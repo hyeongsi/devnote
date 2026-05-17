@@ -1,6 +1,7 @@
 package io.hyeongsi.devnotewebapp.post;
 
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -19,5 +20,13 @@ public class PostController {
     @GetMapping
     public List<PostResponse> getPosts() {
         return postService.getPosts();
+    }
+
+    @GetMapping("/{categorySlug}/{postSlug}")
+    public PostDetailResponse getPost(
+            @PathVariable String categorySlug,
+            @PathVariable String postSlug
+    ) {
+        return postService.getPost(categorySlug, postSlug);
     }
 }
