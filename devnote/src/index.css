@@ -1,0 +1,59 @@
+@import "tailwindcss";
+
+@theme {
+  --color-primary: #6d5dfc;
+  --color-primary-soft: #f0edff;
+  --color-dark: #101218;
+  --color-line: #e8eaf0;
+  --color-muted: #6b7280;
+}
+
+@layer base {
+  * {
+    box-sizing: border-box;
+  }
+
+  html {
+    scroll-behavior: smooth;
+  }
+
+  body {
+    margin: 0;
+    min-width: 320px;
+    color: #111827;
+    background:
+      radial-gradient(circle at top left, rgba(109, 93, 252, 0.12), transparent 26%),
+      linear-gradient(180deg, #f5f6fb 0%, #ffffff 32%, #f7f8fc 100%);
+    font-family: "Pretendard", "Segoe UI", sans-serif;
+  }
+
+  button,
+  input,
+  select,
+  textarea {
+    font: inherit;
+  }
+
+  a {
+    color: inherit;
+    text-decoration: none;
+  }
+}
+
+@layer components {
+  .app-shell {
+    @apply mx-auto my-4 min-h-screen w-[min(1480px,calc(100%-24px))] overflow-hidden rounded-[32px] border border-white/80 bg-white/95 shadow-[0_30px_90px_rgba(17,24,39,0.08)] md:my-6 md:w-[min(1480px,calc(100%-48px))];
+  }
+
+  .section {
+    @apply px-5 py-10 md:px-8 md:py-12 xl:px-12 xl:py-14;
+  }
+
+  .card-base {
+    @apply rounded-[18px] border border-line bg-white shadow-[0_12px_40px_rgba(17,24,39,0.04)];
+  }
+
+  .gradient-primary {
+    @apply bg-gradient-to-r from-[#7c67ff] via-[#6d5dfc] to-[#5a48ed];
+  }
+}
