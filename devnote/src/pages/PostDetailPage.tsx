@@ -11,13 +11,16 @@ import {
   Package,
   ServerCog,
 } from 'lucide-react';
-import type { ReactNode } from 'react';
+import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import { Link, useParams } from 'react-router-dom';
+import { getPost, getPosts } from '../api/posts';
 import { Button } from '../components/ui/Button';
 import { Card } from '../components/ui/Card';
 import { TagList } from '../components/ui/TagList';
-import { allBlogPosts, getPostPath } from '../data/siteData';
-import type { BlogPost } from '../types';
+import { getPostPath } from '../data/siteData';
+import { PostMarkdownRenderer } from '../features/post/PostMarkdownRenderer';
+import { extractMarkdownHeadings } from '../features/post/postMarkdown';
+import type { BlogPost, BlogPostDetail } from '../types';
 
 const heroStyles: Record<BlogPost['imageStyle'], { icon: ReactNode; className: string }> = {
   ai: {
@@ -54,24 +57,114 @@ const heroStyles: Record<BlogPost['imageStyle'], { icon: ReactNode; className: s
   },
 };
 
-const stackMap: Record<BlogPost['imageStyle'], string> = {
-  ai: 'OpenAI API, Spring Boot, Scheduler',
-  laptop: '@ControllerAdvice, ResponseEntity, Validation',
-  docker: 'Docker, Docker Compose, Nginx',
-  code: 'Java 17, Records, Sealed Classes',
-  chart: 'Jsoup, Batch, Spring Scheduler',
-  security: 'Spring Security, JWT, Redis',
-  data: 'Spring Data JPA, Querydsl, MySQL',
-  monitor: 'Actuator, Prometheus, Grafana',
-};
-
 export function PostDetailPage() {
   const { categorySlug, postSlug } = useParams();
-  const post = allBlogPosts.find(
-    (item) => item.categorySlug === categorySlug && item.slug === postSlug,
+  const [post, setPost] = useState<BlogPostDetail | null>(null);
+  const [posts, setPosts] = useState<BlogPost[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isNotFound, setIsNotFound] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!categorySlug || !postSlug) {
+      setPost(null);
+      setPosts([]);
+      setIsNotFound(true);
+      setErrorMessage(null);
+      setIsLoading(false);
+      return;
+    }
+
+    const resolvedCategorySlug = categorySlug;
+    const resolvedPostSlug = postSlug;
+    let isMounted = true;
+
+    async function loadPostDetail() {
+      setIsLoading(true);
+      setIsNotFound(false);
+      setErrorMessage(null);
+
+      try {
+        const [nextPost, nextPosts] = await Promise.all([
+          getPost(resolvedCategorySlug, resolvedPostSlug),
+          getPosts(),
+        ]);
+
+        if (!isMounted) {
+          return;
+        }
+
+        setPost(nextPost);
+        setPosts(nextPosts);
+      } catch (error) {
+        if (!isMounted) {
+          return;
+        }
+
+        setPost(null);
+        setPosts([]);
+
+        if (error instanceof Error && error.message === 'POST_NOT_FOUND') {
+          setIsNotFound(true);
+          return;
+        }
+
+        setErrorMessage(
+          error instanceof Error ? error.message : '게시글 상세를 불러오지 못했습니다.',
+        );
+      } finally {
+        if (isMounted) {
+          setIsLoading(false);
+        }
+      }
+    }
+
+    void loadPostDetail();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [categorySlug, postSlug]);
+
+  const headings = useMemo(
+    () => (post ? extractMarkdownHeadings(post.contentMarkdown) : []),
+    [post],
   );
 
-  if (!post) {
+  if (isLoading) {
+    return (
+      <section className="section">
+        <Card className="rounded-[28px] p-8 text-center">
+          <p className="text-sm font-bold text-primary">Loading</p>
+          <h1 className="mt-3 text-3xl font-black tracking-tight text-gray-950">
+            게시글을 불러오는 중입니다
+          </h1>
+          <p className="mt-3 text-muted">선택한 게시글 상세 데이터를 백엔드에서 가져오고 있습니다.</p>
+        </Card>
+      </section>
+    );
+  }
+
+  if (errorMessage) {
+    return (
+      <section className="section">
+        <Card className="rounded-[28px] p-8 text-center">
+          <p className="text-sm font-bold text-primary">Error</p>
+          <h1 className="mt-3 text-3xl font-black tracking-tight text-gray-950">
+            게시글 상세를 불러오지 못했습니다
+          </h1>
+          <p className="mt-3 text-muted">{errorMessage}</p>
+          <div className="mt-6 flex justify-center">
+            <Link to="/posts">
+              <Button>게시글 목록 보기</Button>
+            </Link>
+          </div>
+        </Card>
+      </section>
+    );
+  }
+
+  if (!post || isNotFound) {
     return (
       <section className="section">
         <Card className="rounded-[28px] p-8 text-center">
@@ -93,9 +186,9 @@ export function PostDetailPage() {
   }
 
   const hero = heroStyles[post.imageStyle];
-  const sections = buildSections(post);
-  const previousPost = allBlogPosts.find((item) => item.id === post.id - 1);
-  const nextPost = allBlogPosts.find((item) => item.id === post.id + 1);
+  const currentPostIndex = posts.findIndex((item) => item.id === post.id);
+  const previousPost = currentPostIndex >= 0 ? posts[currentPostIndex + 1] : undefined;
+  const nextPost = currentPostIndex > 0 ? posts[currentPostIndex - 1] : undefined;
 
   return (
     <section className="section grid gap-8 lg:grid-cols-[minmax(0,1fr)_260px] lg:items-start">
@@ -138,11 +231,7 @@ export function PostDetailPage() {
           </div>
         </div>
 
-        {sections.map((section) => (
-          <ArticleSection key={section.id} id={section.id} title={section.title}>
-            {section.content}
-          </ArticleSection>
-        ))}
+        <PostMarkdownRenderer markdown={post.contentMarkdown} />
 
         <div className="mt-10 flex flex-wrap gap-3 border-t border-line pt-6">
           <Button variant="outline" className="gap-2">
@@ -184,105 +273,13 @@ export function PostDetailPage() {
       <Card className="order-first rounded-[24px] p-6 lg:sticky lg:top-24 lg:order-none">
         <h3 className="font-extrabold text-gray-950">목차</h3>
         <div className="mt-4 grid gap-3 text-sm text-muted">
-          {sections.map((section) => (
-            <a key={section.id} href={`#${section.id}`} className="transition hover:text-primary">
-              {section.title}
+          {headings.map((heading) => (
+            <a key={heading.id} href={`#${heading.id}`} className="transition hover:text-primary">
+              {heading.text}
             </a>
           ))}
         </div>
       </Card>
-    </section>
-  );
-}
-
-function buildSections(post: BlogPost) {
-  const stack = stackMap[post.imageStyle];
-
-  return [
-    {
-      id: 'overview',
-      title: '1. 개요',
-      content: (
-        <>
-          <p>
-            이 글은 {post.title}를 실제 프로젝트 흐름 안에서 어떻게 풀어냈는지 정리한 내용입니다.
-            단순 기능 소개를 넘어서, 왜 이런 구조를 택했고 운영 관점에서 무엇을 신경 썼는지도 함께 담았습니다.
-          </p>
-          <div className="rounded-2xl border-l-4 border-primary bg-[#f8f7ff] p-6 text-gray-600">
-            핵심 목표: 빠르게 구현하되, 이후 확장과 유지보수에 무리가 없는 구조를 만드는 것
-          </div>
-        </>
-      ),
-    },
-    {
-      id: 'architecture',
-      title: '2. 구현 흐름',
-      content: (
-        <>
-          <p>
-            전체 작업은 요구사항 정리, 핵심 로직 구현, 예외 처리, 운영 자동화 순으로 나눠 진행했습니다.
-            각 단계가 서로 과하게 결합되지 않도록 역할을 분리해 이후 수정 비용을 줄였습니다.
-          </p>
-          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-            {['요구사항 정리', '핵심 로직 구현', '예외 처리', '운영 자동화'].map((item) => (
-              <div
-                key={item}
-                className="rounded-2xl border border-line bg-white p-5 text-center font-bold text-gray-600"
-              >
-                {item}
-              </div>
-            ))}
-          </div>
-        </>
-      ),
-    },
-    {
-      id: 'stack',
-      title: '3. 기술 스택',
-      content: (
-        <>
-          <p>
-            주제에 따라 조금씩 달라지지만, 이 글에서 중심이 되는 기술 조합은 아래와 같습니다.
-          </p>
-          <pre className="overflow-auto rounded-2xl bg-slate-950 p-6 text-sm leading-7 text-blue-100">
-            <code>{`{
-  "category": "${post.category}",
-  "topic": "${post.title}",
-  "stack": "${stack}",
-  "routing": "React Router",
-  "ui": "React + Tailwind CSS"
-}`}</code>
-          </pre>
-        </>
-      ),
-    },
-    {
-      id: 'retrospective',
-      title: '4. 정리',
-      content: (
-        <p>
-          {post.title}처럼 설명형 콘텐츠는 목록에서 끝나지 않고 자연스럽게 상세로 이어져야 읽는 흐름이 살아납니다.
-          이번 작업에서는 바로 그 흐름을 만들기 위해 카드 클릭, 상세 라우트, 본문 레이아웃, 이전/다음 글 이동까지
-          한 번에 연결했습니다.
-        </p>
-      ),
-    },
-  ];
-}
-
-function ArticleSection({
-  id,
-  title,
-  children,
-}: {
-  id: string;
-  title: string;
-  children: ReactNode;
-}) {
-  return (
-    <section id={id} className="mt-10 scroll-mt-24">
-      <h2 className="mb-4 text-2xl font-extrabold text-gray-950">{title}</h2>
-      <div className="space-y-4 text-[17px] leading-9 text-gray-600">{children}</div>
     </section>
   );
 }

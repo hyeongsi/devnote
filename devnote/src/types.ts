@@ -40,6 +40,14 @@ export interface BlogPostApiResponse {
   thumbnailStyle: BlogPost['imageStyle'];
 }
 
+export interface BlogPostDetailApiResponse extends BlogPostApiResponse {
+  contentMarkdown: string;
+}
+
+export interface BlogPostDetail extends BlogPost {
+  contentMarkdown: string;
+}
+
 export interface ProjectPreview {
   id: number;
   title: string;

@@ -9,6 +9,7 @@ import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
+import jakarta.persistence.Lob;
 import jakarta.persistence.OrderColumn;
 import jakarta.persistence.Table;
 
@@ -51,6 +52,10 @@ public class Post {
     @Column(nullable = false, length = 30)
     private String thumbnailStyle;
 
+    @Lob
+    @Column(nullable = false)
+    private String contentMarkdown;
+
     @ElementCollection(fetch = FetchType.EAGER)
     @CollectionTable(name = "post_tags", joinColumns = @JoinColumn(name = "post_id"))
     @Column(name = "tag_name", nullable = false, length = 50)
@@ -70,6 +75,7 @@ public class Post {
             String readTime,
             Integer viewCount,
             String thumbnailStyle,
+            String contentMarkdown,
             List<String> tags
     ) {
         this.slug = slug;
@@ -81,6 +87,7 @@ public class Post {
         this.readTime = readTime;
         this.viewCount = viewCount;
         this.thumbnailStyle = thumbnailStyle;
+        this.contentMarkdown = contentMarkdown;
         this.tags = new ArrayList<>(tags);
     }
 
@@ -122,6 +129,10 @@ public class Post {
 
     public String getThumbnailStyle() {
         return thumbnailStyle;
+    }
+
+    public String getContentMarkdown() {
+        return contentMarkdown;
     }
 
     public List<String> getTags() {
