@@ -192,7 +192,7 @@ export function PostDetailPage() {
 
   return (
     <section className="section grid gap-8 lg:grid-cols-[minmax(0,1fr)_260px] lg:items-start">
-      <article>
+      <article className="lg:pl-4 xl:pl-6">
         <div className="mb-5 flex flex-wrap items-center gap-2 text-sm text-gray-400">
           <Link to="/" className="font-medium transition hover:text-primary">
             홈
@@ -247,8 +247,21 @@ export function PostDetailPage() {
             공유하기
           </Button>
         </div>
+      </article>
 
-        <div className="mt-8 grid gap-3 rounded-[24px] border border-line bg-white p-4 sm:grid-cols-2">
+      <Card className="order-first rounded-[24px] p-6 lg:sticky lg:top-24 lg:order-none">
+        <h3 className="font-extrabold text-gray-950">목차</h3>
+        <div className="mt-4 grid gap-3 text-sm text-muted">
+          {headings.map((heading) => (
+            <a key={heading.id} href={`#${heading.id}`} className="transition hover:text-primary">
+              {heading.text}
+            </a>
+          ))}
+        </div>
+      </Card>
+
+      <div className="lg:col-span-2">
+        <div className="grid gap-3 rounded-[24px] border border-line bg-white p-4 sm:grid-cols-2">
           <Link
             to={previousPost ? getPostPath(previousPost) : '/posts'}
             className="rounded-[18px] border border-line px-4 py-4 transition hover:border-primary hover:text-primary"
@@ -268,18 +281,7 @@ export function PostDetailPage() {
             </p>
           </Link>
         </div>
-      </article>
-
-      <Card className="order-first rounded-[24px] p-6 lg:sticky lg:top-24 lg:order-none">
-        <h3 className="font-extrabold text-gray-950">목차</h3>
-        <div className="mt-4 grid gap-3 text-sm text-muted">
-          {headings.map((heading) => (
-            <a key={heading.id} href={`#${heading.id}`} className="transition hover:text-primary">
-              {heading.text}
-            </a>
-          ))}
-        </div>
-      </Card>
+      </div>
     </section>
   );
 }
