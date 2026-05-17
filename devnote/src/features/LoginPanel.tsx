@@ -1,31 +1,33 @@
-import {
-  Chrome,
-  EyeOff,
-  Github,
-  Lock,
-  Mail,
-} from 'lucide-react';
-import type { InputHTMLAttributes, ReactNode } from 'react';
+import { Chrome, EyeOff, Github, Lock, Mail } from 'lucide-react';
+import type { FormEvent, InputHTMLAttributes, ReactNode } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
 import { loginProviders } from '../data/siteData';
 
 export function LoginPanel() {
+  const navigate = useNavigate();
+
+  function handleSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    navigate('/admin');
+  }
+
   return (
     <section className="section">
       <div className="grid overflow-hidden rounded-[28px] border border-line bg-white shadow-[0_20px_80px_rgba(17,24,39,0.06)] lg:grid-cols-[1.1fr_0.9fr]">
         <div className="relative overflow-hidden bg-[radial-gradient(circle_at_top,#ffffff_0%,#f3f0ff_44%,#edeaff_100%)] px-8 py-10 md:px-12 md:py-16">
           <div className="max-w-xl">
-            <p className="text-xl font-extrabold text-primary">개발과 자동화를 기록합니다.</p>
+            <p className="text-xl font-extrabold text-primary">개발과 자동화를 기록합니다</p>
             <h1 className="mt-6 text-4xl font-black leading-tight tracking-tight text-gray-950 md:text-6xl">
               DevNote에 오신 것을
               <br />
               환영합니다
             </h1>
             <p className="mt-6 max-w-lg text-lg leading-8 text-muted">
-              로그인하여 나만의 개발 기록을 관리하고,
+              로그인 화면은 유지하되 실제 인증 없이
               <br />
-              AI 자동 포스팅 기능을 활용해 보세요.
+              어드민 페이지로 바로 이동할 수 있습니다.
             </p>
           </div>
 
@@ -45,9 +47,9 @@ export function LoginPanel() {
         <div className="px-8 py-10 md:px-12 md:py-16">
           <div className="max-w-xl">
             <h2 className="text-4xl font-black tracking-tight text-gray-950">로그인</h2>
-            <p className="mt-3 text-lg text-muted">계정에 로그인하여 계속하세요.</p>
+            <p className="mt-3 text-lg text-muted">로그인 버튼을 누르면 어드민 페이지로 이동합니다.</p>
 
-            <form className="mt-10 space-y-6">
+            <form className="mt-10 space-y-6" onSubmit={handleSubmit}>
               <Field label="이메일">
                 <IconField icon={<Mail className="h-5 w-5" />} placeholder="이메일 주소를 입력하세요" />
               </Field>
@@ -71,7 +73,7 @@ export function LoginPanel() {
                 </button>
               </div>
 
-              <Button className="w-full" size="lg">
+              <Button className="w-full" size="lg" type="submit">
                 로그인
               </Button>
             </form>

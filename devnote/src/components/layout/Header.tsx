@@ -32,14 +32,27 @@ export function Header() {
         </nav>
 
         <div className="flex items-center gap-2 md:gap-3">
-          <button type="button" aria-label="검색" className="rounded-full p-2.5 text-gray-700 transition hover:bg-primary-soft hover:text-primary">
+          <button
+            type="button"
+            aria-label="검색"
+            className="rounded-full p-2.5 text-gray-700 transition hover:bg-primary-soft hover:text-primary"
+          >
             <Search className="h-5 w-5" />
           </button>
-          <button type="button" aria-label="다크 모드" className="rounded-full p-2.5 text-gray-700 transition hover:bg-primary-soft hover:text-primary">
+          <button
+            type="button"
+            aria-label="다크 모드"
+            className="rounded-full p-2.5 text-gray-700 transition hover:bg-primary-soft hover:text-primary"
+          >
             <Moon className="h-5 w-5" />
           </button>
-          <Button size="sm" variant="dark" className="hidden md:inline-flex" onClick={() => navigate('/login')}>
-            구독하기
+          <Button
+            size="sm"
+            variant="dark"
+            className="hidden md:inline-flex"
+            onClick={() => navigate('/login')}
+          >
+            로그인
           </Button>
           <button type="button" aria-label="메뉴" className="rounded-full p-2.5 text-gray-700 lg:hidden">
             <Menu className="h-6 w-6" />
