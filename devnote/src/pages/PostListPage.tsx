@@ -79,9 +79,7 @@ export function PostListPage() {
   }
 
   if (sortBy === 'popular') {
-    filteredPosts = [...filteredPosts].sort(
-      (a, b) => Number.parseFloat(b.views) - Number.parseFloat(a.views),
-    );
+    filteredPosts = [...filteredPosts].sort((a, b) => b.viewCount - a.viewCount);
   }
 
   const sidebarPopularPosts = categoryPopularPosts[selectedCategory] ?? popularPosts;

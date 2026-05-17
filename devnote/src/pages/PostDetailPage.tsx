@@ -21,6 +21,7 @@ import { getPostPath } from '../data/siteData';
 import { PostMarkdownRenderer } from '../features/post/PostMarkdownRenderer';
 import { extractMarkdownHeadings } from '../features/post/postMarkdown';
 import type { BlogPost, BlogPostDetail } from '../types';
+import { formatViewCount } from '../utils/postMetadata';
 
 const heroStyles: Record<BlogPost['imageStyle'], { icon: ReactNode; className: string }> = {
   ai: {
@@ -214,9 +215,9 @@ export function PostDetailPage() {
 
         <div className="mt-6 flex flex-wrap items-center gap-4 text-sm text-muted">
           <strong className="text-gray-900">DevNote</strong>
-          <span>{post.date}</span>
+          <span>{post.displayDate}</span>
           <span>{post.readTime}</span>
-          <span>조회 {post.views}</span>
+          <span>조회 {formatViewCount(post.viewCount)}</span>
         </div>
 
         <div className="mt-5">

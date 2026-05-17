@@ -2,6 +2,7 @@ import { Link } from 'react-router-dom';
 import { Card } from '../components/ui/Card';
 import { getPostPath } from '../data/siteData';
 import type { BlogPost } from '../types';
+import { formatViewCount } from '../utils/postMetadata';
 
 const tones: Record<BlogPost['imageStyle'], string> = {
   ai: 'from-[#f3efff] via-white to-[#e6e0ff]',
@@ -44,9 +45,9 @@ export function PostPreviewCard({ post }: { post: BlogPost }) {
               {post.excerpt}
             </p>
             <div className="mt-auto flex flex-wrap items-center gap-4 pt-5 text-sm font-medium text-gray-500">
-              <span>{post.date}</span>
+              <span>{post.displayDate}</span>
               <span>{post.readTime}</span>
-              <span>조회 {post.views}</span>
+              <span>조회 {formatViewCount(post.viewCount)}</span>
             </div>
           </div>
         </article>

@@ -44,18 +44,10 @@ function mapPostResponse(post: BlogPostApiResponse): BlogPost {
     categorySlug: post.categorySlug,
     title: post.title,
     excerpt: post.excerpt,
-    date: post.displayDate,
+    displayDate: post.displayDate,
     readTime: post.readTime,
-    views: formatViewCount(post.viewCount),
+    viewCount: post.viewCount,
     tags: post.tags,
     imageStyle: post.thumbnailStyle,
   };
-}
-
-function formatViewCount(viewCount: number): string {
-  if (viewCount >= 1000) {
-    return `${(viewCount / 1000).toFixed(1)}K`;
-  }
-
-  return `${viewCount}`;
 }

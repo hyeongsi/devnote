@@ -19,9 +19,9 @@ export interface BlogPost {
   categorySlug: string;
   title: string;
   excerpt: string;
-  date: string;
+  displayDate: string;
   readTime: string;
-  views: string;
+  viewCount: number;
   tags: string[];
   imageStyle: 'ai' | 'laptop' | 'docker' | 'code' | 'chart' | 'security' | 'data' | 'monitor';
 }

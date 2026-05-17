@@ -12,6 +12,7 @@ import type { ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 import { getPostPath } from '../data/siteData';
 import type { BlogPost } from '../types';
+import { formatViewCount } from '../utils/postMetadata';
 
 const thumbStyles: Record<BlogPost['imageStyle'], { icon: ReactNode; className: string }> = {
   ai: {
@@ -72,9 +73,9 @@ export function PostListItem({ post }: { post: BlogPost }) {
           </h3>
           <p className="mt-3 text-base leading-7 text-muted">{post.excerpt}</p>
           <div className="mt-5 flex flex-wrap items-center gap-4 text-sm font-medium text-gray-500">
-            <span>{post.date}</span>
+            <span>{post.displayDate}</span>
             <span>{post.readTime}</span>
-            <span>조회 {post.views}</span>
+            <span>조회 {formatViewCount(post.viewCount)}</span>
           </div>
         </div>
       </article>
