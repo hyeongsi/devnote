@@ -1,12 +1,13 @@
 import { Link } from 'react-router-dom';
 import { SidebarPanel } from '../components/ui/SidebarPanel';
-import { blogCategories } from '../data/siteData';
-import type { RankedPost } from '../types';
+import type { BlogCategory, RankedPost } from '../types';
 
 export function PostSidebar({
+  categories,
   selectedCategory,
   popularPosts,
 }: {
+  categories: BlogCategory[];
   selectedCategory: string;
   popularPosts: RankedPost[];
 }) {
@@ -14,7 +15,7 @@ export function PostSidebar({
     <aside className="grid h-fit gap-5 self-start">
       <SidebarPanel title="카테고리">
         <div className="grid gap-2.5 text-sm font-semibold text-gray-600">
-          {blogCategories.map((category) => {
+          {categories.map((category) => {
             const isActive =
               (selectedCategory === 'all' && category.slug === 'all') ||
               category.slug === selectedCategory;
