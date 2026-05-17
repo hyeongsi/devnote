@@ -1,0 +1,42 @@
+package io.hyeongsi.devnotewebapp.post;
+
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.time.format.DateTimeFormatter;
+import java.util.List;
+
+@Service
+@Transactional(readOnly = true)
+public class PostService {
+
+    private static final DateTimeFormatter DISPLAY_DATE_FORMAT = DateTimeFormatter.ofPattern("yyyy.MM.dd");
+
+    private final PostRepository postRepository;
+
+    public PostService(PostRepository postRepository) {
+        this.postRepository = postRepository;
+    }
+
+    public List<PostResponse> getPosts() {
+        return postRepository.findPostList().stream()
+                .map(this::toResponse)
+                .toList();
+    }
+
+    private PostResponse toResponse(Post post) {
+        return new PostResponse(
+                post.getId(),
+                post.getSlug(),
+                post.getCategoryName(),
+                post.getCategorySlug(),
+                post.getTitle(),
+                post.getExcerpt(),
+                post.getPublishedAt().format(DISPLAY_DATE_FORMAT),
+                post.getReadTime(),
+                post.getViewCount(),
+                post.getTags(),
+                post.getThumbnailStyle()
+        );
+    }
+}

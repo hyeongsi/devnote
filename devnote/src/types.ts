@@ -26,6 +26,20 @@ export interface BlogPost {
   imageStyle: 'ai' | 'laptop' | 'docker' | 'code' | 'chart' | 'security' | 'data' | 'monitor';
 }
 
+export interface BlogPostApiResponse {
+  id: number;
+  slug: string;
+  categoryName: string;
+  categorySlug: string;
+  title: string;
+  excerpt: string;
+  displayDate: string;
+  readTime: string;
+  viewCount: number;
+  tags: string[];
+  thumbnailStyle: BlogPost['imageStyle'];
+}
+
 export interface ProjectPreview {
   id: number;
   title: string;
