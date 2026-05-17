@@ -3,10 +3,12 @@ import { useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { getPosts } from '../api/posts';
 import { Input } from '../components/ui/Input';
+import { Pagination } from '../components/ui/Pagination';
 import { Select } from '../components/ui/Select';
 import { blogCategories, categoryPopularPosts, popularPosts } from '../data/siteData';
 import { PostListItem } from '../features/PostListItem';
 import { PostSidebar } from '../features/PostSidebar';
+import { usePagination } from '../hooks/usePagination';
 import type { BlogCategory, BlogPost } from '../types';
 
 const categoryDescriptions: Record<string, string> = {
@@ -19,6 +21,8 @@ const categoryDescriptions: Record<string, string> = {
   infra: '서버, 운영, 모니터링 관련 내용을 모아둔 카테고리입니다.',
   etc: '기타 개발 기록과 실험 내용을 담은 카테고리입니다.',
 };
+
+const POSTS_PER_PAGE = 6;
 
 export function PostListPage() {
   const { categorySlug } = useParams();
@@ -81,6 +85,19 @@ export function PostListPage() {
   if (sortBy === 'popular') {
     filteredPosts = [...filteredPosts].sort((a, b) => b.viewCount - a.viewCount);
   }
+
+  const {
+    currentPage,
+    setCurrentPage,
+    totalItems: totalPosts,
+    totalPages,
+    paginatedItems: paginatedPosts,
+    paginationItems,
+  } = usePagination({
+    items: filteredPosts,
+    itemsPerPage: POSTS_PER_PAGE,
+    resetDeps: [selectedCategory, query, sortBy],
+  });
 
   const sidebarPopularPosts = categoryPopularPosts[selectedCategory] ?? popularPosts;
   const categoryCounts = posts.reduce<Record<string, number>>((accumulator, post) => {
@@ -160,8 +177,8 @@ export function PostListPage() {
               <div className="rounded-[24px] border border-red-200 bg-red-50 px-6 py-12 text-center text-sm font-medium text-red-600">
                 {error}
               </div>
-            ) : filteredPosts.length > 0 ? (
-              filteredPosts.map((post) => <PostListItem key={post.id} post={post} />)
+            ) : totalPosts > 0 ? (
+              paginatedPosts.map((post) => <PostListItem key={post.id} post={post} />)
             ) : (
               <div className="rounded-[24px] border border-dashed border-line bg-white px-6 py-12 text-center text-sm font-medium text-muted">
                 조건에 맞는 게시글이 없습니다.
@@ -169,22 +186,14 @@ export function PostListPage() {
             )}
           </div>
 
-          <div className="flex items-center justify-center gap-3 pt-3 text-sm font-bold">
-            {['1', '2', '3', '4', '5', '...', '10'].map((item, index) => (
-              <button
-                key={`${item}-${index}`}
-                type="button"
-                className={`grid h-9 w-9 place-items-center rounded-xl transition ${
-                  index === 0 ? 'bg-primary text-white' : 'text-gray-600 hover:bg-primary-soft hover:text-primary'
-                }`}
-              >
-                {item}
-              </button>
-            ))}
-            <button type="button" className="px-2 text-gray-600 transition hover:text-primary">
-              &gt;
-            </button>
-          </div>
+          {!isLoading && !error ? (
+            <Pagination
+              currentPage={currentPage}
+              totalPages={totalPages}
+              items={paginationItems}
+              onPageChange={setCurrentPage}
+            />
+          ) : null}
         </div>
 
         <PostSidebar
