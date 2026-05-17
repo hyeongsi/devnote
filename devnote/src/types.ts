@@ -7,9 +7,23 @@ export interface PublicNavItem {
 }
 
 export interface BlogCategory {
+  id?: number;
   slug: string;
   name: string;
+  description?: string;
   count: number;
+  visible?: boolean;
+  displayOrder?: number;
+}
+
+export interface AuthLoginRequest {
+  email: string;
+  password: string;
+}
+
+export interface AuthUser {
+  email: string;
+  role: string;
 }
 
 export interface BlogPost {
@@ -38,6 +52,16 @@ export interface BlogPostApiResponse {
   viewCount: number;
   tags: string[];
   thumbnailStyle: BlogPost['imageStyle'];
+}
+
+export interface BlogCategoryApiResponse {
+  id: number;
+  slug: string;
+  name: string;
+  description: string;
+  count: number;
+  visible: boolean;
+  displayOrder: number;
 }
 
 export interface BlogPostDetailApiResponse extends BlogPostApiResponse {
@@ -107,9 +131,20 @@ export interface AdminMenuRow {
 
 export interface AdminCategoryRow {
   id: number;
+  slug?: string;
   name: string;
   description: string;
   postCount: number;
   visible: boolean;
   order: number;
+}
+
+export interface AdminCategoryApiResponse {
+  id: number;
+  slug: string;
+  name: string;
+  description: string;
+  postCount: number;
+  visible: boolean;
+  displayOrder: number;
 }

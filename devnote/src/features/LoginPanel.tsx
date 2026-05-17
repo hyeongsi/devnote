@@ -1,16 +1,40 @@
 import { Chrome, EyeOff, Github, Lock, Mail } from 'lucide-react';
-import type { FormEvent, InputHTMLAttributes, ReactNode } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useState, type FormEvent, type InputHTMLAttributes, type ReactNode } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
+import { login } from '../api/auth';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
 import { loginProviders } from '../data/siteData';
 
 export function LoginPanel() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const [email, setEmail] = useState('admin@devnote.dev');
+  const [password, setPassword] = useState('devnote-admin-1234');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  function handleSubmit(event: FormEvent<HTMLFormElement>) {
+  const redirectTo = searchParams.get('redirect') || '/admin';
+
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    navigate('/admin');
+    setIsSubmitting(true);
+    setError(null);
+
+    try {
+      await login({ email, password });
+      navigate(redirectTo, { replace: true });
+    } catch (submitError) {
+      if (submitError instanceof Error && submitError.message === 'LOGIN_FAILED') {
+        setError('이메일 또는 비밀번호가 올바르지 않습니다.');
+      } else if (submitError instanceof Error) {
+        setError(submitError.message);
+      } else {
+        setError('로그인 중 문제가 발생했습니다.');
+      }
+    } finally {
+      setIsSubmitting(false);
+    }
   }
 
   return (
@@ -20,22 +44,25 @@ export function LoginPanel() {
           <div className="max-w-xl">
             <p className="text-xl font-extrabold text-primary">개발과 자동화를 기록합니다</p>
             <h1 className="mt-6 text-4xl font-black leading-tight tracking-tight text-gray-950 md:text-6xl">
-              DevNote에 오신 것을
+              DevNote 관리자 화면을
               <br />
-              환영합니다
+              안전하게 연결합니다
             </h1>
             <p className="mt-6 max-w-lg text-lg leading-8 text-muted">
-              로그인 화면은 유지하되 실제 인증 없이
+              로그인 화면이 실제 스프링 시큐리티 인증과 연결됩니다.
               <br />
-              어드민 페이지로 바로 이동할 수 있습니다.
+              아래 임시 관리자 계정으로 바로 확인할 수 있습니다.
             </p>
           </div>
 
-          <div className="relative mt-16 flex min-h-[380px] items-center justify-center">
+          <div className="mt-10 rounded-[24px] border border-white/70 bg-white/80 p-5 shadow-[0_20px_50px_rgba(125,103,255,0.12)]">
+            <p className="text-sm font-bold text-gray-900">임시 관리자 계정</p>
+            <p className="mt-3 text-sm text-muted">이메일: admin@devnote.dev</p>
+            <p className="mt-1 text-sm text-muted">비밀번호: devnote-admin-1234</p>
+          </div>
+
+          <div className="relative mt-12 flex min-h-[300px] items-center justify-center">
             <div className="absolute h-60 w-60 rounded-full bg-primary/10 blur-3xl" />
-            <div className="absolute bottom-8 left-8 h-16 w-16 rounded-[22px] border border-white/70 bg-white/70 shadow-[0_20px_50px_rgba(125,103,255,0.12)]" />
-            <div className="absolute right-10 top-6 h-12 w-12 rounded-2xl border border-white/70 bg-white/75 shadow-[0_16px_40px_rgba(125,103,255,0.12)]" />
-            <div className="absolute bottom-20 right-16 h-14 w-14 rounded-[18px] border border-white/70 bg-white/80 shadow-[0_20px_50px_rgba(125,103,255,0.14)]" />
             <div className="relative rounded-[34px] bg-white p-8 shadow-[0_30px_90px_rgba(125,103,255,0.18)]">
               <div className="grid h-48 w-40 place-items-center rounded-[30px] bg-gradient-to-br from-[#9d91ff] via-[#7d6cff] to-[#5f4eff] text-white shadow-[0_30px_60px_rgba(109,93,252,0.35)]">
                 <span className="text-7xl font-black">&lt;/&gt;</span>
@@ -47,11 +74,16 @@ export function LoginPanel() {
         <div className="px-8 py-10 md:px-12 md:py-16">
           <div className="max-w-xl">
             <h2 className="text-4xl font-black tracking-tight text-gray-950">로그인</h2>
-            <p className="mt-3 text-lg text-muted">로그인 버튼을 누르면 어드민 페이지로 이동합니다.</p>
+            <p className="mt-3 text-lg text-muted">관리자 권한이 있는 계정으로 인증한 뒤 어드민 화면으로 이동합니다.</p>
 
             <form className="mt-10 space-y-6" onSubmit={handleSubmit}>
               <Field label="이메일">
-                <IconField icon={<Mail className="h-5 w-5" />} placeholder="이메일 주소를 입력하세요" />
+                <IconField
+                  icon={<Mail className="h-5 w-5" />}
+                  placeholder="이메일 주소를 입력하세요"
+                  value={email}
+                  onChange={(event) => setEmail(event.target.value)}
+                />
               </Field>
 
               <Field label="비밀번호">
@@ -60,8 +92,16 @@ export function LoginPanel() {
                   placeholder="비밀번호를 입력하세요"
                   suffix={<EyeOff className="h-5 w-5" />}
                   type="password"
+                  value={password}
+                  onChange={(event) => setPassword(event.target.value)}
                 />
               </Field>
+
+              {error ? (
+                <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-600">
+                  {error}
+                </div>
+              ) : null}
 
               <div className="flex items-center justify-between text-sm">
                 <label className="flex items-center gap-3 font-semibold text-gray-600">
@@ -73,8 +113,8 @@ export function LoginPanel() {
                 </button>
               </div>
 
-              <Button className="w-full" size="lg" type="submit">
-                로그인
+              <Button className="w-full" size="lg" type="submit" disabled={isSubmitting}>
+                {isSubmitting ? '로그인 중...' : '로그인'}
               </Button>
             </form>
 
@@ -98,13 +138,6 @@ export function LoginPanel() {
                 </button>
               ))}
             </div>
-
-            <p className="mt-8 text-base text-muted">
-              계정이 없으신가요?{' '}
-              <button type="button" className="font-bold text-primary">
-                회원가입
-              </button>
-            </p>
           </div>
         </div>
       </div>

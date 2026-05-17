@@ -1,39 +1,39 @@
 import { Search } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
+import { getBlogCategories } from '../api/categories';
 import { getPosts } from '../api/posts';
 import { Input } from '../components/ui/Input';
 import { Pagination } from '../components/ui/Pagination';
 import { Select } from '../components/ui/Select';
-import { blogCategories, categoryPopularPosts, popularPosts } from '../data/siteData';
+import { categoryPopularPosts, popularPosts } from '../data/siteData';
 import { PostListItem } from '../features/PostListItem';
 import { PostSidebar } from '../features/PostSidebar';
 import { usePagination } from '../hooks/usePagination';
 import type { BlogCategory, BlogPost } from '../types';
 
-const categoryDescriptions: Record<string, string> = {
-  all: '개발, 자동화, AI 등 다양한 주제의 게시글을 확인할 수 있습니다.',
-  'spring-boot': 'Spring Boot 관련 개발 기록과 실전 정리를 모아둔 카테고리입니다.',
-  'ai-automation': 'AI와 자동화 도구를 실제로 적용한 기록을 모아둔 카테고리입니다.',
-  devops: '배포, 운영, 자동화 관련 내용을 정리한 카테고리입니다.',
-  java: 'Java 언어와 백엔드 개발 내용을 정리한 카테고리입니다.',
-  database: '데이터 모델링과 성능 최적화 기록을 모아둔 카테고리입니다.',
-  infra: '서버, 운영, 모니터링 관련 내용을 모아둔 카테고리입니다.',
-  etc: '기타 개발 기록과 실험 내용을 담은 카테고리입니다.',
-};
-
 const POSTS_PER_PAGE = 6;
+
+const allCategory: BlogCategory = {
+  id: 0,
+  slug: 'all',
+  name: '전체',
+  description: '개발, 자동화, AI 등 다양한 주제의 게시글을 확인할 수 있습니다.',
+  count: 0,
+  visible: true,
+  displayOrder: 0,
+};
 
 export function PostListPage() {
   const { categorySlug } = useParams();
   const [query, setQuery] = useState('');
   const [sortBy, setSortBy] = useState('latest');
   const [posts, setPosts] = useState<BlogPost[]>([]);
+  const [categories, setCategories] = useState<BlogCategory[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   const selectedCategory = categorySlug ?? 'all';
-  const category = blogCategories.find((item) => item.slug === selectedCategory) ?? blogCategories[0];
 
   useEffect(() => {
     let cancelled = false;
@@ -43,10 +43,11 @@ export function PostListPage() {
       setError(null);
 
       try {
-        const nextPosts = await getPosts();
+        const [nextPosts, nextCategories] = await Promise.all([getPosts(), getBlogCategories()]);
 
         if (!cancelled) {
           setPosts(nextPosts);
+          setCategories(nextCategories);
         }
       } catch (loadError) {
         if (!cancelled) {
@@ -100,14 +101,15 @@ export function PostListPage() {
   });
 
   const sidebarPopularPosts = categoryPopularPosts[selectedCategory] ?? popularPosts;
-  const categoryCounts = posts.reduce<Record<string, number>>((accumulator, post) => {
-    accumulator[post.categorySlug] = (accumulator[post.categorySlug] ?? 0) + 1;
-    return accumulator;
-  }, {});
-  const sidebarCategories: BlogCategory[] = blogCategories.map((item) => ({
-    ...item,
-    count: item.slug === 'all' ? posts.length : (categoryCounts[item.slug] ?? 0),
-  }));
+  const sidebarCategories: BlogCategory[] = [
+    {
+      ...allCategory,
+      count: posts.length,
+    },
+    ...categories,
+  ];
+  const currentCategory =
+    sidebarCategories.find((item) => item.slug === selectedCategory) ?? sidebarCategories[0];
 
   return (
     <section className="section">
@@ -122,20 +124,20 @@ export function PostListPage() {
         {selectedCategory !== 'all' ? (
           <>
             <span>/</span>
-            <span className="font-semibold text-gray-600">{category.name}</span>
+            <span className="font-semibold text-gray-600">{currentCategory.name}</span>
           </>
         ) : null}
       </div>
 
       <div>
         <h1 className="text-4xl font-black tracking-tight text-gray-950 md:text-[48px]">
-          {selectedCategory === 'all' ? '전체 게시글' : category.name}
+          {selectedCategory === 'all' ? '전체 게시글' : currentCategory.name}
         </h1>
-        <p className="mt-3 text-lg text-muted">{categoryDescriptions[selectedCategory]}</p>
+        <p className="mt-3 text-lg text-muted">{currentCategory.description ?? allCategory.description}</p>
       </div>
 
       <div className="mt-8 flex flex-wrap gap-3">
-        {blogCategories.slice(0, 6).map((item) => (
+        {sidebarCategories.slice(0, 6).map((item) => (
           <Link
             key={item.slug}
             to={item.slug === 'all' ? '/posts' : `/posts/${item.slug}`}

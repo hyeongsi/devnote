@@ -6,6 +6,7 @@ import org.springframework.stereotype.Repository;
 import java.util.List;
 import java.util.Optional;
 
+import static io.hyeongsi.devnotewebapp.category.QCategory.category;
 import static io.hyeongsi.devnotewebapp.post.QPost.post;
 
 @Repository
@@ -21,6 +22,7 @@ public class PostRepositoryImpl implements PostRepositoryCustom {
     public List<Post> findPostList() {
         return queryFactory
                 .selectFrom(post)
+                .join(post.category, category).fetchJoin()
                 .orderBy(post.publishedAt.desc(), post.id.desc())
                 .fetch();
     }
@@ -30,8 +32,9 @@ public class PostRepositoryImpl implements PostRepositoryCustom {
         return Optional.ofNullable(
                 queryFactory
                         .selectFrom(post)
+                        .join(post.category, category).fetchJoin()
                         .where(
-                                post.categorySlug.eq(categorySlug),
+                                category.slug.eq(categorySlug),
                                 post.slug.eq(postSlug)
                         )
                         .fetchOne()

@@ -1,6 +1,7 @@
-import { adminCategoryRows } from '../../data/siteData';
-import type { AdminCategoryRow } from '../../types';
+import { useEffect, useState } from 'react';
+import { getAdminCategories } from '../../api/categories';
 import { AdminTable } from '../../features/admin/AdminTable';
+import type { AdminCategoryRow } from '../../types';
 
 const columns = [
   {
@@ -31,12 +32,67 @@ const columns = [
 ];
 
 export function AdminCategoriesPage() {
+  const [rows, setRows] = useState<AdminCategoryRow[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadCategories() {
+      setIsLoading(true);
+      setError(null);
+
+      try {
+        const nextRows = await getAdminCategories();
+
+        if (!cancelled) {
+          setRows(nextRows);
+        }
+      } catch (loadError) {
+        if (!cancelled) {
+          setError(
+            loadError instanceof Error
+              ? loadError.message
+              : '관리 카테고리 목록을 불러오는 중 문제가 발생했습니다.',
+          );
+        }
+      } finally {
+        if (!cancelled) {
+          setIsLoading(false);
+        }
+      }
+    }
+
+    void loadCategories();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  if (isLoading) {
+    return (
+      <section className="rounded-[28px] border border-line bg-white px-6 py-12 text-center text-sm font-medium text-muted shadow-[0_20px_60px_rgba(17,24,39,0.05)]">
+        관리 카테고리 목록을 불러오는 중입니다.
+      </section>
+    );
+  }
+
+  if (error) {
+    return (
+      <section className="rounded-[28px] border border-red-200 bg-red-50 px-6 py-12 text-center text-sm font-medium text-red-600 shadow-[0_20px_60px_rgba(17,24,39,0.05)]">
+        {error}
+      </section>
+    );
+  }
+
   return (
     <AdminTable
       title="카테고리 관리"
       description="게시글 카테고리를 생성하고 관리합니다."
       actionLabel="카테고리 추가"
-      rows={adminCategoryRows}
+      rows={rows}
       columns={columns}
       getRowKey={(row) => row.id}
     />

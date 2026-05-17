@@ -1,5 +1,6 @@
 package io.hyeongsi.devnotewebapp.post;
 
+import io.hyeongsi.devnotewebapp.category.Category;
 import jakarta.persistence.CollectionTable;
 import jakarta.persistence.Column;
 import jakarta.persistence.ElementCollection;
@@ -10,6 +11,7 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.Lob;
+import jakarta.persistence.ManyToOne;
 import jakarta.persistence.OrderColumn;
 import jakarta.persistence.Table;
 
@@ -28,11 +30,9 @@ public class Post {
     @Column(nullable = false, unique = true, length = 120)
     private String slug;
 
-    @Column(nullable = false, length = 60)
-    private String categoryName;
-
-    @Column(nullable = false, length = 60)
-    private String categorySlug;
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "category_id", nullable = false)
+    private Category category;
 
     @Column(nullable = false, length = 200)
     private String title;
@@ -67,8 +67,7 @@ public class Post {
 
     public Post(
             String slug,
-            String categoryName,
-            String categorySlug,
+            Category category,
             String title,
             String excerpt,
             LocalDate publishedAt,
@@ -79,8 +78,7 @@ public class Post {
             List<String> tags
     ) {
         this.slug = slug;
-        this.categoryName = categoryName;
-        this.categorySlug = categorySlug;
+        this.category = category;
         this.title = title;
         this.excerpt = excerpt;
         this.publishedAt = publishedAt;
@@ -100,11 +98,11 @@ public class Post {
     }
 
     public String getCategoryName() {
-        return categoryName;
+        return category.getName();
     }
 
     public String getCategorySlug() {
-        return categorySlug;
+        return category.getSlug();
     }
 
     public String getTitle() {

@@ -1,4 +1,5 @@
 import { Navigate, Route, Routes } from 'react-router-dom';
+import { RequireAdmin } from './components/auth/RequireAdmin';
 import { AdminShell } from './components/layout/AdminShell';
 import { PageShell } from './components/layout/PageShell';
 import { HomePage } from './pages/HomePage';
@@ -21,11 +22,13 @@ export default function App() {
         <Route path="/posts/:categorySlug/:postSlug" element={<PostDetailPage />} />
       </Route>
 
-      <Route path="/admin" element={<AdminShell />}>
-        <Route index element={<AdminDashboardPage />} />
-        <Route path="ai-posting" element={<AdminAiPostingPage />} />
-        <Route path="menus" element={<AdminMenusPage />} />
-        <Route path="categories" element={<AdminCategoriesPage />} />
+      <Route element={<RequireAdmin />}>
+        <Route path="/admin" element={<AdminShell />}>
+          <Route index element={<AdminDashboardPage />} />
+          <Route path="ai-posting" element={<AdminAiPostingPage />} />
+          <Route path="menus" element={<AdminMenusPage />} />
+          <Route path="categories" element={<AdminCategoriesPage />} />
+        </Route>
       </Route>
 
       <Route path="*" element={<Navigate to="/" replace />} />
