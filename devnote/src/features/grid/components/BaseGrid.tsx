@@ -42,7 +42,7 @@ export function BaseGrid<TRow>({
 }: BaseGridProps<TRow>) {
   return (
     <div className={className}>
-      <div className="ag-theme-quartz grid-platform-theme overflow-hidden rounded-[22px] border border-line shadow-[0_12px_40px_rgba(17,24,39,0.04)]">
+      <div className="ag-theme-quartz grid-platform-theme overflow-hidden rounded-2xl border border-line bg-white shadow-[0_10px_30px_rgba(17,24,39,0.04)]">
         <div style={{ height: gridHeight }}>
           <AgGridReact<TRow>
             rowData={rowData}

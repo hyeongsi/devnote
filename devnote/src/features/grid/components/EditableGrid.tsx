@@ -209,7 +209,7 @@ export function EditableGrid<TItem extends { id?: number; order: number }>({
             row.state !== 'deleted' &&
             !isToggleColumn(column)
           ) {
-            classes.push('cursor-text');
+            classes.push('grid-cell-editable cursor-text');
           }
 
           return classes.join(' ');
@@ -263,10 +263,10 @@ export function EditableGrid<TItem extends { id?: number; order: number }>({
           }
 
           if (column.render) {
-            return column.render(context);
+            return <div className="grid-cell-content">{column.render(context)}</div>;
           }
 
-          return getEditableGridValueLabel(column, value);
+          return <span className="grid-cell-content">{getEditableGridValueLabel(column, value)}</span>;
         },
       };
     });
@@ -287,14 +287,14 @@ export function EditableGrid<TItem extends { id?: number; order: number }>({
         }
 
         return (
-          <div className="flex items-center gap-2">
+          <div className="flex w-full items-center justify-center">
             <button
               type="button"
               aria-label={params.data.state === 'deleted' ? 'Restore row' : 'Delete row'}
-              className={`rounded-full p-2 transition ${
+              className={`grid-action-button ${
                 params.data.state === 'deleted'
-                  ? 'text-red-600 hover:bg-red-100'
-                  : 'text-gray-500 hover:bg-red-50 hover:text-red-600'
+                  ? 'text-red-600 hover:border-red-200 hover:bg-red-50'
+                  : 'text-gray-500 hover:border-red-200 hover:bg-red-50 hover:text-red-600'
               }`}
               onClick={() => void toggleDelete(params.data!)}
             >
@@ -329,18 +329,18 @@ export function EditableGrid<TItem extends { id?: number; order: number }>({
   }
 
   return (
-    <section className="rounded-[28px] border border-line bg-white p-6 shadow-[0_20px_60px_rgba(17,24,39,0.05)] md:p-7">
-      <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+    <section className="rounded-[24px] border border-line bg-white p-5 shadow-[0_18px_50px_rgba(17,24,39,0.045)] md:p-6">
+      <div className="flex flex-col gap-4 border-b border-line/70 pb-5 md:flex-row md:items-center md:justify-between">
         <div>
-          <h2 className="text-3xl font-black tracking-tight text-gray-950">{title}</h2>
-          <p className="mt-2 text-sm text-muted">{description}</p>
+          <h2 className="text-2xl font-black tracking-tight text-gray-950">{title}</h2>
+          <p className="mt-1.5 text-sm leading-6 text-muted">{description}</p>
         </div>
         <div className="flex flex-wrap items-center gap-3">
           <button
             type="button"
-            className={`inline-flex items-center justify-center gap-2 rounded-2xl px-5 py-3 text-sm font-bold text-white transition ${
+            className={`inline-flex h-11 items-center justify-center gap-2 rounded-xl px-4 text-sm font-bold text-white transition ${
               hasChanges && !isSaving
-                ? 'bg-primary shadow-[0_12px_30px_rgba(109,93,252,0.2)] hover:brightness-105'
+                ? 'bg-primary shadow-[0_10px_24px_rgba(109,93,252,0.18)] hover:brightness-105'
                 : 'cursor-not-allowed bg-gray-300 shadow-none'
             }`}
             onClick={() => void handleSave()}
@@ -351,7 +351,7 @@ export function EditableGrid<TItem extends { id?: number; order: number }>({
           </button>
           <button
             type="button"
-            className="inline-flex items-center justify-center gap-2 rounded-2xl bg-primary px-5 py-3 text-sm font-bold text-white shadow-[0_12px_30px_rgba(109,93,252,0.26)]"
+            className="inline-flex h-11 items-center justify-center gap-2 rounded-xl border border-line bg-white px-4 text-sm font-bold text-gray-700 transition hover:border-primary/30 hover:bg-primary-soft hover:text-primary"
             onClick={addRow}
           >
             <Plus className="h-4 w-4" />
@@ -375,12 +375,13 @@ export function EditableGrid<TItem extends { id?: number; order: number }>({
         }}
       />
 
-      <div className="mt-5 flex flex-col gap-3 rounded-2xl bg-primary-soft px-4 py-3 text-sm font-medium text-muted md:flex-row md:items-center md:justify-between">
-        <span>Row colors indicate unsaved state: blue for added, green for modified, red for deleted.</span>
-        <span className={hasChanges ? 'text-primary' : ''}>
-          {hasChanges
-            ? `${changeSet.added.length} added, ${changeSet.modified.length} modified, ${changeSet.deleted.length} deleted`
-            : 'No pending changes'}
+      <div className="mt-4 flex flex-wrap items-center gap-2 text-xs font-bold text-gray-500">
+        <span className="grid-status-chip">Rows {rows.length}</span>
+        <span className="grid-status-chip grid-status-chip-added">Added {changeSet.added.length}</span>
+        <span className="grid-status-chip grid-status-chip-modified">Modified {changeSet.modified.length}</span>
+        <span className="grid-status-chip grid-status-chip-deleted">Deleted {changeSet.deleted.length}</span>
+        <span className={`ml-auto ${hasChanges ? 'text-primary' : 'text-gray-400'}`}>
+          {hasChanges ? 'Unsaved changes' : 'Up to date'}
         </span>
       </div>
     </section>
