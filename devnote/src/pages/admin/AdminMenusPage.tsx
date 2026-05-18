@@ -1,8 +1,8 @@
 import { getAdminMenus, saveAdminMenus } from '../../api/menus';
 import {
-  AdminEditableGrid,
-  type AdminEditableGridColumn,
-} from '../../features/admin/AdminEditableGrid';
+  EditableGrid,
+  type EditableGridColumn,
+} from '../../features/grid';
 import type { AdminMenuRow } from '../../types';
 
 const menuStateOptions = [
@@ -11,7 +11,7 @@ const menuStateOptions = [
   { label: '비활성', value: '비활성' },
 ] as const;
 
-const columns: AdminEditableGridColumn<AdminMenuRow>[] = [
+const columns: EditableGridColumn<AdminMenuRow>[] = [
   {
     id: 'name',
     title: '메뉴명',
@@ -65,7 +65,7 @@ function validateMenuRow(row: AdminMenuRow, rows: AdminMenuRow[]): Record<string
 
 export function AdminMenusPage() {
   return (
-    <AdminEditableGrid
+    <EditableGrid
       title="메뉴 관리"
       description="행 단위 편집 모드로 메뉴 속성을 조정하고 저장 직전에 변경 diff를 관리합니다."
       itemLabel="Menu"

@@ -1,13 +1,14 @@
 export { BaseGrid } from './components/BaseGrid';
 export {
-  AdminEditableGrid,
-} from './components/AdminEditableGrid';
+  EditableGrid,
+} from './components/EditableGrid';
 export type {
-  AdminEditableGridColumn,
-  GridChangeSet,
-  GridSelectOption as AdminGridSelectOption,
-} from './components/AdminEditableGrid';
+  EditableGridColumn,
+  EditableGridChangeSet,
+  EditableGridSelectOption,
+} from './types/editableGridTypes';
 export { GridEmptyState } from './components/GridEmptyState';
+export { useEditableGrid } from './hooks/useEditableGrid';
 export { useGridState } from './hooks/useGridState';
 
 export type {
@@ -33,6 +34,14 @@ export {
   getDirtyGridFields,
   isSameGridValue,
 } from './utils/rowState';
+export {
+  buildEditableGridChangeSet,
+  coerceEditableGridValue,
+  createEditableGridRow,
+  createEditableGridRowId,
+  getEditableGridValueLabel,
+  resolveEditableGridColumn,
+} from './utils/editableGridUtils';
 export {
   booleanFormatter,
   numberFormatter,
