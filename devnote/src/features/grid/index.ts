@@ -1,4 +1,12 @@
 export { BaseGrid } from './components/BaseGrid';
+export {
+  AdminEditableGrid,
+} from './components/AdminEditableGrid';
+export type {
+  AdminEditableGridColumn,
+  GridChangeSet,
+  GridSelectOption as AdminGridSelectOption,
+} from './components/AdminEditableGrid';
 export { GridEmptyState } from './components/GridEmptyState';
 export { useGridState } from './hooks/useGridState';
 

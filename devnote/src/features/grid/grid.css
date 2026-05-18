@@ -1,0 +1,60 @@
+.grid-platform-theme {
+  --ag-font-family: "Pretendard", "Segoe UI", sans-serif;
+  --ag-font-size: 14px;
+  --ag-border-color: #e8eaf0;
+  --ag-foreground-color: #1f2937;
+  --ag-background-color: rgba(255, 255, 255, 0.96);
+  --ag-header-background-color: #fbfbff;
+  --ag-header-foreground-color: #6b7280;
+  --ag-header-column-resize-handle-color: rgba(109, 93, 252, 0.24);
+  --ag-accent-color: #6d5dfc;
+  --ag-selected-row-background-color: rgba(109, 93, 252, 0.08);
+  --ag-row-hover-color: rgba(109, 93, 252, 0.05);
+  --ag-range-selection-border-color: rgba(109, 93, 252, 0.28);
+  --ag-input-focus-border-color: #6d5dfc;
+  --ag-checkbox-checked-color: #6d5dfc;
+  --ag-wrapper-border-radius: 22px;
+  --ag-row-border-color: #eef1f6;
+  --ag-cell-horizontal-padding: 16px;
+  --ag-header-height: 50px;
+  --ag-row-height: 58px;
+}
+
+.grid-platform-theme .ag-root-wrapper {
+  border: 0;
+}
+
+.grid-platform-theme .ag-header-cell {
+  font-weight: 800;
+}
+
+.grid-platform-theme .ag-cell {
+  display: flex;
+  align-items: center;
+}
+
+.grid-platform-theme .ag-row.grid-row-added .ag-cell {
+  background: #eef6ff;
+}
+
+.grid-platform-theme .ag-row.grid-row-modified .ag-cell {
+  background: #edfdf5;
+}
+
+.grid-platform-theme .ag-row.grid-row-deleted .ag-cell {
+  background: #fff1f2;
+}
+
+.grid-platform-theme .ag-row.grid-row-deleted .ag-cell-value,
+.grid-platform-theme .ag-row.grid-row-deleted .ag-cell-wrapper {
+  opacity: 0.65;
+}
+
+.grid-platform-theme .ag-cell.grid-cell-error {
+  box-shadow: inset 0 -2px 0 rgba(239, 68, 68, 0.55);
+}
+
+.grid-platform-empty {
+  color: #6b7280;
+  font-weight: 600;
+}

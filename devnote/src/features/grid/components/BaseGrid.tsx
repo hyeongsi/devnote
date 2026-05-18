@@ -1,69 +1,72 @@
-import type { ReactNode } from 'react';
+import {
+  AllCommunityModule,
+  ModuleRegistry,
+  type ColDef,
+  type GetRowIdParams,
+  type GridReadyEvent,
+  type RowClassParams,
+  type RowClassRules,
+} from 'ag-grid-community';
+import { AgGridReact } from 'ag-grid-react';
 
-import type { GridColumn } from '../types/gridTypes';
-import { GridEmptyState } from './GridEmptyState';
+import 'ag-grid-community/styles/ag-grid.css';
+import 'ag-grid-community/styles/ag-theme-quartz.css';
+import '../grid.css';
+
+ModuleRegistry.registerModules([AllCommunityModule]);
 
 interface BaseGridProps<TRow> {
-  columns: GridColumn<TRow>[];
+  columnDefs: ColDef<TRow>[];
   rowData: TRow[];
-  emptyState?: ReactNode;
   className?: string;
+  gridHeight?: number;
+  loading?: boolean;
+  defaultColDef?: ColDef<TRow>;
+  rowClassRules?: RowClassRules<TRow>;
+  getRowClass?: (params: RowClassParams<TRow>) => string | string[] | undefined;
+  getRowId?: (params: GetRowIdParams<TRow>) => string;
+  onGridReady?: (event: GridReadyEvent<TRow>) => void;
 }
 
 export function BaseGrid<TRow>({
-  columns,
+  columnDefs,
   rowData,
-  emptyState,
   className,
+  gridHeight = 460,
+  loading = false,
+  defaultColDef,
+  rowClassRules,
+  getRowClass,
+  getRowId,
+  onGridReady,
 }: BaseGridProps<TRow>) {
-  if (rowData.length === 0) {
-    return <>{emptyState ?? <GridEmptyState />}</>;
-  }
-
   return (
     <div className={className}>
-      <div className="overflow-x-auto rounded-[22px] border border-line">
-        <table className="min-w-full border-separate border-spacing-0 text-left">
-          <thead className="bg-[#fbfbff] text-sm font-bold text-gray-500">
-            <tr>
-              {columns.map((column) => (
-                <th key={column.id} className="border-b border-line px-4 py-3">
-                  {column.headerName}
-                </th>
-              ))}
-            </tr>
-          </thead>
-          <tbody className="bg-white text-sm text-gray-700">
-            {rowData.map((row, rowIndex) => (
-              <tr key={rowIndex} className="even:bg-[#fdfdff]">
-                {columns.map((column) => {
-                  if (column.kind === 'action') {
-                    return (
-                      <td key={column.id} className="border-b border-line px-4 py-4 align-middle">
-                        {column.render({
-                          row,
-                          value: undefined,
-                        })}
-                      </td>
-                    );
-                  }
-
-                  const value = row[column.field];
-                  const rendered = column.render?.({
-                    row,
-                    value,
-                  });
-
-                  return (
-                    <td key={column.id} className="border-b border-line px-4 py-4 align-middle">
-                      {rendered ?? column.formatter?.(value, row) ?? String(value ?? '')}
-                    </td>
-                  );
-                })}
-              </tr>
-            ))}
-          </tbody>
-        </table>
+      <div className="ag-theme-quartz grid-platform-theme overflow-hidden rounded-[22px] border border-line shadow-[0_12px_40px_rgba(17,24,39,0.04)]">
+        <div style={{ height: gridHeight }}>
+          <AgGridReact<TRow>
+            rowData={rowData}
+            columnDefs={columnDefs}
+            defaultColDef={{
+              resizable: true,
+              sortable: true,
+              flex: 1,
+              minWidth: 120,
+              suppressMovable: true,
+              ...defaultColDef,
+            }}
+            loading={loading}
+            rowClassRules={rowClassRules}
+            getRowClass={getRowClass}
+            getRowId={getRowId}
+            onGridReady={onGridReady}
+            animateRows
+            stopEditingWhenCellsLoseFocus
+            singleClickEdit
+            suppressRowClickSelection
+            overlayNoRowsTemplate='<span class="grid-platform-empty">No rows available.</span>'
+          />
+        </div>
       </div>
     </div>
   );

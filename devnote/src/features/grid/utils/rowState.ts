@@ -46,7 +46,7 @@ export function deriveGridRowState<TRow extends object>(
   original: TRow | undefined,
   current: TRow,
   previousState: GridRowState,
-) {
+): GridRowState {
   if (previousState === 'deleted') {
     return 'deleted';
   }

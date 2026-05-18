@@ -2,7 +2,7 @@ import { getAdminCategories, saveAdminCategories } from '../../api/categories';
 import {
   AdminEditableGrid,
   type AdminEditableGridColumn,
-} from '../../features/admin/AdminEditableGrid';
+} from '../../features/grid';
 import type { AdminCategoryRow } from '../../types';
 
 const columns: AdminEditableGridColumn<AdminCategoryRow>[] = [
