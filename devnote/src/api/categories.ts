@@ -52,3 +52,31 @@ export async function getAdminCategories(): Promise<AdminCategoryRow[]> {
     order: category.displayOrder,
   }));
 }
+
+export async function saveAdminCategories(items: AdminCategoryRow[]): Promise<void> {
+  const response = await fetch(`${CATEGORIES_API_URL}/admin`, {
+    method: 'PUT',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    credentials: 'include',
+    body: JSON.stringify(
+      items.map((item, index) => ({
+        id: item.id,
+        slug: item.slug,
+        name: item.name,
+        description: item.description,
+        visible: item.visible,
+        displayOrder: index + 1,
+      })),
+    ),
+  });
+
+  if (response.status === 401) {
+    throw new Error('UNAUTHORIZED');
+  }
+
+  if (!response.ok) {
+    throw new Error(`카테고리 변경 사항을 저장하지 못했습니다. (${response.status})`);
+  }
+}

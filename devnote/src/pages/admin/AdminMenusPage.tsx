@@ -1,60 +1,86 @@
-import { adminMenuRows } from '../../data/siteData';
+import { getAdminMenus, saveAdminMenus } from '../../api/menus';
+import {
+  AdminEditableGrid,
+  type AdminEditableGridColumn,
+} from '../../features/admin/AdminEditableGrid';
 import type { AdminMenuRow } from '../../types';
-import { AdminTable } from '../../features/admin/AdminTable';
 
-const columns = [
+const menuStateOptions = [
+  { label: '운영 중', value: '운영 중' },
+  { label: '준비 중', value: '준비 중' },
+  { label: '비활성', value: '비활성' },
+] as const;
+
+const columns: AdminEditableGridColumn<AdminMenuRow>[] = [
   {
-    key: 'name',
+    id: 'name',
     title: '메뉴명',
-    render: (row: AdminMenuRow) => <span className="font-semibold text-gray-900">{row.name}</span>,
+    type: 'text',
+    field: 'name',
+    required: true,
+    placeholder: '예: 블로그',
+    render: ({ value }) => <span className="font-semibold text-gray-900">{value}</span>,
   },
   {
-    key: 'path',
-    title: '링크',
-    render: (row: AdminMenuRow) => <span className="text-gray-500">{row.path}</span>,
+    id: 'path',
+    title: '경로',
+    type: 'text',
+    field: 'path',
+    required: true,
+    placeholder: '예: /posts',
+    render: ({ value }) => <span className="font-mono text-xs text-gray-500">{value}</span>,
   },
   {
-    key: 'state',
-    title: '상태 메뉴',
-    render: (row: AdminMenuRow) => <span className="text-gray-500">{row.state}</span>,
+    id: 'state',
+    title: '상태',
+    type: 'select',
+    field: 'state',
+    required: true,
+    options: [...menuStateOptions],
+    className: 'w-40',
   },
   {
-    key: 'visible',
+    id: 'visible',
     title: '노출',
-    render: (row: AdminMenuRow) => <ToggleSwitch active={row.visible} />,
-  },
-  {
-    key: 'order',
-    title: '순서',
-    render: (row: AdminMenuRow) => <span className="font-semibold text-gray-700">{row.order}</span>,
+    type: 'switch',
+    field: 'visible',
+    className: 'w-28',
   },
 ];
 
-export function AdminMenusPage() {
-  return (
-    <AdminTable
-      title="메뉴 관리"
-      description="사이트 내비게이션에 표시할 메뉴를 관리합니다."
-      actionLabel="메뉴 추가"
-      rows={adminMenuRows}
-      columns={columns}
-      getRowKey={(row) => row.id}
-    />
-  );
+function validateMenuRow(row: AdminMenuRow, rows: AdminMenuRow[]): Record<string, string> {
+  const errors: Record<string, string> = {};
+  const normalizedPath = row.path.trim().toLowerCase();
+
+  if (!normalizedPath.startsWith('/')) {
+    errors.path = '메뉴 경로는 / 로 시작해야 합니다.';
+  }
+
+  if (rows.filter((candidate) => candidate.path.trim().toLowerCase() === normalizedPath).length > 1) {
+    errors.path = '같은 경로를 가진 메뉴가 이미 있습니다.';
+  }
+
+  return errors;
 }
 
-function ToggleSwitch({ active }: { active: boolean }) {
+export function AdminMenusPage() {
   return (
-    <span
-      className={`inline-flex h-7 w-12 items-center rounded-full p-1 transition ${
-        active ? 'bg-primary' : 'bg-gray-200'
-      }`}
-    >
-      <span
-        className={`h-5 w-5 rounded-full bg-white shadow transition ${
-          active ? 'translate-x-5' : 'translate-x-0'
-        }`}
-      />
-    </span>
+    <AdminEditableGrid
+      title="메뉴 관리"
+      description="행 단위 편집 모드로 메뉴 속성을 조정하고 저장 직전에 변경 diff를 관리합니다."
+      itemLabel="Menu"
+      columns={columns}
+      fetchItems={getAdminMenus}
+      saveItems={saveAdminMenus}
+      getItemName={(item) => item.name}
+      validateRow={validateMenuRow}
+      createEmptyItem={(nextOrder) => ({
+        name: '',
+        path: '',
+        state: '운영 중',
+        visible: true,
+        order: nextOrder,
+      })}
+    />
   );
 }

@@ -1,116 +1,93 @@
-import { useEffect, useState } from 'react';
-import { getAdminCategories } from '../../api/categories';
-import { AdminTable } from '../../features/admin/AdminTable';
+import { getAdminCategories, saveAdminCategories } from '../../api/categories';
+import {
+  AdminEditableGrid,
+  type AdminEditableGridColumn,
+} from '../../features/admin/AdminEditableGrid';
 import type { AdminCategoryRow } from '../../types';
 
-const columns = [
+const columns: AdminEditableGridColumn<AdminCategoryRow>[] = [
   {
-    key: 'name',
+    id: 'name',
     title: '카테고리명',
-    render: (row: AdminCategoryRow) => <span className="font-semibold text-gray-900">{row.name}</span>,
+    type: 'text',
+    field: 'name',
+    required: true,
+    placeholder: '예: Spring Boot',
+    render: ({ value }) => <span className="font-semibold text-gray-900">{value}</span>,
   },
   {
-    key: 'description',
+    id: 'slug',
+    title: '슬러그',
+    type: 'text',
+    field: 'slug',
+    required: true,
+    placeholder: '예: spring-boot',
+    render: ({ value }) => <span className="font-mono text-xs text-gray-500">{value}</span>,
+  },
+  {
+    id: 'description',
     title: '설명',
-    render: (row: AdminCategoryRow) => <span className="text-gray-500">{row.description}</span>,
+    type: 'text',
+    field: 'description',
+    required: true,
+    placeholder: '카테고리 설명을 입력해 주세요.',
+    className: 'min-w-[260px]',
+    render: ({ value }) => <span className="text-gray-500">{value}</span>,
   },
   {
-    key: 'postCount',
+    id: 'postCount',
     title: '게시글 수',
-    render: (row: AdminCategoryRow) => <span className="font-semibold text-gray-700">{row.postCount}</span>,
+    type: 'number',
+    field: 'postCount',
+    editable: false,
+    className: 'w-28',
+    render: ({ value }) => <span className="font-semibold text-gray-700">{value}</span>,
   },
   {
-    key: 'visible',
+    id: 'visible',
     title: '노출',
-    render: (row: AdminCategoryRow) => <ToggleSwitch active={row.visible} />,
-  },
-  {
-    key: 'order',
-    title: '순서',
-    render: (row: AdminCategoryRow) => <span className="font-semibold text-gray-700">{row.order}</span>,
+    type: 'switch',
+    field: 'visible',
+    className: 'w-28',
   },
 ];
 
-export function AdminCategoriesPage() {
-  const [rows, setRows] = useState<AdminCategoryRow[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+function validateCategoryRow(
+  row: AdminCategoryRow,
+  rows: AdminCategoryRow[],
+): Record<string, string> {
+  const errors: Record<string, string> = {};
+  const normalizedSlug = row.slug?.trim().toLowerCase();
 
-  useEffect(() => {
-    let cancelled = false;
-
-    async function loadCategories() {
-      setIsLoading(true);
-      setError(null);
-
-      try {
-        const nextRows = await getAdminCategories();
-
-        if (!cancelled) {
-          setRows(nextRows);
-        }
-      } catch (loadError) {
-        if (!cancelled) {
-          setError(
-            loadError instanceof Error
-              ? loadError.message
-              : '관리 카테고리 목록을 불러오는 중 문제가 발생했습니다.',
-          );
-        }
-      } finally {
-        if (!cancelled) {
-          setIsLoading(false);
-        }
-      }
-    }
-
-    void loadCategories();
-
-    return () => {
-      cancelled = true;
-    };
-  }, []);
-
-  if (isLoading) {
-    return (
-      <section className="rounded-[28px] border border-line bg-white px-6 py-12 text-center text-sm font-medium text-muted shadow-[0_20px_60px_rgba(17,24,39,0.05)]">
-        관리 카테고리 목록을 불러오는 중입니다.
-      </section>
-    );
+  if (
+    normalizedSlug &&
+    rows.filter((candidate) => candidate.slug?.trim().toLowerCase() === normalizedSlug).length > 1
+  ) {
+    errors.slug = '같은 슬러그를 가진 카테고리가 이미 있습니다.';
   }
 
-  if (error) {
-    return (
-      <section className="rounded-[28px] border border-red-200 bg-red-50 px-6 py-12 text-center text-sm font-medium text-red-600 shadow-[0_20px_60px_rgba(17,24,39,0.05)]">
-        {error}
-      </section>
-    );
-  }
-
-  return (
-    <AdminTable
-      title="카테고리 관리"
-      description="게시글 카테고리를 생성하고 관리합니다."
-      actionLabel="카테고리 추가"
-      rows={rows}
-      columns={columns}
-      getRowKey={(row) => row.id}
-    />
-  );
+  return errors;
 }
 
-function ToggleSwitch({ active }: { active: boolean }) {
+export function AdminCategoriesPage() {
   return (
-    <span
-      className={`inline-flex h-7 w-12 items-center rounded-full p-1 transition ${
-        active ? 'bg-primary' : 'bg-gray-200'
-      }`}
-    >
-      <span
-        className={`h-5 w-5 rounded-full bg-white shadow transition ${
-          active ? 'translate-x-5' : 'translate-x-0'
-        }`}
-      />
-    </span>
+    <AdminEditableGrid
+      title="카테고리 관리"
+      description="그리드에서 바로 값을 수정하고, 추가/수정/삭제 상태를 한 번에 저장할 수 있습니다."
+      itemLabel="Category"
+      columns={columns}
+      fetchItems={getAdminCategories}
+      saveItems={saveAdminCategories}
+      getItemName={(item) => item.name}
+      validateRow={validateCategoryRow}
+      createEmptyItem={(nextOrder) => ({
+        slug: '',
+        name: '',
+        description: '',
+        postCount: 0,
+        visible: true,
+        order: nextOrder,
+      })}
+    />
   );
 }

@@ -121,7 +121,7 @@ export interface ActivityItem {
 }
 
 export interface AdminMenuRow {
-  id: number;
+  id?: number;
   name: string;
   path: string;
   state: string;
@@ -130,7 +130,7 @@ export interface AdminMenuRow {
 }
 
 export interface AdminCategoryRow {
-  id: number;
+  id?: number;
   slug?: string;
   name: string;
   description: string;
@@ -145,6 +145,15 @@ export interface AdminCategoryApiResponse {
   name: string;
   description: string;
   postCount: number;
+  visible: boolean;
+  displayOrder: number;
+}
+
+export interface AdminMenuApiResponse {
+  id: number;
+  name: string;
+  path: string;
+  state: string;
   visible: boolean;
   displayOrder: number;
 }
