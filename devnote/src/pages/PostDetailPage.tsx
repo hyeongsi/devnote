@@ -68,11 +68,13 @@ export function PostDetailPage() {
 
   useEffect(() => {
     if (!categorySlug || !postSlug) {
-      setPost(null);
-      setPosts([]);
-      setIsNotFound(true);
-      setErrorMessage(null);
-      setIsLoading(false);
+      queueMicrotask(() => {
+        setPost(null);
+        setPosts([]);
+        setIsNotFound(true);
+        setErrorMessage(null);
+        setIsLoading(false);
+      });
       return;
     }
 

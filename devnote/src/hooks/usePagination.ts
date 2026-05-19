@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 
 export type PaginationItem = number | '...';
 
@@ -21,29 +21,30 @@ function getPaginationItems(currentPage: number, totalPages: number): Pagination
 interface UsePaginationOptions<T> {
   items: T[];
   itemsPerPage: number;
-  resetDeps?: readonly unknown[];
+  resetKey?: string;
 }
 
 export function usePagination<T>({
   items,
   itemsPerPage,
-  resetDeps = [],
+  resetKey = 'default',
 }: UsePaginationOptions<T>) {
-  const [currentPage, setCurrentPage] = useState(1);
-
-  useEffect(() => {
-    setCurrentPage(1);
-  }, resetDeps);
+  const [pageState, setPageState] = useState({ page: 1, resetKey });
 
   const totalItems = items.length;
   const totalPages = Math.ceil(totalItems / itemsPerPage);
-  const safeCurrentPage = totalPages > 0 ? Math.min(currentPage, totalPages) : 1;
+  const requestedPage = pageState.resetKey === resetKey ? pageState.page : 1;
+  const safeCurrentPage = totalPages > 0 ? Math.min(requestedPage, totalPages) : 1;
 
-  useEffect(() => {
-    if (totalPages > 0 && currentPage > totalPages) {
-      setCurrentPage(totalPages);
-    }
-  }, [currentPage, totalPages]);
+  const setCurrentPage = useCallback(
+    (page: number) => {
+      setPageState({
+        page,
+        resetKey,
+      });
+    },
+    [resetKey],
+  );
 
   const paginatedItems = useMemo(() => {
     const startIndex = (safeCurrentPage - 1) * itemsPerPage;

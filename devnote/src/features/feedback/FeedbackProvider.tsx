@@ -1,31 +1,18 @@
 import { AlertCircle, AlertTriangle, CheckCircle2, Info, X } from 'lucide-react';
 import {
-  createContext,
   useCallback,
-  useContext,
   useEffect,
   useMemo,
   useRef,
   useState,
   type ReactNode,
 } from 'react';
-
-export type FeedbackTone = 'success' | 'warning' | 'error' | 'info';
-
-interface FeedbackMessageInput {
-  title: string;
-  description?: string;
-  tone?: FeedbackTone;
-  durationMs?: number;
-}
-
-interface ConfirmOptions {
-  title: string;
-  description?: string;
-  confirmLabel?: string;
-  cancelLabel?: string;
-  tone?: Extract<FeedbackTone, 'warning' | 'error' | 'info'>;
-}
+import {
+  FeedbackContext,
+  type ConfirmOptions,
+  type FeedbackMessageInput,
+  type FeedbackTone,
+} from './FeedbackContext';
 
 interface FeedbackMessage extends Required<Omit<FeedbackMessageInput, 'durationMs'>> {
   id: number;
@@ -35,13 +22,6 @@ interface FeedbackMessage extends Required<Omit<FeedbackMessageInput, 'durationM
 interface ConfirmState extends ConfirmOptions {
   resolve: (value: boolean) => void;
 }
-
-interface FeedbackContextValue {
-  showMessage: (input: FeedbackMessageInput) => void;
-  showConfirm: (options: ConfirmOptions) => Promise<boolean>;
-}
-
-const FeedbackContext = createContext<FeedbackContextValue | null>(null);
 
 const toneStyles: Record<
   FeedbackTone,
@@ -225,14 +205,4 @@ export function FeedbackProvider({ children }: { children: ReactNode }) {
       ) : null}
     </FeedbackContext.Provider>
   );
-}
-
-export function useFeedback() {
-  const context = useContext(FeedbackContext);
-
-  if (!context) {
-    throw new Error('useFeedback must be used within a FeedbackProvider.');
-  }
-
-  return context;
 }

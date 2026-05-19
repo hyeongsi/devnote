@@ -1,46 +1,48 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 
 import type {
-  EditableGridColumn,
-  EditableGridFieldColumn,
-  EditableGridManagedRow,
-  EditableGridProps,
-} from '../types/editableGridTypes';
-import { deriveGridRowState, getDirtyGridFields } from '../utils/rowState';
+  EntityListColumn,
+  EntityListFieldColumn,
+  EntityListManagedRow,
+  EntityListProps,
+} from '../types/entityListTypes';
 import {
-  buildEditableGridChangeSet,
-  createEditableGridRow,
-  createEditableGridRowId,
-} from '../utils/editableGridUtils';
+  buildEntityListChangeSet,
+  createEntityListRow,
+  createEntityListRowId,
+  deriveEntityRowState,
+  getDirtyEntityFields,
+} from '../utils/entityListUtils';
 
-interface UseEditableGridOptions<TItem extends { id?: number; order: number }> {
-  columns: EditableGridColumn<TItem>[];
-  createEmptyItem: EditableGridProps<TItem>['createEmptyItem'];
-  fetchItems: EditableGridProps<TItem>['fetchItems'];
-  saveItems: EditableGridProps<TItem>['saveItems'];
-  validateRow?: EditableGridProps<TItem>['validateRow'];
+interface UseEntityListOptions<TItem extends { id?: number; order: number }> {
+  columns: EntityListColumn<TItem>[];
+  createEmptyItem: EntityListProps<TItem>['createEmptyItem'];
+  fetchItems: EntityListProps<TItem>['fetchItems'];
+  saveItems: EntityListProps<TItem>['saveItems'];
+  validateRow?: EntityListProps<TItem>['validateRow'];
   onSaved: () => void;
 }
 
-export function useEditableGrid<TItem extends { id?: number; order: number }>({
+export function useEntityList<TItem extends { id?: number; order: number }>({
   columns,
   createEmptyItem,
   fetchItems,
   saveItems,
   validateRow,
   onSaved,
-}: UseEditableGridOptions<TItem>) {
-  const [rows, setRows] = useState<EditableGridManagedRow<TItem>[]>([]);
+}: UseEntityListOptions<TItem>) {
+  const [rows, setRows] = useState<EntityListManagedRow<TItem>[]>([]);
+  const [editingRowIds, setEditingRowIds] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
 
   const rowFields = useMemo(
-    () => columns.filter((column): column is EditableGridFieldColumn<TItem> => column.type !== 'action'),
+    () => columns.filter((column): column is EntityListFieldColumn<TItem> => column.type !== 'action'),
     [columns],
   );
 
-  const changeSet = useMemo(() => buildEditableGridChangeSet(rows), [rows]);
+  const changeSet = useMemo(() => buildEntityListChangeSet(rows), [rows]);
   const hasChanges =
     changeSet.added.length > 0 || changeSet.modified.length > 0 || changeSet.deleted.length > 0;
 
@@ -78,13 +80,14 @@ export function useEditableGrid<TItem extends { id?: number; order: number }>({
     [rowFields, validateRow],
   );
 
-  const loadGrid = useCallback(async () => {
+  const loadList = useCallback(async () => {
     setIsLoading(true);
     setLoadError(null);
 
     try {
-      const nextRows = (await fetchItems()).map((item) => createEditableGridRow(item));
+      const nextRows = (await fetchItems()).map((item) => createEntityListRow(item));
       setRows(nextRows);
+      setEditingRowIds([]);
     } catch (error) {
       setLoadError(error instanceof Error ? error.message : 'A problem occurred while loading rows.');
     } finally {
@@ -94,9 +97,9 @@ export function useEditableGrid<TItem extends { id?: number; order: number }>({
 
   useEffect(() => {
     queueMicrotask(() => {
-      void loadGrid();
+      void loadList();
     });
-  }, [loadGrid]);
+  }, [loadList]);
 
   const updateField = useCallback(
     <TKey extends Extract<keyof TItem, string>>(clientId: string, field: TKey, value: TItem[TKey]) => {
@@ -114,8 +117,8 @@ export function useEditableGrid<TItem extends { id?: number; order: number }>({
           return {
             ...row,
             current: nextCurrent,
-            state: deriveGridRowState(row.original, nextCurrent, row.state),
-            dirtyFields: getDirtyGridFields(row.original, nextCurrent),
+            state: deriveEntityRowState(row.original, nextCurrent, row.state),
+            dirtyFields: getDirtyEntityFields(row.original, nextCurrent),
           };
         });
 
@@ -138,10 +141,12 @@ export function useEditableGrid<TItem extends { id?: number; order: number }>({
   );
 
   const addRow = useCallback(() => {
+    const clientId = createEntityListRowId();
+
     setRows((current) => [
       ...current,
       {
-        clientId: createEditableGridRowId(),
+        clientId,
         original: undefined,
         current: createEmptyItem(current.length + 1),
         state: 'added',
@@ -149,10 +154,18 @@ export function useEditableGrid<TItem extends { id?: number; order: number }>({
         errors: {},
       },
     ]);
+    setEditingRowIds((current) => [...current, clientId]);
   }, [createEmptyItem]);
+
+  const toggleEditing = useCallback((clientId: string) => {
+    setEditingRowIds((current) =>
+      current.includes(clientId) ? current.filter((id) => id !== clientId) : [...current, clientId],
+    );
+  }, []);
 
   const removeAddedRow = useCallback((clientId: string) => {
     setRows((current) => current.filter((row) => row.clientId !== clientId));
+    setEditingRowIds((current) => current.filter((id) => id !== clientId));
   }, []);
 
   const restoreRow = useCallback((clientId: string) => {
@@ -161,9 +174,9 @@ export function useEditableGrid<TItem extends { id?: number; order: number }>({
         row.clientId === clientId
           ? {
               ...row,
-              state: deriveGridRowState(row.original, row.current, 'clean'),
+              state: deriveEntityRowState(row.original, row.current, 'clean'),
               errors: {},
-              dirtyFields: getDirtyGridFields(row.original, row.current),
+              dirtyFields: getDirtyEntityFields(row.original, row.current),
             }
           : row,
       ),
@@ -182,6 +195,7 @@ export function useEditableGrid<TItem extends { id?: number; order: number }>({
           : row,
       ),
     );
+    setEditingRowIds((current) => current.filter((id) => id !== clientId));
   }, []);
 
   const validateAllRows = useCallback(() => {
@@ -202,7 +216,7 @@ export function useEditableGrid<TItem extends { id?: number; order: number }>({
     });
   }, [rows, runValidation]);
 
-  const saveGrid = useCallback(async () => {
+  const saveList = useCallback(async () => {
     const validatedRows = validateAllRows();
     const invalidRow = validatedRows.find((row) => Object.keys(row.errors).length > 0);
 
@@ -215,7 +229,7 @@ export function useEditableGrid<TItem extends { id?: number; order: number }>({
     setIsSaving(true);
 
     try {
-      const changes = buildEditableGridChangeSet(validatedRows);
+      const changes = buildEntityListChangeSet(validatedRows);
       const activeItems = validatedRows
         .filter((row) => row.state !== 'deleted')
         .map((row, index) => ({
@@ -224,26 +238,28 @@ export function useEditableGrid<TItem extends { id?: number; order: number }>({
         }));
 
       await saveItems(activeItems, changes);
-      await loadGrid();
+      await loadList();
       onSaved();
       return true;
     } finally {
       setIsSaving(false);
     }
-  }, [loadGrid, onSaved, saveItems, validateAllRows]);
+  }, [loadList, onSaved, saveItems, validateAllRows]);
 
   return {
     rows,
+    editingRowIds,
     isLoading,
     isSaving,
     loadError,
     changeSet,
     hasChanges,
     addRow,
+    toggleEditing,
     removeAddedRow,
     restoreRow,
     markRowDeleted,
-    saveGrid,
+    saveList,
     updateField,
   };
 }

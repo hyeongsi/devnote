@@ -1,11 +1,11 @@
 import { getAdminCategories, saveAdminCategories } from '../../api/categories';
 import {
-  EditableGrid,
-  type EditableGridColumn,
-} from '../../features/grid';
+  EntityList,
+  type EntityListColumn,
+} from '../../features/list';
 import type { AdminCategoryRow } from '../../types';
 
-const columns: EditableGridColumn<AdminCategoryRow>[] = [
+const columns: EntityListColumn<AdminCategoryRow>[] = [
   {
     id: 'name',
     title: '카테고리명',
@@ -71,9 +71,9 @@ function validateCategoryRow(
 
 export function AdminCategoriesPage() {
   return (
-    <EditableGrid
+    <EntityList
       title="카테고리 관리"
-      description="그리드에서 바로 값을 수정하고, 추가/수정/삭제 상태를 한 번에 저장할 수 있습니다."
+      description="블로그 카테고리의 이름, 슬러그, 설명, 노출 여부를 관리합니다."
       itemLabel="Category"
       columns={columns}
       fetchItems={getAdminCategories}
