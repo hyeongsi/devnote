@@ -3,6 +3,7 @@ import type {
   BlogPostApiResponse,
   BlogPostDetail,
   BlogPostDetailApiResponse,
+  PostCreateRequest,
 } from '../types';
 
 const POSTS_API_URL = 'http://localhost:8080/api/posts';
@@ -27,6 +28,35 @@ export async function getPost(categorySlug: string, postSlug: string): Promise<B
 
   if (!response.ok) {
     throw new Error(`게시글 상세를 불러오지 못했습니다. (${response.status})`);
+  }
+
+  const post = (await response.json()) as BlogPostDetailApiResponse;
+  return {
+    ...mapPostResponse(post),
+    contentMarkdown: post.contentMarkdown,
+  };
+}
+
+export async function createPost(request: PostCreateRequest): Promise<BlogPostDetail> {
+  const response = await fetch(POSTS_API_URL, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    credentials: 'include',
+    body: JSON.stringify(request),
+  });
+
+  if (response.status === 401 || response.status === 403) {
+    throw new Error('FORBIDDEN');
+  }
+
+  if (response.status === 409) {
+    throw new Error('SLUG_CONFLICT');
+  }
+
+  if (!response.ok) {
+    throw new Error(`게시글을 저장하지 못했습니다. (${response.status})`);
   }
 
   const post = (await response.json()) as BlogPostDetailApiResponse;

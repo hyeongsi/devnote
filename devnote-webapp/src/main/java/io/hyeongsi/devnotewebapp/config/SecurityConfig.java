@@ -20,6 +20,7 @@ import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 import java.util.List;
 
 import static org.springframework.http.HttpMethod.DELETE;
+import static org.springframework.http.HttpMethod.POST;
 
 @Configuration
 public class SecurityConfig {
@@ -31,6 +32,7 @@ public class SecurityConfig {
                 .csrf(csrf -> csrf.ignoringRequestMatchers(
                         "/h2-console/**",
                         "/api/posts/**",
+                        "/api/ai/posts/**",
                         "/api/categories/admin/**",
                         "/api/menus/admin/**",
                         "/api/auth/login",
@@ -40,6 +42,8 @@ public class SecurityConfig {
                 .authorizeHttpRequests(authorize -> authorize
                         .requestMatchers("/h2-console/**").permitAll()
                         .requestMatchers("/api/auth/login", "/api/auth/me", "/api/auth/logout").permitAll()
+                        .requestMatchers("/api/ai/posts/**").hasRole("ADMIN")
+                        .requestMatchers(POST, "/api/posts").hasRole("ADMIN")
                         .requestMatchers(DELETE, "/api/posts/**").hasRole("ADMIN")
                         .requestMatchers("/api/posts/**").permitAll()
                         .requestMatchers("/api/menus/admin/**").hasRole("ADMIN")

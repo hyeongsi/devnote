@@ -72,6 +72,32 @@ export interface BlogPostDetail extends BlogPost {
   contentMarkdown: string;
 }
 
+export interface AiPostGenerateRequest {
+  topic: string;
+}
+
+export interface AiPostGenerateResponse {
+  title: string;
+  summary: string;
+  content: string;
+  tags: string[];
+  readTime: string;
+  recommendedTopics: string[];
+  recommendedCategorySlug: string;
+  thumbnailStyle: BlogPost['imageStyle'];
+}
+
+export interface PostCreateRequest {
+  slug: string;
+  categoryId: number;
+  title: string;
+  excerpt: string;
+  readTime: string;
+  thumbnailStyle: BlogPost['imageStyle'];
+  contentMarkdown: string;
+  tags: string[];
+}
+
 export interface ProjectPreview {
   id: number;
   title: string;

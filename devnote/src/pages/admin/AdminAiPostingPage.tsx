@@ -1,118 +1,482 @@
-import { Lightbulb, PenSquare, Sparkles } from 'lucide-react';
+import { BookOpenCheck, Lightbulb, Loader2, Save, Sparkles } from 'lucide-react';
+import { useEffect, useMemo, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { generateAiPost } from '../../api/aiPosts';
+import { getAdminCategories } from '../../api/categories';
+import { createPost } from '../../api/posts';
 import { Button } from '../../components/ui/Button';
 import { Card } from '../../components/ui/Card';
 import { Input } from '../../components/ui/Input';
 import { Select } from '../../components/ui/Select';
 import { Textarea } from '../../components/ui/Textarea';
+import { useFeedback } from '../../features/feedback/FeedbackContext';
+import type { AdminCategoryRow, BlogPost, PostCreateRequest } from '../../types';
 
-const tips = [
-  '구체적인 주제를 입력할수록 더 또렷한 초안 구조를 잡기 좋습니다.',
-  '톤과 스타일은 실제 블로그 독자층에 맞춰 선택하는 것이 좋습니다.',
-  '추가 지시사항에는 꼭 들어가야 할 키워드나 제외할 내용을 적어두면 됩니다.',
+const thumbnailOptions: Array<{ value: BlogPost['imageStyle']; label: string }> = [
+  { value: 'ai', label: 'AI' },
+  { value: 'laptop', label: 'Laptop' },
+  { value: 'docker', label: 'Docker' },
+  { value: 'code', label: 'Code' },
+  { value: 'chart', label: 'Chart' },
+  { value: 'security', label: 'Security' },
+  { value: 'data', label: 'Data' },
+  { value: 'monitor', label: 'Monitor' },
 ];
 
+const initialDraft: PostCreateRequest = {
+  slug: '',
+  categoryId: 0,
+  title: '',
+  excerpt: '',
+  readTime: '',
+  thumbnailStyle: 'laptop',
+  contentMarkdown: '',
+  tags: [],
+};
+
 export function AdminAiPostingPage() {
+  const navigate = useNavigate();
+  const { showMessage } = useFeedback();
+  const [topic, setTopic] = useState('');
+  const [direction, setDirection] = useState('');
+  const [keywords, setKeywords] = useState('');
+  const [excludedKeywords, setExcludedKeywords] = useState('');
+  const [level, setLevel] = useState('초급도 이해할 수 있게');
+  const [lengthHint, setLengthHint] = useState('보통');
+  const [categories, setCategories] = useState<AdminCategoryRow[]>([]);
+  const [draft, setDraft] = useState<PostCreateRequest>(initialDraft);
+  const [recommendedTopics, setRecommendedTopics] = useState<string[]>([]);
+  const [recommendedCategorySlug, setRecommendedCategorySlug] = useState('');
+  const [tagText, setTagText] = useState('');
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadCategories() {
+      try {
+        const nextCategories = await getAdminCategories();
+
+        if (!cancelled) {
+          setCategories(nextCategories);
+        }
+      } catch (error) {
+        if (!cancelled) {
+          setErrorMessage(
+            error instanceof Error ? error.message : '카테고리 목록을 불러오지 못했습니다.',
+          );
+        }
+      }
+    }
+
+    void loadCategories();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const selectedCategory = useMemo(
+    () => categories.find((category) => category.id === draft.categoryId),
+    [categories, draft.categoryId],
+  );
+
+  async function handleGenerate() {
+    const trimmedTopic = topic.trim();
+
+    if (!trimmedTopic) {
+      setErrorMessage('글 주제를 입력해 주세요.');
+      return;
+    }
+
+    setIsGenerating(true);
+    setErrorMessage(null);
+
+    try {
+      const response = await generateAiPost({ topic: trimmedTopic });
+      const recommendedCategory = categories.find(
+        (category) => category.slug === response.recommendedCategorySlug,
+      );
+      const fallbackCategory = categories[0];
+      const nextCategoryId = recommendedCategory?.id ?? fallbackCategory?.id ?? 0;
+
+      setDraft({
+        slug: createSlug(response.title, trimmedTopic),
+        categoryId: nextCategoryId,
+        title: response.title,
+        excerpt: response.summary,
+        readTime: response.readTime,
+        thumbnailStyle: response.thumbnailStyle,
+        contentMarkdown: response.content,
+        tags: response.tags,
+      });
+      setTagText(response.tags.join(', '));
+      setRecommendedTopics(response.recommendedTopics);
+      setRecommendedCategorySlug(response.recommendedCategorySlug);
+      showMessage({
+        tone: 'success',
+        title: 'AI 글 초안을 생성했습니다.',
+        description: '제목, 본문, 태그, 카테고리를 확인한 뒤 저장할 수 있습니다.',
+      });
+    } catch (error) {
+      const description =
+        error instanceof Error && error.message === 'FORBIDDEN'
+          ? '관리자 권한이 필요합니다.'
+          : error instanceof Error
+            ? error.message
+            : 'AI 글 초안을 생성하지 못했습니다.';
+
+      setErrorMessage(description);
+      showMessage({
+        tone: 'error',
+        title: 'AI 글 생성에 실패했습니다.',
+        description,
+      });
+    } finally {
+      setIsGenerating(false);
+    }
+  }
+
+  async function handleSave() {
+    const tags = parseTags(tagText);
+    const request = {
+      ...draft,
+      slug: draft.slug.trim(),
+      title: draft.title.trim(),
+      excerpt: draft.excerpt.trim(),
+      readTime: draft.readTime.trim(),
+      contentMarkdown: draft.contentMarkdown.trim(),
+      tags,
+    };
+
+    if (!request.slug || !request.categoryId || !request.title || !request.excerpt || !request.contentMarkdown) {
+      setErrorMessage('제목, 요약, 본문, slug, 카테고리는 반드시 입력해야 합니다.');
+      return;
+    }
+
+    if (tags.length === 0) {
+      setErrorMessage('태그를 하나 이상 입력해 주세요.');
+      return;
+    }
+
+    setIsSaving(true);
+    setErrorMessage(null);
+
+    try {
+      const savedPost = await createPost(request);
+      showMessage({
+        tone: 'success',
+        title: '게시글을 저장했습니다.',
+        description: '기존 블로그 게시글 목록에서 바로 조회할 수 있습니다.',
+      });
+      navigate(`/posts/${savedPost.categorySlug}/${savedPost.slug}`);
+    } catch (error) {
+      const description =
+        error instanceof Error && error.message === 'SLUG_CONFLICT'
+          ? '이미 사용 중인 slug입니다. slug를 수정한 뒤 다시 저장해 주세요.'
+          : error instanceof Error && error.message === 'FORBIDDEN'
+            ? '게시글 저장은 관리자 권한이 필요합니다.'
+            : error instanceof Error
+              ? error.message
+              : '게시글 저장에 실패했습니다.';
+
+      setErrorMessage(description);
+      showMessage({
+        tone: 'error',
+        title: '게시글 저장에 실패했습니다.',
+        description,
+      });
+    } finally {
+      setIsSaving(false);
+    }
+  }
+
+  function updateDraft<K extends keyof PostCreateRequest>(key: K, value: PostCreateRequest[K]) {
+    setDraft((current) => ({
+      ...current,
+      [key]: value,
+    }));
+  }
+
   return (
     <div className="space-y-6">
-      <section className="rounded-[28px] border border-line bg-white p-6 shadow-[0_20px_60px_rgba(17,24,39,0.05)] md:p-8">
-        <div className="max-w-3xl">
-          <p className="text-sm font-bold text-primary">AI 자동 포스팅</p>
-          <h2 className="mt-3 text-4xl font-black tracking-tight text-gray-950">
-            AI 글 생성 및 관리
-          </h2>
-          <p className="mt-3 text-lg text-muted">
-            AI를 활용하여 새로운 블로그 글 초안을 생성하는 화면입니다. 현재는 기능 없이
-            화면과 이동 흐름만 구성되어 있습니다.
-          </p>
+      <section className="rounded-[24px] border border-line bg-white p-6 shadow-[0_18px_50px_rgba(17,24,39,0.05)] md:p-8">
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+          <div className="max-w-3xl">
+            <p className="text-sm font-bold text-primary">AI 자동 포스팅</p>
+            <h2 className="mt-3 text-3xl font-black tracking-tight text-gray-950 md:text-4xl">
+              주제 기반 학습형 블로그 초안 생성
+            </h2>
+            <p className="mt-3 text-base leading-7 text-muted">
+              실제 GPT API는 호출하지 않고, 백엔드 Mock 응답으로 학습형 글 초안을 생성합니다.
+              생성된 글은 수정한 뒤 기존 게시글 구조로 저장됩니다.
+            </p>
+          </div>
+          <div className="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-bold text-emerald-800">
+            API Key 저장 없음
+          </div>
         </div>
       </section>
 
-      <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_280px]">
-        <Card className="rounded-[28px] p-6 md:p-8">
-          <div className="border-b border-line pb-5">
-            <p className="text-sm font-bold text-primary">글 생성</p>
-            <h3 className="mt-2 text-2xl font-black tracking-tight text-gray-950">새 글 생성</h3>
+      {errorMessage ? (
+        <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-semibold text-red-700">
+          {errorMessage}
+        </div>
+      ) : null}
+
+      <div className="grid gap-6 xl:grid-cols-[minmax(0,420px)_1fr]">
+        <Card className="rounded-[24px] p-6">
+          <div className="flex items-center gap-3 border-b border-line pb-5">
+            <div className="grid h-11 w-11 place-items-center rounded-2xl bg-primary-soft text-primary">
+              <Sparkles className="h-5 w-5" />
+            </div>
+            <div>
+              <p className="text-sm font-bold text-primary">Generate</p>
+              <h3 className="text-xl font-black text-gray-950">글 생성 요청</h3>
+            </div>
           </div>
 
           <div className="mt-6 grid gap-5">
             <label className="grid gap-2">
-              <span className="text-sm font-semibold text-gray-700">주제 키워드</span>
-              <Input placeholder="예: Spring Boot AI 자동화" />
-            </label>
-
-            <div className="grid gap-5 md:grid-cols-2">
-              <label className="grid gap-2">
-                <span className="text-sm font-semibold text-gray-700">카테고리</span>
-                <Select defaultValue="ai">
-                  <option value="ai">AI 자동화</option>
-                  <option value="spring">Spring Boot</option>
-                  <option value="devops">DevOps</option>
-                </Select>
-              </label>
-
-              <label className="grid gap-2">
-                <span className="text-sm font-semibold text-gray-700">톤 & 스타일</span>
-                <Select defaultValue="technical">
-                  <option value="technical">전문적이고 기술적인</option>
-                  <option value="friendly">친근하고 설명적인</option>
-                  <option value="brief">짧고 요약형</option>
-                </Select>
-              </label>
-            </div>
-
-            <label className="grid gap-2">
-              <span className="text-sm font-semibold text-gray-700">추가 지시사항</span>
-              <Textarea
-                placeholder="예: 실무 예시와 구성 단계를 포함하고, 초보자도 이해하기 쉬운 흐름으로 작성"
-                className="min-h-40"
+              <span className="text-sm font-semibold text-gray-700">글 주제 *</span>
+              <Input
+                value={topic}
+                onChange={(event) => setTopic(event.target.value)}
+                placeholder="예: Spring Security"
               />
             </label>
 
-            <div className="flex justify-end pt-2">
-              <Button type="button" className="min-w-44 gap-2">
-                <Sparkles className="h-4 w-4" />
-                AI 글 생성하기
-              </Button>
+            <label className="grid gap-2">
+              <span className="text-sm font-semibold text-gray-700">원하는 글 방향</span>
+              <Input
+                value={direction}
+                onChange={(event) => setDirection(event.target.value)}
+                placeholder="예: 실무 보안 설정 중심"
+              />
+            </label>
+
+            <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-1">
+              <label className="grid gap-2">
+                <span className="text-sm font-semibold text-gray-700">포함할 키워드</span>
+                <Input
+                  value={keywords}
+                  onChange={(event) => setKeywords(event.target.value)}
+                  placeholder="JWT, OAuth2"
+                />
+              </label>
+
+              <label className="grid gap-2">
+                <span className="text-sm font-semibold text-gray-700">제외할 키워드</span>
+                <Input
+                  value={excludedKeywords}
+                  onChange={(event) => setExcludedKeywords(event.target.value)}
+                  placeholder="레거시 XML 설정"
+                />
+              </label>
             </div>
+
+            <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-1">
+              <label className="grid gap-2">
+                <span className="text-sm font-semibold text-gray-700">글 난이도</span>
+                <Select value={level} onChange={(event) => setLevel(event.target.value)}>
+                  <option>초급도 이해할 수 있게</option>
+                  <option>중급 개발자 기준</option>
+                  <option>실무 심화 중심</option>
+                </Select>
+              </label>
+
+              <label className="grid gap-2">
+                <span className="text-sm font-semibold text-gray-700">예상 분량</span>
+                <Select value={lengthHint} onChange={(event) => setLengthHint(event.target.value)}>
+                  <option>짧게</option>
+                  <option>보통</option>
+                  <option>자세히</option>
+                </Select>
+              </label>
+            </div>
+
+            <Button type="button" className="gap-2" disabled={isGenerating} onClick={() => void handleGenerate()}>
+              {isGenerating ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
+              {isGenerating ? '생성 중' : 'AI 블로그 글 생성'}
+            </Button>
           </div>
         </Card>
 
-        <Card className="rounded-[28px] p-6">
-          <div className="flex items-center gap-3">
-            <div className="grid h-11 w-11 place-items-center rounded-2xl bg-primary-soft text-primary">
-              <Lightbulb className="h-5 w-5" />
-            </div>
-            <div>
-              <p className="text-sm font-bold text-primary">생성 팁</p>
-              <h3 className="text-lg font-black text-gray-950">입력 가이드</h3>
-            </div>
-          </div>
-
-          <div className="mt-5 space-y-4">
-            {tips.map((tip, index) => (
-              <div key={tip} className="rounded-2xl border border-line bg-[#fbfbff] p-4">
-                <div className="flex items-start gap-3">
-                  <span className="mt-0.5 grid h-6 w-6 shrink-0 place-items-center rounded-full bg-primary-soft text-xs font-black text-primary">
-                    {index + 1}
-                  </span>
-                  <p className="text-sm leading-6 text-gray-600">{tip}</p>
+        <div className="grid gap-6">
+          <Card className="rounded-[24px] p-6">
+            <div className="flex flex-col gap-3 border-b border-line pb-5 md:flex-row md:items-center md:justify-between">
+              <div className="flex items-center gap-3">
+                <div className="grid h-11 w-11 place-items-center rounded-2xl bg-sky-50 text-sky-600">
+                  <BookOpenCheck className="h-5 w-5" />
+                </div>
+                <div>
+                  <p className="text-sm font-bold text-sky-600">Draft</p>
+                  <h3 className="text-xl font-black text-gray-950">생성 결과 편집</h3>
                 </div>
               </div>
-            ))}
-          </div>
-
-          <div className="mt-6 rounded-2xl border border-dashed border-primary/30 bg-primary-soft/50 p-4">
-            <div className="flex items-center gap-2 text-sm font-bold text-primary">
-              <PenSquare className="h-4 w-4" />
-              현재 상태
+              <Button
+                type="button"
+                variant="dark"
+                className="gap-2"
+                disabled={isSaving || !draft.title}
+                onClick={() => void handleSave()}
+              >
+                {isSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+                {isSaving ? '저장 중' : '게시글 저장'}
+              </Button>
             </div>
-            <p className="mt-2 text-sm leading-6 text-gray-600">
-              이 화면은 디자인과 이동 경로만 연결된 상태입니다. 저장, 생성, 목록 반영 같은 기능은
-              아직 붙어 있지 않습니다.
-            </p>
+
+            <div className="mt-6 grid gap-5">
+              <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_220px]">
+                <label className="grid gap-2">
+                  <span className="text-sm font-semibold text-gray-700">제목</span>
+                  <Input value={draft.title} onChange={(event) => updateDraft('title', event.target.value)} />
+                </label>
+                <label className="grid gap-2">
+                  <span className="text-sm font-semibold text-gray-700">Slug</span>
+                  <Input value={draft.slug} onChange={(event) => updateDraft('slug', event.target.value)} />
+                </label>
+              </div>
+
+              <label className="grid gap-2">
+                <span className="text-sm font-semibold text-gray-700">요약</span>
+                <Textarea
+                  className="min-h-24"
+                  value={draft.excerpt}
+                  onChange={(event) => updateDraft('excerpt', event.target.value)}
+                />
+              </label>
+
+              <div className="grid gap-5 md:grid-cols-3">
+                <label className="grid gap-2">
+                  <span className="text-sm font-semibold text-gray-700">카테고리</span>
+                  <Select
+                    value={draft.categoryId || ''}
+                    onChange={(event) => updateDraft('categoryId', Number(event.target.value))}
+                  >
+                    <option value="">카테고리 선택</option>
+                    {categories.map((category) => (
+                      <option key={category.id ?? category.slug} value={category.id}>
+                        {category.name}
+                      </option>
+                    ))}
+                  </Select>
+                </label>
+
+                <label className="grid gap-2">
+                  <span className="text-sm font-semibold text-gray-700">예상 읽기 시간</span>
+                  <Input value={draft.readTime} onChange={(event) => updateDraft('readTime', event.target.value)} />
+                </label>
+
+                <label className="grid gap-2">
+                  <span className="text-sm font-semibold text-gray-700">썸네일 스타일</span>
+                  <Select
+                    value={draft.thumbnailStyle}
+                    onChange={(event) =>
+                      updateDraft('thumbnailStyle', event.target.value as BlogPost['imageStyle'])
+                    }
+                  >
+                    {thumbnailOptions.map((option) => (
+                      <option key={option.value} value={option.value}>
+                        {option.label}
+                      </option>
+                    ))}
+                  </Select>
+                </label>
+              </div>
+
+              <label className="grid gap-2">
+                <span className="text-sm font-semibold text-gray-700">태그</span>
+                <Input
+                  value={tagText}
+                  onChange={(event) => {
+                    setTagText(event.target.value);
+                    updateDraft('tags', parseTags(event.target.value));
+                  }}
+                  placeholder="쉼표로 구분해 입력"
+                />
+              </label>
+
+              <label className="grid gap-2">
+                <span className="text-sm font-semibold text-gray-700">본문 마크다운</span>
+                <Textarea
+                  className="min-h-[460px] font-mono leading-6"
+                  value={draft.contentMarkdown}
+                  onChange={(event) => updateDraft('contentMarkdown', event.target.value)}
+                />
+              </label>
+            </div>
+          </Card>
+
+          <div className="grid gap-6 lg:grid-cols-2">
+            <Card className="rounded-[24px] p-6">
+              <div className="flex items-center gap-3">
+                <div className="grid h-10 w-10 place-items-center rounded-2xl bg-amber-50 text-amber-600">
+                  <Lightbulb className="h-5 w-5" />
+                </div>
+                <div>
+                  <p className="text-sm font-bold text-amber-600">Recommendation</p>
+                  <h3 className="font-black text-gray-950">추천 정보</h3>
+                </div>
+              </div>
+              <div className="mt-5 grid gap-3 text-sm text-gray-600">
+                <p>
+                  추천 카테고리:{' '}
+                  <strong className="text-gray-950">
+                    {recommendedCategorySlug || '생성 후 표시됩니다'}
+                  </strong>
+                </p>
+                <p>
+                  현재 선택:{' '}
+                  <strong className="text-gray-950">{selectedCategory?.name ?? '선택 안 됨'}</strong>
+                </p>
+              </div>
+            </Card>
+
+            <Card className="rounded-[24px] p-6">
+              <p className="text-sm font-bold text-primary">Next Study</p>
+              <h3 className="mt-1 font-black text-gray-950">추가로 학습하면 좋은 항목</h3>
+              <div className="mt-4 flex flex-wrap gap-2">
+                {recommendedTopics.length > 0 ? (
+                  recommendedTopics.map((item) => (
+                    <span
+                      key={item}
+                      className="rounded-full border border-line bg-gray-50 px-3 py-1.5 text-sm font-semibold text-gray-700"
+                    >
+                      {item}
+                    </span>
+                  ))
+                ) : (
+                  <p className="text-sm text-muted">AI 글 생성 후 추천 학습 항목이 표시됩니다.</p>
+                )}
+              </div>
+            </Card>
           </div>
-        </Card>
+        </div>
       </div>
     </div>
   );
+}
+
+function parseTags(value: string) {
+  return value
+    .split(',')
+    .map((tag) => tag.trim())
+    .filter(Boolean)
+    .slice(0, 10);
+}
+
+function createSlug(title: string, fallback: string) {
+  const source = `${title} ${fallback}`;
+  const slug = source
+    .toLowerCase()
+    .replace(/[^a-z0-9\s-]/g, ' ')
+    .trim()
+    .replace(/\s+/g, '-')
+    .replace(/-+/g, '-')
+    .replace(/^-|-$/g, '');
+
+  return slug || `ai-post-${Date.now()}`;
 }
