@@ -1,4 +1,4 @@
-import { BookOpenCheck, Lightbulb, Loader2, Save, Sparkles } from 'lucide-react';
+import { BookOpenCheck, Eye, Lightbulb, Loader2, PencilLine, Save, Sparkles } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { generateAiPost } from '../../api/aiPosts';
@@ -10,6 +10,7 @@ import { Input } from '../../components/ui/Input';
 import { Select } from '../../components/ui/Select';
 import { Textarea } from '../../components/ui/Textarea';
 import { useFeedback } from '../../features/feedback/FeedbackContext';
+import { PostMarkdownRenderer } from '../../features/post/PostMarkdownRenderer';
 import type { AdminCategoryRow, BlogPost, PostCreateRequest } from '../../types';
 
 const thumbnailOptions: Array<{ value: BlogPost['imageStyle']; label: string }> = [
@@ -50,6 +51,7 @@ export function AdminAiPostingPage() {
   const [tagText, setTagText] = useState('');
   const [isGenerating, setIsGenerating] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [isPreviewMode, setIsPreviewMode] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   useEffect(() => {
@@ -316,98 +318,153 @@ export function AdminAiPostingPage() {
                   <h3 className="text-xl font-black text-gray-950">생성 결과 편집</h3>
                 </div>
               </div>
-              <Button
-                type="button"
-                variant="dark"
-                className="gap-2"
-                disabled={isSaving || !draft.title}
-                onClick={() => void handleSave()}
-              >
-                {isSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
-                {isSaving ? '저장 중' : '게시글 저장'}
-              </Button>
+              <div className="flex flex-wrap gap-2">
+                <Button
+                  type="button"
+                  variant={isPreviewMode ? 'primary' : 'outline'}
+                  className="gap-2"
+                  disabled={!draft.contentMarkdown}
+                  onClick={() => setIsPreviewMode((current) => !current)}
+                >
+                  {isPreviewMode ? <PencilLine className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  {isPreviewMode ? '편집하기' : '미리보기'}
+                </Button>
+                <Button
+                  type="button"
+                  variant="dark"
+                  className="gap-2"
+                  disabled={isSaving || !draft.title}
+                  onClick={() => void handleSave()}
+                >
+                  {isSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+                  {isSaving ? '저장 중' : '게시글 저장'}
+                </Button>
+              </div>
             </div>
 
-            <div className="mt-6 grid gap-5">
-              <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_220px]">
+            {isPreviewMode ? (
+              <article className="mt-6 rounded-2xl border border-line bg-white p-5 md:p-7">
+                {draft.title ? (
+                  <h1 className="text-3xl font-extrabold leading-tight tracking-tight text-gray-950">
+                    {draft.title}
+                  </h1>
+                ) : (
+                  <p className="text-sm font-semibold text-muted">미리볼 제목이 없습니다.</p>
+                )}
+
+                {draft.excerpt ? (
+                  <p className="mt-4 text-base leading-8 text-muted">{draft.excerpt}</p>
+                ) : null}
+
+                <div className="mt-5 flex flex-wrap items-center gap-3 text-sm text-muted">
+                  {selectedCategory ? <span>{selectedCategory.name}</span> : null}
+                  {draft.readTime ? <span>{draft.readTime}</span> : null}
+                  {draft.thumbnailStyle ? <span>{draft.thumbnailStyle}</span> : null}
+                </div>
+
+                {parseTags(tagText).length > 0 ? (
+                  <div className="mt-5 flex flex-wrap gap-2">
+                    {parseTags(tagText).map((tag) => (
+                      <span
+                        key={tag}
+                        className="rounded-full border border-line bg-gray-50 px-3 py-1.5 text-sm font-semibold text-gray-700"
+                      >
+                        {tag}
+                      </span>
+                    ))}
+                  </div>
+                ) : null}
+
+                <div className="mt-8 border-t border-line pt-2">
+                  {draft.contentMarkdown ? (
+                    <PostMarkdownRenderer markdown={draft.contentMarkdown} />
+                  ) : (
+                    <p className="mt-6 text-sm text-muted">미리볼 본문이 없습니다.</p>
+                  )}
+                </div>
+              </article>
+            ) : (
+              <div className="mt-6 grid gap-5">
+                <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_220px]">
+                  <label className="grid gap-2">
+                    <span className="text-sm font-semibold text-gray-700">제목</span>
+                    <Input value={draft.title} onChange={(event) => updateDraft('title', event.target.value)} />
+                  </label>
+                  <label className="grid gap-2">
+                    <span className="text-sm font-semibold text-gray-700">Slug</span>
+                    <Input value={draft.slug} onChange={(event) => updateDraft('slug', event.target.value)} />
+                  </label>
+                </div>
+
                 <label className="grid gap-2">
-                  <span className="text-sm font-semibold text-gray-700">제목</span>
-                  <Input value={draft.title} onChange={(event) => updateDraft('title', event.target.value)} />
+                  <span className="text-sm font-semibold text-gray-700">요약</span>
+                  <Textarea
+                    className="min-h-24"
+                    value={draft.excerpt}
+                    onChange={(event) => updateDraft('excerpt', event.target.value)}
+                  />
                 </label>
+
+                <div className="grid gap-5 md:grid-cols-3">
+                  <label className="grid gap-2">
+                    <span className="text-sm font-semibold text-gray-700">카테고리</span>
+                    <Select
+                      value={draft.categoryId || ''}
+                      onChange={(event) => updateDraft('categoryId', Number(event.target.value))}
+                    >
+                      <option value="">카테고리 선택</option>
+                      {categories.map((category) => (
+                        <option key={category.id ?? category.slug} value={category.id}>
+                          {category.name}
+                        </option>
+                      ))}
+                    </Select>
+                  </label>
+
+                  <label className="grid gap-2">
+                    <span className="text-sm font-semibold text-gray-700">예상 읽기 시간</span>
+                    <Input value={draft.readTime} onChange={(event) => updateDraft('readTime', event.target.value)} />
+                  </label>
+
+                  <label className="grid gap-2">
+                    <span className="text-sm font-semibold text-gray-700">썸네일 스타일</span>
+                    <Select
+                      value={draft.thumbnailStyle}
+                      onChange={(event) =>
+                        updateDraft('thumbnailStyle', event.target.value as BlogPost['imageStyle'])
+                      }
+                    >
+                      {thumbnailOptions.map((option) => (
+                        <option key={option.value} value={option.value}>
+                          {option.label}
+                        </option>
+                      ))}
+                    </Select>
+                  </label>
+                </div>
+
                 <label className="grid gap-2">
-                  <span className="text-sm font-semibold text-gray-700">Slug</span>
-                  <Input value={draft.slug} onChange={(event) => updateDraft('slug', event.target.value)} />
+                  <span className="text-sm font-semibold text-gray-700">태그</span>
+                  <Input
+                    value={tagText}
+                    onChange={(event) => {
+                      setTagText(event.target.value);
+                      updateDraft('tags', parseTags(event.target.value));
+                    }}
+                    placeholder="쉼표로 구분해 입력"
+                  />
+                </label>
+
+                <label className="grid gap-2">
+                  <span className="text-sm font-semibold text-gray-700">본문 마크다운</span>
+                  <Textarea
+                    className="min-h-[460px] font-mono leading-6"
+                    value={draft.contentMarkdown}
+                    onChange={(event) => updateDraft('contentMarkdown', event.target.value)}
+                  />
                 </label>
               </div>
-
-              <label className="grid gap-2">
-                <span className="text-sm font-semibold text-gray-700">요약</span>
-                <Textarea
-                  className="min-h-24"
-                  value={draft.excerpt}
-                  onChange={(event) => updateDraft('excerpt', event.target.value)}
-                />
-              </label>
-
-              <div className="grid gap-5 md:grid-cols-3">
-                <label className="grid gap-2">
-                  <span className="text-sm font-semibold text-gray-700">카테고리</span>
-                  <Select
-                    value={draft.categoryId || ''}
-                    onChange={(event) => updateDraft('categoryId', Number(event.target.value))}
-                  >
-                    <option value="">카테고리 선택</option>
-                    {categories.map((category) => (
-                      <option key={category.id ?? category.slug} value={category.id}>
-                        {category.name}
-                      </option>
-                    ))}
-                  </Select>
-                </label>
-
-                <label className="grid gap-2">
-                  <span className="text-sm font-semibold text-gray-700">예상 읽기 시간</span>
-                  <Input value={draft.readTime} onChange={(event) => updateDraft('readTime', event.target.value)} />
-                </label>
-
-                <label className="grid gap-2">
-                  <span className="text-sm font-semibold text-gray-700">썸네일 스타일</span>
-                  <Select
-                    value={draft.thumbnailStyle}
-                    onChange={(event) =>
-                      updateDraft('thumbnailStyle', event.target.value as BlogPost['imageStyle'])
-                    }
-                  >
-                    {thumbnailOptions.map((option) => (
-                      <option key={option.value} value={option.value}>
-                        {option.label}
-                      </option>
-                    ))}
-                  </Select>
-                </label>
-              </div>
-
-              <label className="grid gap-2">
-                <span className="text-sm font-semibold text-gray-700">태그</span>
-                <Input
-                  value={tagText}
-                  onChange={(event) => {
-                    setTagText(event.target.value);
-                    updateDraft('tags', parseTags(event.target.value));
-                  }}
-                  placeholder="쉼표로 구분해 입력"
-                />
-              </label>
-
-              <label className="grid gap-2">
-                <span className="text-sm font-semibold text-gray-700">본문 마크다운</span>
-                <Textarea
-                  className="min-h-[460px] font-mono leading-6"
-                  value={draft.contentMarkdown}
-                  onChange={(event) => updateDraft('contentMarkdown', event.target.value)}
-                />
-              </label>
-            </div>
+            )}
           </Card>
 
           <div className="grid gap-6 lg:grid-cols-2">
