@@ -1,15 +1,9 @@
 import { Github, Linkedin, Mail } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import { usePublicMenus } from '../../hooks/usePublicMenus';
 import { Button } from '../ui/Button';
 import { Input } from '../ui/Input';
-
-const footerLinks = [
-  { label: '홈', to: '/' },
-  { label: '블로그', to: '/posts' },
-  { label: '포트폴리오', to: '/posts/devops' },
-  { label: 'AI 자동 포스팅', to: '/posts/ai-automation' },
-];
 
 const introLinks = [
   { label: '소개 (About)', to: '/' },
@@ -19,6 +13,7 @@ const introLinks = [
 
 export function Footer() {
   const navigate = useNavigate();
+  const footerLinks = usePublicMenus();
 
   return (
     <footer className="border-t border-line px-5 pb-10 pt-6 md:px-8 xl:px-12">
@@ -82,7 +77,7 @@ function FooterColumn({
       <h4 className="font-bold text-gray-950">{title}</h4>
       <div className="mt-4 grid gap-2 text-sm text-muted">
         {links.map((link) => (
-          <Link key={link.label} to={link.to} className="transition hover:text-primary">
+          <Link key={`${link.label}-${link.to}`} to={link.to} className="transition hover:text-primary">
             {link.label}
           </Link>
         ))}

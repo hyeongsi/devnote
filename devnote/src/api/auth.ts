@@ -1,6 +1,7 @@
 import type { AuthLoginRequest, AuthUser } from '../types';
 
 const AUTH_API_URL = 'http://localhost:8080/api/auth';
+export const AUTH_CHANGED_EVENT = 'devnote:auth-changed';
 
 export async function login(request: AuthLoginRequest): Promise<AuthUser> {
   const response = await fetch(`${AUTH_API_URL}/login`, {
@@ -20,7 +21,10 @@ export async function login(request: AuthLoginRequest): Promise<AuthUser> {
     throw new Error(`로그인에 실패했습니다. (${response.status})`);
   }
 
-  return (await response.json()) as AuthUser;
+  const user = (await response.json()) as AuthUser;
+  notifyAuthChanged();
+
+  return user;
 }
 
 export async function getCurrentUser(): Promise<AuthUser | null> {
@@ -48,4 +52,14 @@ export async function logout(): Promise<void> {
   if (!response.ok && response.status !== 204) {
     throw new Error(`로그아웃에 실패했습니다. (${response.status})`);
   }
+
+  notifyAuthChanged();
+}
+
+export function notifyAuthChanged() {
+  if (typeof window === 'undefined') {
+    return;
+  }
+
+  window.dispatchEvent(new Event(AUTH_CHANGED_EVENT));
 }

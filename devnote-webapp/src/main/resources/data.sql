@@ -64,6 +64,23 @@ VALUES
         7
     );
 
+INSERT INTO menus (
+    id,
+    name,
+    path,
+    state,
+    visible,
+    display_order
+)
+VALUES
+    (1, '홈', '/', '운영 중', TRUE, 1),
+    (2, '블로그', '/posts', '운영 중', TRUE, 2),
+    (3, '프로젝트', '/projects', '운영 중', TRUE, 3),
+    (4, 'AI 자동 포스팅', '/admin/ai-posting', '운영 중', TRUE, 4),
+    (5, '기술 스택', '/stack', '준비 중', FALSE, 5),
+    (6, '소개', '/about', '준비 중', FALSE, 6),
+    (7, '문의', '/contact', '준비 중', FALSE, 7);
+
 INSERT INTO posts (
     id,
     slug,

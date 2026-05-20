@@ -37,6 +37,17 @@ public class PostService {
         return toDetailResponse(post);
     }
 
+    @Transactional
+    public void deletePost(String categorySlug, String postSlug) {
+        Post post = postRepository.findPostDetail(categorySlug, postSlug)
+                .orElseThrow(() -> new ResponseStatusException(
+                        NOT_FOUND,
+                        "Post not found: " + categorySlug + "/" + postSlug
+                ));
+
+        postRepository.delete(post);
+    }
+
     private PostResponse toSummaryResponse(Post post) {
         return new PostResponse(
                 post.getId(),

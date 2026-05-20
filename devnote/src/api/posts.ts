@@ -36,6 +36,25 @@ export async function getPost(categorySlug: string, postSlug: string): Promise<B
   };
 }
 
+export async function deletePost(categorySlug: string, postSlug: string): Promise<void> {
+  const response = await fetch(`${POSTS_API_URL}/${categorySlug}/${postSlug}`, {
+    method: 'DELETE',
+    credentials: 'include',
+  });
+
+  if (response.status === 401 || response.status === 403) {
+    throw new Error('FORBIDDEN');
+  }
+
+  if (response.status === 404) {
+    throw new Error('POST_NOT_FOUND');
+  }
+
+  if (!response.ok) {
+    throw new Error(`게시글을 삭제하지 못했습니다. (${response.status})`);
+  }
+}
+
 function mapPostResponse(post: BlogPostApiResponse): BlogPost {
   return {
     id: post.id,

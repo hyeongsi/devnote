@@ -10,17 +10,20 @@ import {
   MessageSquareShare,
   Package,
   ServerCog,
+  Trash2,
 } from 'lucide-react';
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
-import { Link, useParams } from 'react-router-dom';
-import { getPost, getPosts } from '../api/posts';
+import { Link, useNavigate, useParams } from 'react-router-dom';
+import { getCurrentUser } from '../api/auth';
+import { deletePost, getPost, getPosts } from '../api/posts';
 import { Button } from '../components/ui/Button';
 import { Card } from '../components/ui/Card';
 import { TagList } from '../components/ui/TagList';
 import { getPostPath } from '../data/siteData';
+import { useFeedback } from '../features/feedback/FeedbackContext';
 import { PostMarkdownRenderer } from '../features/post/PostMarkdownRenderer';
 import { extractMarkdownHeadings } from '../features/post/postMarkdown';
-import type { BlogPost, BlogPostDetail } from '../types';
+import type { AuthUser, BlogPost, BlogPostDetail } from '../types';
 import { formatViewCount } from '../utils/postMetadata';
 
 const heroStyles: Record<BlogPost['imageStyle'], { icon: ReactNode; className: string }> = {
@@ -60,9 +63,13 @@ const heroStyles: Record<BlogPost['imageStyle'], { icon: ReactNode; className: s
 
 export function PostDetailPage() {
   const { categorySlug, postSlug } = useParams();
+  const navigate = useNavigate();
+  const { showConfirm, showMessage } = useFeedback();
   const [post, setPost] = useState<BlogPostDetail | null>(null);
   const [posts, setPosts] = useState<BlogPost[]>([]);
+  const [currentUser, setCurrentUser] = useState<AuthUser | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [isDeleting, setIsDeleting] = useState(false);
   const [isNotFound, setIsNotFound] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
@@ -129,10 +136,80 @@ export function PostDetailPage() {
     };
   }, [categorySlug, postSlug]);
 
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadCurrentUser() {
+      try {
+        const user = await getCurrentUser();
+
+        if (!cancelled) {
+          setCurrentUser(user);
+        }
+      } catch {
+        if (!cancelled) {
+          setCurrentUser(null);
+        }
+      }
+    }
+
+    void loadCurrentUser();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
   const headings = useMemo(
     () => (post ? extractMarkdownHeadings(post.contentMarkdown) : []),
     [post],
   );
+
+  const canDeletePost = currentUser?.role === 'ROLE_ADMIN';
+
+  async function handleDeletePost() {
+    if (!post || isDeleting) {
+      return;
+    }
+
+    const accepted = await showConfirm({
+      title: '게시글을 삭제할까요?',
+      description: `"${post.title}" 게시글은 삭제 후 복구할 수 없습니다.`,
+      confirmLabel: '삭제',
+      cancelLabel: '취소',
+      tone: 'error',
+    });
+
+    if (!accepted) {
+      return;
+    }
+
+    setIsDeleting(true);
+
+    try {
+      await deletePost(post.categorySlug, post.slug);
+      showMessage({
+        tone: 'success',
+        title: '게시글이 삭제되었습니다.',
+      });
+      navigate('/posts', { replace: true });
+    } catch (error) {
+      const description =
+        error instanceof Error && error.message === 'FORBIDDEN'
+          ? '관리자 권한이 있는 사용자만 게시글을 삭제할 수 있습니다.'
+          : error instanceof Error
+            ? error.message
+            : '다시 시도해 주세요.';
+
+      showMessage({
+        tone: 'error',
+        title: '게시글 삭제에 실패했습니다.',
+        description,
+      });
+    } finally {
+      setIsDeleting(false);
+    }
+  }
 
   if (isLoading) {
     return (
@@ -210,9 +287,24 @@ export function PostDetailPage() {
           </Link>
         </div>
 
-        <h1 className="text-[31px] font-extrabold leading-tight tracking-tight text-gray-950 md:text-[42px]">
-          {post.title}
-        </h1>
+        <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+          <h1 className="text-[31px] font-extrabold leading-tight tracking-tight text-gray-950 md:text-[42px]">
+            {post.title}
+          </h1>
+          {canDeletePost ? (
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="shrink-0 gap-2 border-red-200 text-red-600 hover:border-red-300 hover:bg-red-50"
+              disabled={isDeleting}
+              onClick={() => void handleDeletePost()}
+            >
+              <Trash2 className="h-4 w-4" />
+              {isDeleting ? '삭제 중' : '삭제'}
+            </Button>
+          ) : null}
+        </div>
         <p className="mt-4 leading-8 text-muted">{post.excerpt}</p>
 
         <div className="mt-6 flex flex-wrap items-center gap-4 text-sm text-muted">
