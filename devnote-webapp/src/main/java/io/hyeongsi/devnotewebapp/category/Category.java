@@ -73,4 +73,12 @@ public class Category {
     public Integer getDisplayOrder() {
         return displayOrder;
     }
+
+    public void updateAdminDetails(String slug, String name, String description, Boolean visible, Integer displayOrder) {
+        this.slug = slug;
+        this.name = name;
+        this.description = description;
+        this.visible = visible;
+        this.displayOrder = displayOrder;
+    }
 }

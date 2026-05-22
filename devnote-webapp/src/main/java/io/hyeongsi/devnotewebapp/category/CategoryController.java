@@ -1,6 +1,8 @@
 package io.hyeongsi.devnotewebapp.category;
 
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -24,5 +26,10 @@ public class CategoryController {
     @GetMapping("/admin")
     public List<AdminCategoryResponse> getAdminCategories() {
         return categoryService.getAdminCategories();
+    }
+
+    @PutMapping("/admin")
+    public void saveAdminCategories(@RequestBody List<AdminCategorySaveRequest> requests) {
+        categoryService.saveAdminCategories(requests);
     }
 }
