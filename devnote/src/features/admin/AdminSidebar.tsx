@@ -8,20 +8,66 @@ import {
   Settings,
   UserRound,
 } from 'lucide-react';
+import { useCallback, useEffect, useState } from 'react';
 import { NavLink } from 'react-router-dom';
+import { getAdminSidebarMenus, MENUS_CHANGED_EVENT } from '../../api/menus';
+import type { PublicNavItem } from '../../types';
 
-const adminNavItems = [
-  { label: '대시보드', to: '/admin', icon: LayoutDashboard, end: true },
-  { label: '게시글 관리', to: '/posts', icon: FileText, end: false },
-  { label: '카테고리 관리', to: '/admin/categories', icon: FolderKanban, end: false },
-  { label: '메뉴 관리', to: '/admin/menus', icon: ListTree, end: false },
-  { label: '댓글 관리', to: '/posts/spring-boot', icon: MessageCircle, end: false },
-  { label: '사용자 관리', to: '/login', icon: UserRound, end: false },
-  { label: 'AI 자동 포스팅', to: '/admin/ai-posting', icon: Bot, end: false },
-  { label: '설정', to: '/login', icon: Settings, end: false },
+const fallbackAdminNavItems = [
+  { label: 'Dashboard', to: '/admin', icon: LayoutDashboard, end: true },
+  { label: 'Posts', to: '/posts', icon: FileText, end: false },
+  { label: 'Categories', to: '/admin/categories', icon: FolderKanban, end: false },
+  { label: 'Menus', to: '/admin/menus', icon: ListTree, end: false },
+  { label: 'Comments', to: '/posts/spring-boot', icon: MessageCircle, end: false },
+  { label: 'Users', to: '/login', icon: UserRound, end: false },
+  { label: 'AI Posting', to: '/admin/ai-posting', icon: Bot, end: false },
+  { label: 'Settings', to: '/login', icon: Settings, end: false },
 ];
 
+const adminIconByPath = [
+  { match: '/admin/ai-posting', icon: Bot },
+  { match: '/admin/categories', icon: FolderKanban },
+  { match: '/admin/menus', icon: ListTree },
+  { match: '/posts', icon: FileText },
+  { match: '/login', icon: UserRound },
+  { match: '/admin', icon: LayoutDashboard },
+] as const;
+
+function resolveAdminIcon(path: string) {
+  return adminIconByPath.find((entry) => path.startsWith(entry.match))?.icon ?? Settings;
+}
+
+function mapMenuToNavItem(menu: PublicNavItem) {
+  return {
+    label: menu.label,
+    to: menu.to,
+    icon: resolveAdminIcon(menu.to),
+    end: menu.end ?? false,
+  };
+}
+
 export function AdminSidebar() {
+  const [navItems, setNavItems] = useState(fallbackAdminNavItems);
+
+  const loadMenus = useCallback(async () => {
+    try {
+      const menus = await getAdminSidebarMenus();
+      setNavItems(menus.length > 0 ? menus.map(mapMenuToNavItem) : fallbackAdminNavItems);
+    } catch {
+      setNavItems(fallbackAdminNavItems);
+    }
+  }, []);
+
+  useEffect(() => {
+    void loadMenus();
+
+    window.addEventListener(MENUS_CHANGED_EVENT, loadMenus);
+
+    return () => {
+      window.removeEventListener(MENUS_CHANGED_EVENT, loadMenus);
+    };
+  }, [loadMenus]);
+
   return (
     <aside className="hidden w-[255px] shrink-0 border-r border-line bg-white md:flex md:flex-col">
       <div className="flex h-20 items-center gap-3 border-b border-line px-7">
@@ -32,11 +78,11 @@ export function AdminSidebar() {
       </div>
 
       <nav className="flex-1 space-y-1 px-4 py-5">
-        {adminNavItems.map((item) => {
+        {navItems.map((item) => {
           const Icon = item.icon;
           return (
             <NavLink
-              key={item.label}
+              key={`${item.label}-${item.to}`}
               to={item.to}
               end={item.end}
               className={({ isActive }) =>
@@ -60,7 +106,7 @@ export function AdminSidebar() {
             A
           </div>
           <div>
-            <p className="font-bold text-gray-950">관리자</p>
+            <p className="font-bold text-gray-950">Admin</p>
             <p className="text-xs text-muted">admin@devnote.dev</p>
           </div>
         </div>

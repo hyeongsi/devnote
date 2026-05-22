@@ -6,6 +6,9 @@ public record AdminMenuResponse(
         String path,
         String state,
         Boolean visible,
-        Integer displayOrder
+        Integer displayOrder,
+        String area,
+        Long parentId,
+        Integer depth
 ) {
 }

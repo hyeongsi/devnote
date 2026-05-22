@@ -15,10 +15,10 @@ public class Menu {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(nullable = false, unique = true, length = 60)
+    @Column(nullable = false, length = 60)
     private String name;
 
-    @Column(nullable = false, unique = true, length = 120)
+    @Column(nullable = false, length = 120)
     private String path;
 
     @Column(nullable = false, length = 60)
@@ -30,15 +30,35 @@ public class Menu {
     @Column(name = "display_order", nullable = false)
     private Integer displayOrder;
 
+    @Column(length = 20)
+    private String area;
+
+    @Column(name = "parent_id")
+    private Long parentId;
+
     protected Menu() {
     }
 
     public Menu(String name, String path, String state, Boolean visible, Integer displayOrder) {
+        this(name, path, state, visible, displayOrder, "HEADER", null);
+    }
+
+    public Menu(
+            String name,
+            String path,
+            String state,
+            Boolean visible,
+            Integer displayOrder,
+            String area,
+            Long parentId
+    ) {
         this.name = name;
         this.path = path;
         this.state = state;
         this.visible = visible;
         this.displayOrder = displayOrder;
+        this.area = area;
+        this.parentId = parentId;
     }
 
     public Long getId() {
@@ -65,11 +85,29 @@ public class Menu {
         return displayOrder;
     }
 
-    public void updateAdminDetails(String name, String path, String state, Boolean visible, Integer displayOrder) {
+    public String getArea() {
+        return area;
+    }
+
+    public Long getParentId() {
+        return parentId;
+    }
+
+    public void updateAdminDetails(
+            String name,
+            String path,
+            String state,
+            Boolean visible,
+            Integer displayOrder,
+            String area,
+            Long parentId
+    ) {
         this.name = name;
         this.path = path;
         this.state = state;
         this.visible = visible;
         this.displayOrder = displayOrder;
+        this.area = area;
+        this.parentId = parentId;
     }
 }

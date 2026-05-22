@@ -29,6 +29,7 @@ export interface EntityListManagedRow<TItem> {
 
 export interface EntityListCellContext<TItem, TValue> {
   row: TItem;
+  rows: TItem[];
   value: TValue;
   rowState: EntityRowState;
   isEditing: boolean;
@@ -88,4 +89,9 @@ export interface EntityListProps<TItem extends { id?: number; order: number }> {
   validateRow?: (row: TItem, rows: TItem[]) => Record<string, string>;
   getRowClassName?: (row: TItem, state: EntityRowState) => string;
   emptyMessage?: string;
+  tree?: {
+    getRowId: (row: TItem) => number | string | undefined;
+    getParentId: (row: TItem) => number | string | null | undefined;
+    getDepth?: (row: TItem) => number;
+  };
 }

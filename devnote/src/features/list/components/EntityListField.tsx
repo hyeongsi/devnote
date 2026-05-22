@@ -15,6 +15,7 @@ interface EntityListFieldProps<
   TField extends Extract<keyof TItem, string>,
 > {
   row: EntityListManagedRow<TItem>;
+  rows: EntityListManagedRow<TItem>[];
   column: EntityListFieldColumn<TItem, TField>;
   isEditing: boolean;
   updateField: (clientId: string, field: TField, value: TItem[TField]) => void;
@@ -25,6 +26,7 @@ export function EntityListField<
   TField extends Extract<keyof TItem, string>,
 >({
   row,
+  rows,
   column,
   isEditing,
   updateField,
@@ -34,6 +36,7 @@ export function EntityListField<
   const editable = resolveEntityListColumn(column, row.current);
   const context: EntityListCellContext<TItem, TItem[TField]> = {
     row: row.current,
+    rows: rows.filter((entry) => entry.state !== 'deleted').map((entry) => entry.current),
     value,
     rowState: row.state,
     isEditing,

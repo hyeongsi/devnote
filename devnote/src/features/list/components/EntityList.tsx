@@ -1,9 +1,10 @@
-import { useCallback, useMemo } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 
 import { useFeedback } from '../../feedback/FeedbackContext';
 import { useEntityList } from '../hooks/useEntityList';
 import type { EntityListManagedRow, EntityListProps } from '../types/entityListTypes';
 import { isEntityListFieldColumn } from '../utils/entityListColumns';
+import { getVisibleEntityTreeRows } from '../utils/entityListTree';
 import { EntityListMobileCards } from './EntityListMobileCards';
 import { EntityListStateBlock } from './EntityListStateBlock';
 import { EntityListSummary } from './EntityListSummary';
@@ -22,6 +23,7 @@ export function EntityList<TItem extends { id?: number; order: number }>({
   validateRow,
   getRowClassName,
   emptyMessage = 'No rows available.',
+  tree,
 }: EntityListProps<TItem>) {
   const { showConfirm, showMessage } = useFeedback();
 
@@ -58,6 +60,36 @@ export function EntityList<TItem extends { id?: number; order: number }>({
   });
 
   const fieldColumns = useMemo(() => columns.filter(isEntityListFieldColumn), [columns]);
+  const [collapsedTreeRowIds, setCollapsedTreeRowIds] = useState<Set<string>>(() => new Set());
+  const visibleRows = useMemo(
+    () => (tree ? getVisibleEntityTreeRows(rows, collapsedTreeRowIds, tree) : rows),
+    [collapsedTreeRowIds, rows, tree],
+  );
+
+  const toggleTreeRow = useCallback((row: TItem) => {
+    if (!tree) {
+      return;
+    }
+
+    const rowId = tree.getRowId(row);
+
+    if (rowId === null || rowId === undefined) {
+      return;
+    }
+
+    const rowKey = String(rowId);
+    setCollapsedTreeRowIds((current) => {
+      const next = new Set(current);
+
+      if (next.has(rowKey)) {
+        next.delete(rowKey);
+      } else {
+        next.add(rowKey);
+      }
+
+      return next;
+    });
+  }, [tree]);
 
   const toggleDelete = useCallback(
     async (row: EntityListManagedRow<TItem>) => {
@@ -130,7 +162,8 @@ export function EntityList<TItem extends { id?: number; order: number }>({
       />
 
       <EntityListTable
-        rows={rows}
+        rows={visibleRows}
+        allRows={rows}
         fieldColumns={fieldColumns}
         editingRowIds={editingRowIds}
         emptyMessage={emptyMessage}
@@ -138,16 +171,23 @@ export function EntityList<TItem extends { id?: number; order: number }>({
         onToggleEditing={toggleEditing}
         onToggleDelete={(row) => void toggleDelete(row)}
         updateField={updateField}
+        tree={tree}
+        collapsedTreeRowIds={collapsedTreeRowIds}
+        onToggleTreeRow={toggleTreeRow}
       />
 
       <EntityListMobileCards
-        rows={rows}
+        rows={visibleRows}
+        allRows={rows}
         fieldColumns={fieldColumns}
         editingRowIds={editingRowIds}
         emptyMessage={emptyMessage}
         onToggleEditing={toggleEditing}
         onToggleDelete={(row) => void toggleDelete(row)}
         updateField={updateField}
+        tree={tree}
+        collapsedTreeRowIds={collapsedTreeRowIds}
+        onToggleTreeRow={toggleTreeRow}
       />
 
       <EntityListSummary rowCount={rows.length} changeSet={changeSet} hasChanges={hasChanges} />

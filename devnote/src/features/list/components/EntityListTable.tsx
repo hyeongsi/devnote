@@ -1,16 +1,19 @@
-import { Check, Pencil, RotateCcw, Trash2 } from 'lucide-react';
+import { Check, ChevronDown, ChevronRight, Pencil, RotateCcw, Trash2 } from 'lucide-react';
 
 import type {
   EntityListFieldColumn,
   EntityListManagedRow,
   EntityRowState,
+  EntityListProps,
 } from '../types/entityListTypes';
 import { entityListStatePresentation } from '../utils/entityListPresentation';
+import { hasEntityTreeChildren } from '../utils/entityListTree';
 import { EntityListField } from './EntityListField';
 import { EntityListStatusBadge } from './EntityListStatusBadge';
 
 interface EntityListTableProps<TItem extends { id?: number; order: number }> {
   rows: EntityListManagedRow<TItem>[];
+  allRows: EntityListManagedRow<TItem>[];
   fieldColumns: EntityListFieldColumn<TItem>[];
   editingRowIds: string[];
   emptyMessage: string;
@@ -22,10 +25,14 @@ interface EntityListTableProps<TItem extends { id?: number; order: number }> {
     field: TKey,
     value: TItem[TKey],
   ) => void;
+  tree?: EntityListProps<TItem>['tree'];
+  collapsedTreeRowIds?: Set<string>;
+  onToggleTreeRow?: (row: TItem) => void;
 }
 
 export function EntityListTable<TItem extends { id?: number; order: number }>({
   rows,
+  allRows,
   fieldColumns,
   editingRowIds,
   emptyMessage,
@@ -33,6 +40,9 @@ export function EntityListTable<TItem extends { id?: number; order: number }>({
   onToggleEditing,
   onToggleDelete,
   updateField,
+  tree,
+  collapsedTreeRowIds,
+  onToggleTreeRow,
 }: EntityListTableProps<TItem>) {
   return (
     <div className="hidden overflow-x-auto md:block">
@@ -64,6 +74,10 @@ export function EntityListTable<TItem extends { id?: number; order: number }>({
           ) : (
             rows.map((row) => {
               const isEditing = editingRowIds.includes(row.clientId);
+              const treeRowId = tree?.getRowId(row.current);
+              const treeRowKey = treeRowId === undefined || treeRowId === null ? null : String(treeRowId);
+              const hasChildren = tree ? hasEntityTreeChildren(row.current, allRows, tree) : false;
+              const collapsed = treeRowKey ? collapsedTreeRowIds?.has(treeRowKey) ?? false : false;
 
               return (
                 <tr
@@ -80,12 +94,48 @@ export function EntityListTable<TItem extends { id?: number; order: number }>({
                       } ${column.className ?? ''}`}
                     >
                       <div className="space-y-1">
+                        {tree && column.id === fieldColumns[0]?.id ? (
+                          <div
+                            style={{ paddingLeft: `${(tree.getDepth?.(row.current) ?? 0) * 18}px` }}
+                          >
+                            <button
+                              type="button"
+                              className={`inline-flex items-center gap-2 text-left ${
+                                hasChildren ? 'cursor-pointer' : 'cursor-default'
+                              }`}
+                              onClick={() => {
+                                if (hasChildren) {
+                                  onToggleTreeRow?.(row.current);
+                                }
+                              }}
+                            >
+                              <span className="grid h-5 w-5 place-items-center text-gray-400">
+                                {hasChildren ? (
+                                  collapsed ? (
+                                    <ChevronRight className="h-4 w-4" />
+                                  ) : (
+                                    <ChevronDown className="h-4 w-4" />
+                                  )
+                                ) : null}
+                              </span>
+                              <EntityListField
+                                row={row}
+                                rows={allRows}
+                                column={column}
+                                isEditing={isEditing}
+                                updateField={updateField}
+                              />
+                            </button>
+                          </div>
+                        ) : (
                         <EntityListField
                           row={row}
+                          rows={allRows}
                           column={column}
                           isEditing={isEditing}
                           updateField={updateField}
                         />
+                        )}
                         {row.errors[column.field] ? (
                           <p className="text-xs font-semibold text-red-500">{row.errors[column.field]}</p>
                         ) : null}

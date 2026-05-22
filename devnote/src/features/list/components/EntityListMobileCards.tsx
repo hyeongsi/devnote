@@ -1,15 +1,18 @@
-import { Pencil, RotateCcw, Trash2, X } from 'lucide-react';
+import { ChevronDown, ChevronRight, Pencil, RotateCcw, Trash2, X } from 'lucide-react';
 
 import type {
   EntityListFieldColumn,
   EntityListManagedRow,
+  EntityListProps,
 } from '../types/entityListTypes';
 import { entityListStatePresentation } from '../utils/entityListPresentation';
+import { hasEntityTreeChildren } from '../utils/entityListTree';
 import { EntityListField } from './EntityListField';
 import { EntityListStatusBadge } from './EntityListStatusBadge';
 
 interface EntityListMobileCardsProps<TItem extends { id?: number; order: number }> {
   rows: EntityListManagedRow<TItem>[];
+  allRows: EntityListManagedRow<TItem>[];
   fieldColumns: EntityListFieldColumn<TItem>[];
   editingRowIds: string[];
   emptyMessage: string;
@@ -20,16 +23,23 @@ interface EntityListMobileCardsProps<TItem extends { id?: number; order: number 
     field: TKey,
     value: TItem[TKey],
   ) => void;
+  tree?: EntityListProps<TItem>['tree'];
+  collapsedTreeRowIds?: Set<string>;
+  onToggleTreeRow?: (row: TItem) => void;
 }
 
 export function EntityListMobileCards<TItem extends { id?: number; order: number }>({
   rows,
+  allRows,
   fieldColumns,
   editingRowIds,
   emptyMessage,
   onToggleEditing,
   onToggleDelete,
   updateField,
+  tree,
+  collapsedTreeRowIds,
+  onToggleTreeRow,
 }: EntityListMobileCardsProps<TItem>) {
   return (
     <div className="divide-y divide-line md:hidden">
@@ -38,6 +48,10 @@ export function EntityListMobileCards<TItem extends { id?: number; order: number
       ) : (
         rows.map((row) => {
           const isEditing = editingRowIds.includes(row.clientId);
+          const treeRowId = tree?.getRowId(row.current);
+          const treeRowKey = treeRowId === undefined || treeRowId === null ? null : String(treeRowId);
+          const hasChildren = tree ? hasEntityTreeChildren(row.current, allRows, tree) : false;
+          const collapsed = treeRowKey ? collapsedTreeRowIds?.has(treeRowKey) ?? false : false;
 
           return (
             <article
@@ -81,10 +95,21 @@ export function EntityListMobileCards<TItem extends { id?: number; order: number
                     <dd className="text-sm font-medium text-gray-700">
                       <EntityListField
                         row={row}
+                        rows={allRows}
                         column={column}
                         isEditing={isEditing}
                         updateField={updateField}
                       />
+                      {tree && column.id === fieldColumns[0]?.id && hasChildren ? (
+                        <button
+                          type="button"
+                          className="mt-2 inline-flex items-center gap-1 text-xs font-bold text-primary"
+                          onClick={() => onToggleTreeRow?.(row.current)}
+                        >
+                          {collapsed ? <ChevronRight className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
+                          {collapsed ? 'Show children' : 'Hide children'}
+                        </button>
+                      ) : null}
                       {row.errors[column.field] ? (
                         <p className="mt-1 text-xs font-semibold text-red-500">{row.errors[column.field]}</p>
                       ) : null}

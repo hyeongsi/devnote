@@ -28,6 +28,11 @@ public class MenuController {
         return menuService.getAdminMenus();
     }
 
+    @GetMapping("/admin/sidebar")
+    public List<AdminMenuResponse> getAdminSidebarMenus() {
+        return menuService.getAdminSidebarMenus();
+    }
+
     @PutMapping("/admin")
     public void saveAdminMenus(@RequestBody List<AdminMenuSaveRequest> requests) {
         menuService.saveAdminMenus(requests);

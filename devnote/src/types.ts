@@ -6,6 +6,8 @@ export interface PublicNavItem {
   end?: boolean;
 }
 
+export type MenuArea = 'ADMIN' | 'HEADER' | 'ROOT';
+
 export interface BlogCategory {
   id?: number;
   slug: string;
@@ -153,6 +155,9 @@ export interface AdminMenuRow {
   state: string;
   visible: boolean;
   order: number;
+  area?: MenuArea;
+  parentId?: number | null;
+  depth?: number;
 }
 
 export interface AdminCategoryRow {
@@ -182,4 +187,7 @@ export interface AdminMenuApiResponse {
   state: string;
   visible: boolean;
   displayOrder: number;
+  area?: MenuArea;
+  parentId?: number | null;
+  depth?: number;
 }

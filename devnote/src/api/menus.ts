@@ -1,5 +1,10 @@
 import type { AdminMenuApiResponse, AdminMenuRow } from '../types';
-import { mapMenuResponseToAdminRow, mapMenusToPublicNavItems, mapMenusToSavePayload } from './menuMapping';
+import {
+  mapMenuResponseToAdminRow,
+  mapMenusToAdminNavItems,
+  mapMenusToPublicNavItems,
+  mapMenusToSavePayload,
+} from './menuMapping';
 
 const MENUS_API_URL = 'http://localhost:8080/api/menus';
 export const MENUS_CHANGED_EVENT = 'devnote:menus-changed';
@@ -32,6 +37,20 @@ export async function getAdminMenus(): Promise<AdminMenuRow[]> {
   const menus = (await response.json()) as AdminMenuApiResponse[];
 
   return menus.map(mapMenuResponseToAdminRow);
+}
+
+export async function getAdminSidebarMenus() {
+  const response = await fetch(`${MENUS_API_URL}/admin/sidebar`, {
+    credentials: 'include',
+  });
+
+  if (!response.ok) {
+    throw new Error(`Admin menu list could not be loaded. (${response.status})`);
+  }
+
+  const menus = (await response.json()) as AdminMenuApiResponse[];
+
+  return mapMenusToAdminNavItems(menus.map(mapMenuResponseToAdminRow));
 }
 
 export async function saveAdminMenus(items: AdminMenuRow[]): Promise<void> {
