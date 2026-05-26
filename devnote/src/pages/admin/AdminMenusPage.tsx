@@ -1,80 +1,30 @@
+import { CornerDownRight, CornerUpLeft } from 'lucide-react';
+
 import { getAdminMenus, saveAdminMenus } from '../../api/menus';
 import {
   EntityList,
-  type EntityListCellContext,
   type EntityListColumn,
+  type EntityListManagedRow,
 } from '../../features/list';
-import type { AdminMenuRow, MenuArea } from '../../types';
-import { isMenuDescendant, isSystemAreaParent, validateMenuRow } from './adminMenuTree';
-
-const menuStateOptions = [
-  { label: 'Active', value: 'Active' },
-  { label: 'Preparing', value: 'Preparing' },
-  { label: 'Inactive', value: 'Inactive' },
-] as const;
-
-const menuAreaOptions = [
-  { label: 'Admin', value: 'ADMIN' },
-  { label: 'Header', value: 'HEADER' },
-] as const;
-
-function getAreaLabel(area: MenuArea | undefined) {
-  if (area === 'ADMIN') {
-    return 'Admin';
-  }
-
-  if (area === 'HEADER') {
-    return 'Header';
-  }
-
-  return 'Root';
-}
-
-function renderParentEditor({
-  row,
-  rows,
-  value,
-  update,
-}: EntityListCellContext<AdminMenuRow, AdminMenuRow[keyof AdminMenuRow]>) {
-  const parentId = typeof value === 'number' ? value : '';
-  const parentOptions = rows.filter((candidate) => {
-    if (!candidate.id || candidate.id === row.id) {
-      return false;
-    }
-
-    if (candidate.area !== row.area) {
-      return false;
-    }
-
-    return !isMenuDescendant(candidate, row, rows);
-  });
-
-  return (
-    <select
-      value={parentId}
-      className="h-10 w-full rounded-lg border border-line bg-white px-3 text-sm font-medium text-gray-700 outline-none transition focus:border-primary focus:ring-4 focus:ring-primary/10"
-      onChange={(event) => update(Number(event.target.value))}
-    >
-      <option value="" disabled>
-        Select parent
-      </option>
-      {parentOptions.map((option) => (
-        <option key={option.id} value={option.id}>
-          {`${'  '.repeat(option.depth ?? 0)}${option.name}`}
-        </option>
-      ))}
-    </select>
-  );
-}
+import type { AdminMenuRow } from '../../types';
+import {
+  canMoveAddedMenuToChild,
+  canMoveAddedMenuToParent,
+  createMenuDraftForTarget,
+  isSystemAreaParent,
+  moveAddedMenuToChild,
+  moveAddedMenuToParent,
+  validateMenuRow,
+} from './adminMenuTree';
 
 const columns: EntityListColumn<AdminMenuRow>[] = [
   {
     id: 'name',
-    title: 'Menu',
+    title: '메뉴명',
     type: 'text',
     field: 'name',
     required: true,
-    placeholder: 'Home',
+    placeholder: '홈',
     className: 'min-w-56',
     render: ({ row, value }) => (
       <span className={`block font-semibold ${isSystemAreaParent(row) ? 'text-gray-950' : 'text-gray-800'}`}>
@@ -83,59 +33,18 @@ const columns: EntityListColumn<AdminMenuRow>[] = [
     ),
   },
   {
-    id: 'area',
-    title: 'Area',
-    type: 'select',
-    field: 'area',
-    required: true,
-    options: [...menuAreaOptions],
-    editable: (row) => !isSystemAreaParent(row),
-    className: 'w-32',
-    render: ({ value }) => (
-      <span className="rounded-full bg-gray-100 px-2.5 py-1 text-xs font-bold text-gray-600">
-        {getAreaLabel(value as MenuArea | undefined)}
-      </span>
-    ),
-  },
-  {
-    id: 'parentId',
-    title: 'Parent',
-    type: 'number',
-    field: 'parentId',
-    editable: (row) => !isSystemAreaParent(row),
-    className: 'min-w-48',
-    editor: renderParentEditor,
-    render: ({ row, rows }) => {
-      if (isSystemAreaParent(row)) {
-        return <span className="text-xs font-semibold text-gray-400">ROOT child</span>;
-      }
-
-      const parent = rows.find((item) => item.id === row.parentId);
-      return <span className="text-sm text-gray-600">{parent?.name ?? '-'}</span>;
-    },
-  },
-  {
     id: 'path',
-    title: 'Path',
+    title: '경로',
     type: 'text',
     field: 'path',
-    required: true,
+    required: false,
     placeholder: '/posts',
     editable: (row) => !isSystemAreaParent(row),
     render: ({ value }) => <span className="font-mono text-xs text-gray-500">{value}</span>,
   },
   {
-    id: 'state',
-    title: 'State',
-    type: 'select',
-    field: 'state',
-    required: true,
-    options: [...menuStateOptions],
-    className: 'w-36',
-  },
-  {
     id: 'visible',
-    title: 'Visible',
+    title: '노출',
     type: 'switch',
     field: 'visible',
     editable: (row) => !isSystemAreaParent(row),
@@ -146,9 +55,9 @@ const columns: EntityListColumn<AdminMenuRow>[] = [
 export function AdminMenusPage() {
   return (
     <EntityList
-      title="Menu Management"
-      description="Manage header and admin sidebar menus together as a tree. ROOT is kept internal."
-      itemLabel="Menu"
+      title="메뉴 관리"
+      description="헤더와 운영자 메뉴를 트리 구조로 함께 관리합니다. 같은 부모 메뉴 아래의 항목은 드래그로 순서를 바꿀 수 있습니다."
+      itemLabel="메뉴"
       columns={columns}
       fetchItems={getAdminMenus}
       saveItems={saveAdminMenus}
@@ -159,17 +68,68 @@ export function AdminMenusPage() {
         getRowId: (item) => item.id,
         getParentId: (item) => item.parentId,
         getDepth: (item) => item.depth ?? 0,
+        draggable: true,
       }}
-      createEmptyItem={(nextOrder) => ({
-        name: '',
-        path: '',
-        state: 'Active',
-        visible: true,
-        order: nextOrder,
-        area: 'HEADER' as const,
-        parentId: null,
-        depth: 1,
-      })}
+      renderRowActions={({ row, rows, updateRow }) => (
+        <AddedMenuStructureActions row={row} rows={rows} updateRow={updateRow} />
+      )}
+      createEmptyItem={(_nextOrder, _target, rows = []) =>
+        createMenuDraftForTarget(
+          rows.map((row) => row.current),
+          { type: 'root' },
+        )
+      }
     />
+  );
+}
+
+function AddedMenuStructureActions({
+  row,
+  rows,
+  updateRow,
+}: {
+  row: EntityListManagedRow<AdminMenuRow>;
+  rows: EntityListManagedRow<AdminMenuRow>[];
+  updateRow: (clientId: string, updater: (row: AdminMenuRow, rows: AdminMenuRow[]) => AdminMenuRow) => void;
+}) {
+  if (row.state !== 'added') {
+    return null;
+  }
+
+  const menuRows = rows.map((entry) => entry.current);
+  const canMoveToChild = canMoveAddedMenuToChild(row.current, menuRows);
+  const canMoveToParent = canMoveAddedMenuToParent(row.current, menuRows);
+
+  return (
+    <>
+      <button
+        type="button"
+        aria-label="하위 메뉴로 이동"
+        title="하위 메뉴로 이동"
+        className={`rounded-lg border border-transparent p-2 transition ${
+          canMoveToChild
+            ? 'text-gray-500 hover:border-line hover:bg-white hover:text-primary'
+            : 'cursor-not-allowed text-gray-300'
+        }`}
+        disabled={!canMoveToChild}
+        onClick={() => updateRow(row.clientId, moveAddedMenuToChild)}
+      >
+        <CornerDownRight className="h-4 w-4" />
+      </button>
+      <button
+        type="button"
+        aria-label="상위 메뉴로 이동"
+        title="상위 메뉴로 이동"
+        className={`rounded-lg border border-transparent p-2 transition ${
+          canMoveToParent
+            ? 'text-gray-500 hover:border-line hover:bg-white hover:text-primary'
+            : 'cursor-not-allowed text-gray-300'
+        }`}
+        disabled={!canMoveToParent}
+        onClick={() => updateRow(row.clientId, moveAddedMenuToParent)}
+      >
+        <CornerUpLeft className="h-4 w-4" />
+      </button>
+    </>
   );
 }

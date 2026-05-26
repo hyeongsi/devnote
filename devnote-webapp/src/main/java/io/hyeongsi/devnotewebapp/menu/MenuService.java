@@ -69,7 +69,7 @@ public class MenuService {
                         request.state(),
                         request.visible(),
                         request.displayOrder(),
-                        normalizeArea(request.area()),
+                        normalizeAreaForSave(request.area()),
                         request.parentId()
                 ));
                 continue;
@@ -87,7 +87,7 @@ public class MenuService {
                     request.state(),
                     request.visible(),
                     request.displayOrder(),
-                    normalizeArea(request.area()),
+                    normalizeAreaForSave(request.area()),
                     request.parentId()
             );
             retainedIds.add(menu.getId());
@@ -109,7 +109,7 @@ public class MenuService {
         Set<Long> areaGroupIds = new HashSet<>();
         if (rootId != null) {
             for (Menu menu : menus) {
-                if (Objects.equals(menu.getParentId(), rootId) && area.equals(normalizeArea(menu.getArea()))) {
+                if (Objects.equals(menu.getParentId(), rootId)) {
                     areaGroupIds.add(menu.getId());
                 }
             }
@@ -177,6 +177,7 @@ public class MenuService {
 
     private void validateParentAreas(List<AdminMenuSaveRequest> requests, Map<Long, Menu> existingMenuMap) {
         Map<Long, String> areasById = new HashMap<>();
+        Long rootId = findRootId(new ArrayList<>(existingMenuMap.values()));
 
         for (Menu menu : existingMenuMap.values()) {
             areasById.put(menu.getId(), normalizeArea(menu.getArea()));
@@ -184,7 +185,7 @@ public class MenuService {
 
         for (AdminMenuSaveRequest request : requests) {
             if (request.id() != null) {
-                areasById.put(request.id(), normalizeArea(request.area()));
+                areasById.put(request.id(), normalizeAreaForSave(request.area()));
             }
         }
 
@@ -195,15 +196,21 @@ public class MenuService {
                 throw new IllegalArgumentException("Menu parent is required.");
             }
 
+            Menu parent = existingMenuMap.get(parentId);
             String parentArea = areasById.get(parentId);
+            String parentEffectiveArea = resolveEffectiveArea(parent);
 
             if (parentArea == null) {
                 throw new IllegalArgumentException("Menu parent does not exist.");
             }
 
-            String area = normalizeArea(request.area());
+            String area = normalizeAreaForSave(request.area());
 
-            if (ROOT_AREA.equals(parentArea) && (ADMIN_AREA.equals(area) || HEADER_AREA.equals(area))) {
+            if (ROOT_AREA.equals(parentArea) && area.isBlank()) {
+                continue;
+            }
+
+            if (parent != null && Objects.equals(parent.getParentId(), rootId) && area.equals(parentEffectiveArea)) {
                 continue;
             }
 
@@ -223,10 +230,46 @@ public class MenuService {
 
     private String normalizeArea(String area) {
         if (area == null || area.isBlank()) {
-            return HEADER_AREA;
+            return "";
         }
 
         return area.trim().toUpperCase();
+    }
+
+    private String normalizeAreaForSave(String area) {
+        return normalizeArea(area);
+    }
+
+    private String resolveEffectiveArea(Menu menu) {
+        if (menu == null) {
+            return "";
+        }
+
+        String area = normalizeArea(menu.getArea());
+
+        if (!area.isBlank()) {
+            return area;
+        }
+
+        String name = menu.getName() == null ? "" : menu.getName().toLowerCase();
+
+        if (name.contains("admin") || name.contains("운영자")) {
+            return ADMIN_AREA;
+        }
+
+        if (name.contains("header") || name.contains("헤더")) {
+            return HEADER_AREA;
+        }
+
+        if (Integer.valueOf(1).equals(menu.getDisplayOrder())) {
+            return ADMIN_AREA;
+        }
+
+        if (Integer.valueOf(2).equals(menu.getDisplayOrder())) {
+            return HEADER_AREA;
+        }
+
+        return "";
     }
 
     private Comparator<Menu> menuComparator() {

@@ -19,8 +19,8 @@ class MenuServiceTest {
 
         when(menuRepository.findAll()).thenReturn(List.of(
                 menu(1L, "ROOT", "/__root", "ROOT", null, false, 0),
-                menu(2L, "Admin Menu", "/__admin-menu", "ADMIN", 1L, false, 1),
-                menu(3L, "Header Menu", "/__header-menu", "HEADER", 1L, false, 2),
+                menu(2L, "Admin Menu", "", "", 1L, false, 1),
+                menu(3L, "Header Menu", "", "", 1L, false, 2),
                 menu(4L, "Admin", "/admin", "ADMIN", 2L, true, 1),
                 menu(5L, "Hidden", "/hidden", "HEADER", 3L, false, 1),
                 menu(6L, "Blog", "/posts", "HEADER", 3L, true, 3),
@@ -44,8 +44,8 @@ class MenuServiceTest {
 
         when(menuRepository.findAll()).thenReturn(List.of(
                 menu(1L, "ROOT", "/__root", "ROOT", null, false, 0),
-                menu(2L, "Admin Menu", "/__admin-menu", "ADMIN", 1L, false, 1),
-                menu(3L, "Header Menu", "/__header-menu", "HEADER", 1L, false, 2),
+                menu(2L, "Admin Menu", "", "", 1L, false, 1),
+                menu(3L, "Header Menu", "", "", 1L, false, 2),
                 menu(4L, "Posts", "/posts", "ADMIN", 2L, true, 2),
                 menu(5L, "Dashboard", "/admin", "ADMIN", 2L, true, 1),
                 menu(6L, "Home", "/", "HEADER", 3L, true, 1)
@@ -68,8 +68,8 @@ class MenuServiceTest {
 
         when(menuRepository.findAll()).thenReturn(List.of(
                 menu(1L, "ROOT", "/__root", "ROOT", null, false, 0),
-                menu(2L, "Admin Menu", "/__admin-menu", "ADMIN", 1L, false, 1),
-                menu(3L, "Header Menu", "/__header-menu", "HEADER", 1L, false, 2),
+                menu(2L, "Admin Menu", "", "", 1L, false, 1),
+                menu(3L, "Header Menu", "", "", 1L, false, 2),
                 menu(4L, "Dashboard", "/admin", "ADMIN", 2L, true, 1),
                 menu(5L, "Home", "/", "HEADER", 3L, true, 1)
         ));
@@ -91,8 +91,8 @@ class MenuServiceTest {
 
         when(menuRepository.findAll()).thenReturn(List.of(
                 menu(1L, "ROOT", "/__root", "ROOT", null, false, 0),
-                menu(2L, "Admin Menu", "/__admin-menu", "ADMIN", 1L, false, 1),
-                menu(3L, "Header Menu", "/__header-menu", "HEADER", 1L, false, 2)
+                menu(2L, "Admin Menu", "", "", 1L, false, 1),
+                menu(3L, "Header Menu", "", "", 1L, false, 2)
         ));
 
         assertThatThrownBy(() -> menuService.saveAdminMenus(List.of(

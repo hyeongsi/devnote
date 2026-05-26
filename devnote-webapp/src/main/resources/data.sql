@@ -82,31 +82,31 @@ VALUES
     (7, '문의', '/contact', '준비 중', FALSE, 7);
 
 UPDATE menus
-SET name = 'ROOT', path = '/__root', state = 'SYSTEM', visible = FALSE, display_order = 0, area = 'ROOT', parent_id = NULL
+SET name = '루트', path = '/__root', state = 'SYSTEM', visible = FALSE, display_order = 0, area = 'ROOT', parent_id = NULL
 WHERE id = 1;
 
 UPDATE menus
-SET name = 'Admin Menu', path = '/__admin-menu', state = 'SYSTEM', visible = FALSE, display_order = 1, area = 'ADMIN', parent_id = 1
+SET name = '운영자', path = '', state = '', visible = FALSE, display_order = 1, area = '', parent_id = 1
 WHERE id = 2;
 
 UPDATE menus
-SET name = 'Header Menu', path = '/__header-menu', state = 'SYSTEM', visible = FALSE, display_order = 2, area = 'HEADER', parent_id = 1
+SET name = '헤더', path = '', state = '', visible = FALSE, display_order = 2, area = '', parent_id = 1
 WHERE id = 3;
 
 UPDATE menus
-SET name = 'Dashboard', path = '/admin', state = 'Active', visible = TRUE, display_order = 1, area = 'ADMIN', parent_id = 2
+SET name = '대시보드', path = '/admin', state = '', visible = TRUE, display_order = 1, area = 'ADMIN', parent_id = 2
 WHERE id = 4;
 
 UPDATE menus
-SET name = 'Posts', path = '/posts', state = 'Active', visible = TRUE, display_order = 2, area = 'ADMIN', parent_id = 2
+SET name = '게시글 관리', path = '/posts', state = '', visible = TRUE, display_order = 2, area = 'ADMIN', parent_id = 2
 WHERE id = 5;
 
 UPDATE menus
-SET name = 'Categories', path = '/admin/categories', state = 'Active', visible = TRUE, display_order = 3, area = 'ADMIN', parent_id = 2
+SET name = '카테고리 관리', path = '/admin/categories', state = '', visible = TRUE, display_order = 3, area = 'ADMIN', parent_id = 2
 WHERE id = 6;
 
 UPDATE menus
-SET name = 'Menus', path = '/admin/menus', state = 'Active', visible = TRUE, display_order = 4, area = 'ADMIN', parent_id = 2
+SET name = '메뉴 관리', path = '/admin/menus', state = '', visible = TRUE, display_order = 4, area = 'ADMIN', parent_id = 2
 WHERE id = 7;
 
 INSERT INTO menus (
@@ -120,11 +120,11 @@ INSERT INTO menus (
     parent_id
 )
 VALUES
-    (8, 'AI Posting', '/admin/ai-posting', 'Active', TRUE, 5, 'ADMIN', 2),
-    (9, 'Home', '/', 'Active', TRUE, 1, 'HEADER', 3),
-    (10, 'Blog', '/posts', 'Active', TRUE, 2, 'HEADER', 3),
-    (11, 'Projects', '/projects', 'Active', TRUE, 3, 'HEADER', 3),
-    (12, 'About', '/about', 'Preparing', FALSE, 4, 'HEADER', 3);
+    (8, 'AI 자동 포스팅', '/admin/ai-posting', '', TRUE, 5, 'ADMIN', 2),
+    (9, '홈', '/', '', TRUE, 1, 'HEADER', 3),
+    (10, '블로그', '/posts', '', TRUE, 2, 'HEADER', 3),
+    (11, '프로젝트', '/projects', '', TRUE, 3, 'HEADER', 3),
+    (12, '소개', '/about', '', FALSE, 4, 'HEADER', 3);
 
 INSERT INTO posts (
     id,

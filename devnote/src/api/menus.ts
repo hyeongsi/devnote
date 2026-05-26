@@ -45,7 +45,7 @@ export async function getAdminSidebarMenus() {
   });
 
   if (!response.ok) {
-    throw new Error(`Admin menu list could not be loaded. (${response.status})`);
+    throw new Error(`운영자 메뉴 목록을 불러오지 못했습니다. (${response.status})`);
   }
 
   const menus = (await response.json()) as AdminMenuApiResponse[];

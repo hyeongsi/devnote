@@ -45,6 +45,12 @@ export interface EntityListRowActionContext<TItem> {
   disabled: boolean;
 }
 
+export interface EntityListExtraRowActionContext<TItem extends { id?: number; order: number }> {
+  row: EntityListManagedRow<TItem>;
+  rows: EntityListManagedRow<TItem>[];
+  updateRow: (clientId: string, updater: (row: TItem, rows: TItem[]) => TItem) => void;
+}
+
 interface EntityListBaseColumn {
   id: string;
   title: string;
@@ -77,21 +83,36 @@ export type EntityListColumn<TItem> =
   | EntityListFieldColumn<TItem>
   | EntityListActionColumn<TItem>;
 
-export interface EntityListProps<TItem extends { id?: number; order: number }> {
+export interface EntityListAddControlContext<
+  TItem extends { id?: number; order: number },
+  TAddContext,
+> {
+  rows: EntityListManagedRow<TItem>[];
+  onAdd: (context?: TAddContext) => void;
+}
+
+export interface EntityListProps<TItem extends { id?: number; order: number }, TAddContext = void> {
   title: string;
   description: string;
   itemLabel: string;
   columns: EntityListColumn<TItem>[];
-  createEmptyItem: (nextOrder: number) => TItem;
+  createEmptyItem: (
+    nextOrder: number,
+    context?: TAddContext,
+    rows?: EntityListManagedRow<TItem>[],
+  ) => TItem;
   fetchItems: () => Promise<TItem[]>;
   saveItems: (items: TItem[], changes: EntityListChangeSet<TItem>) => Promise<void>;
   getItemName: (item: TItem) => string;
   validateRow?: (row: TItem, rows: TItem[]) => Record<string, string>;
   getRowClassName?: (row: TItem, state: EntityRowState) => string;
   emptyMessage?: string;
+  renderAddControl?: (context: EntityListAddControlContext<TItem, TAddContext>) => ReactNode;
+  renderRowActions?: (context: EntityListExtraRowActionContext<TItem>) => ReactNode;
   tree?: {
     getRowId: (row: TItem) => number | string | undefined;
     getParentId: (row: TItem) => number | string | null | undefined;
     getDepth?: (row: TItem) => number;
+    draggable?: boolean;
   };
 }

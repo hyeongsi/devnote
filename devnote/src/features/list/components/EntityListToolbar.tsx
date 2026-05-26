@@ -1,5 +1,6 @@
 import { Plus, Save } from 'lucide-react';
 import { memo } from 'react';
+import type { ReactNode } from 'react';
 
 interface EntityListToolbarProps {
   title: string;
@@ -9,6 +10,7 @@ interface EntityListToolbarProps {
   isSaving: boolean;
   onAdd: () => void;
   onSave: () => void;
+  addControl?: ReactNode;
 }
 
 export const EntityListToolbar = memo(function EntityListToolbar({
@@ -19,6 +21,7 @@ export const EntityListToolbar = memo(function EntityListToolbar({
   isSaving,
   onAdd,
   onSave,
+  addControl,
 }: EntityListToolbarProps) {
   return (
     <div className="flex flex-col gap-4 border-b border-line px-5 py-5 md:flex-row md:items-center md:justify-between md:px-6">
@@ -38,16 +41,18 @@ export const EntityListToolbar = memo(function EntityListToolbar({
           disabled={!hasChanges || isSaving}
         >
           <Save className="h-4 w-4" />
-          {isSaving ? 'Saving...' : 'Save changes'}
+          {isSaving ? '저장 중...' : '변경 사항 저장'}
         </button>
-        <button
-          type="button"
-          className="inline-flex h-10 items-center justify-center gap-2 rounded-xl bg-primary px-4 text-sm font-bold text-white shadow-[0_10px_24px_rgba(109,93,252,0.18)] transition hover:brightness-105"
-          onClick={onAdd}
-        >
-          <Plus className="h-4 w-4" />
-          Add {itemLabel.toLowerCase()}
-        </button>
+        {addControl ?? (
+          <button
+            type="button"
+            className="inline-flex h-10 items-center justify-center gap-2 rounded-xl bg-primary px-4 text-sm font-bold text-white shadow-[0_10px_24px_rgba(109,93,252,0.18)] transition hover:brightness-105"
+            onClick={onAdd}
+          >
+            <Plus className="h-4 w-4" />
+            {itemLabel} 추가
+          </button>
+        )}
       </div>
     </div>
   );

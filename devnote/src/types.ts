@@ -6,7 +6,7 @@ export interface PublicNavItem {
   end?: boolean;
 }
 
-export type MenuArea = 'ADMIN' | 'HEADER' | 'ROOT';
+export type MenuArea = 'ADMIN' | 'HEADER' | 'ROOT' | '';
 
 export interface BlogCategory {
   id?: number;

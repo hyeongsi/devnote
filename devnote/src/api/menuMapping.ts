@@ -3,7 +3,7 @@ import type { AdminMenuApiResponse, AdminMenuRow, MenuArea, PublicNavItem } from
 const ROOT_PARENT_ID = 1;
 
 function normalizeArea(area: AdminMenuApiResponse['area'] | AdminMenuRow['area'] | undefined): MenuArea {
-  return area ?? 'HEADER';
+  return area ?? '';
 }
 
 export function mapMenuResponseToAdminRow(menu: AdminMenuApiResponse): AdminMenuRow {

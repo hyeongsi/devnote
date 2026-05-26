@@ -13,24 +13,27 @@ import {
   deriveEntityRowState,
   getDirtyEntityFields,
 } from '../utils/entityListUtils';
+import { getEntityTreeInsertIndex, moveEntityTreeBlock } from '../utils/entityListTree';
 
-interface UseEntityListOptions<TItem extends { id?: number; order: number }> {
+interface UseEntityListOptions<TItem extends { id?: number; order: number }, TAddContext> {
   columns: EntityListColumn<TItem>[];
-  createEmptyItem: EntityListProps<TItem>['createEmptyItem'];
-  fetchItems: EntityListProps<TItem>['fetchItems'];
-  saveItems: EntityListProps<TItem>['saveItems'];
-  validateRow?: EntityListProps<TItem>['validateRow'];
+  createEmptyItem: EntityListProps<TItem, TAddContext>['createEmptyItem'];
+  fetchItems: EntityListProps<TItem, TAddContext>['fetchItems'];
+  saveItems: EntityListProps<TItem, TAddContext>['saveItems'];
+  validateRow?: EntityListProps<TItem, TAddContext>['validateRow'];
   onSaved: () => void;
+  tree?: EntityListProps<TItem, TAddContext>['tree'];
 }
 
-export function useEntityList<TItem extends { id?: number; order: number }>({
+export function useEntityList<TItem extends { id?: number; order: number }, TAddContext = void>({
   columns,
   createEmptyItem,
   fetchItems,
   saveItems,
   validateRow,
   onSaved,
-}: UseEntityListOptions<TItem>) {
+  tree,
+}: UseEntityListOptions<TItem, TAddContext>) {
   const [rows, setRows] = useState<EntityListManagedRow<TItem>[]>([]);
   const [editingRowIds, setEditingRowIds] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -140,22 +143,29 @@ export function useEntityList<TItem extends { id?: number; order: number }>({
     [runValidation],
   );
 
-  const addRow = useCallback(() => {
+  const addRow = useCallback((context?: TAddContext) => {
     const clientId = createEntityListRowId();
 
-    setRows((current) => [
-      ...current,
-      {
+    setRows((current) => {
+      const currentItem = createEmptyItem(current.length + 1, context, current);
+      const nextRow = {
         clientId,
         original: undefined,
-        current: createEmptyItem(current.length + 1),
+        current: currentItem,
         state: 'added',
         dirtyFields: [],
         errors: {},
-      },
-    ]);
+      } satisfies EntityListManagedRow<TItem>;
+      const insertIndex = tree ? getEntityTreeInsertIndex(current, currentItem, tree) : current.length;
+
+      return [
+        ...current.slice(0, insertIndex),
+        nextRow,
+        ...current.slice(insertIndex),
+      ];
+    });
     setEditingRowIds((current) => [...current, clientId]);
-  }, [createEmptyItem]);
+  }, [createEmptyItem, tree]);
 
   const toggleEditing = useCallback((clientId: string) => {
     setEditingRowIds((current) =>
@@ -197,6 +207,53 @@ export function useEntityList<TItem extends { id?: number; order: number }>({
     );
     setEditingRowIds((current) => current.filter((id) => id !== clientId));
   }, []);
+
+  const moveRow = useCallback((activeClientId: string, overClientId: string) => {
+    if (!tree) {
+      return;
+    }
+
+    setRows((current) => moveEntityTreeBlock(current, activeClientId, overClientId, tree));
+  }, [tree]);
+
+  const updateRow = useCallback((clientId: string, updater: (row: TItem, rows: TItem[]) => TItem) => {
+    setRows((current) => {
+      const targetIndex = current.findIndex((row) => row.clientId === clientId);
+      const target = current[targetIndex];
+
+      if (!target || target.state === 'deleted') {
+        return current;
+      }
+
+      const nextCurrent = updater(
+        target.current,
+        current.filter((row) => row.state !== 'deleted').map((row) => row.current),
+      );
+      const nextRow = {
+        ...target,
+        current: nextCurrent,
+        state: deriveEntityRowState(target.original, nextCurrent, target.state),
+        dirtyFields: getDirtyEntityFields(target.original, nextCurrent),
+      };
+      const rowsWithoutTarget = current.filter((row) => row.clientId !== clientId);
+      const insertIndex = tree ? getEntityTreeInsertIndex(rowsWithoutTarget, nextCurrent, tree) : targetIndex;
+      const nextRows = [
+        ...rowsWithoutTarget.slice(0, insertIndex),
+        nextRow,
+        ...rowsWithoutTarget.slice(insertIndex),
+      ];
+      const activeRows = nextRows.filter((row) => row.state !== 'deleted').map((row) => row.current);
+
+      return nextRows.map((row) =>
+        row.clientId === clientId
+          ? {
+              ...row,
+              errors: runValidation(row.current, activeRows),
+            }
+          : row,
+      );
+    });
+  }, [runValidation, tree]);
 
   const validateAllRows = useCallback(() => {
     const activeRows = rows.filter((entry) => entry.state !== 'deleted').map((entry) => entry.current);
@@ -259,6 +316,8 @@ export function useEntityList<TItem extends { id?: number; order: number }>({
     removeAddedRow,
     restoreRow,
     markRowDeleted,
+    moveRow,
+    updateRow,
     saveList,
     updateField,
   };

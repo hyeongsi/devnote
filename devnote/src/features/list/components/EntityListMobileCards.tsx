@@ -1,4 +1,7 @@
-import { ChevronDown, ChevronRight, Pencil, RotateCcw, Trash2, X } from 'lucide-react';
+import { useSortable } from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
+import { ChevronDown, ChevronRight, GripVertical, Pencil, RotateCcw, Trash2, X } from 'lucide-react';
+import type { ReactNode } from 'react';
 
 import type {
   EntityListFieldColumn,
@@ -18,6 +21,7 @@ interface EntityListMobileCardsProps<TItem extends { id?: number; order: number 
   emptyMessage: string;
   onToggleEditing: (clientId: string) => void;
   onToggleDelete: (row: EntityListManagedRow<TItem>) => void;
+  renderRowActions?: (row: EntityListManagedRow<TItem>) => ReactNode;
   updateField: <TKey extends Extract<keyof TItem, string>>(
     clientId: string,
     field: TKey,
@@ -26,6 +30,7 @@ interface EntityListMobileCardsProps<TItem extends { id?: number; order: number 
   tree?: EntityListProps<TItem>['tree'];
   collapsedTreeRowIds?: Set<string>;
   onToggleTreeRow?: (row: TItem) => void;
+  sortableIdPrefix?: string;
 }
 
 export function EntityListMobileCards<TItem extends { id?: number; order: number }>({
@@ -36,10 +41,12 @@ export function EntityListMobileCards<TItem extends { id?: number; order: number
   emptyMessage,
   onToggleEditing,
   onToggleDelete,
+  renderRowActions,
   updateField,
   tree,
   collapsedTreeRowIds,
   onToggleTreeRow,
+  sortableIdPrefix = '',
 }: EntityListMobileCardsProps<TItem>) {
   return (
     <div className="divide-y divide-line md:hidden">
@@ -54,17 +61,34 @@ export function EntityListMobileCards<TItem extends { id?: number; order: number
           const collapsed = treeRowKey ? collapsedTreeRowIds?.has(treeRowKey) ?? false : false;
 
           return (
-            <article
+            <SortableMobileCard
               key={row.clientId}
+              id={`${sortableIdPrefix}${row.clientId}`}
+              disabled={!tree?.draggable || row.state === 'deleted'}
               className={`p-5 ${entityListStatePresentation[row.state].rowClassName}`}
             >
+              {({ setActivatorNodeRef, dragAttributes, dragListeners }) => (
+              <>
               <div className="mb-4 flex items-center justify-between gap-3">
                 <EntityListStatusBadge state={row.state} />
                 <div className="flex items-center gap-2">
+                  {renderRowActions?.(row)}
+                  {tree?.draggable ? (
+                    <button
+                      type="button"
+                      aria-label="드래그하여 이동"
+                      className="rounded-lg border border-line bg-white p-2 text-gray-500"
+                      ref={setActivatorNodeRef}
+                      {...dragAttributes}
+                      {...dragListeners}
+                    >
+                      <GripVertical className="h-4 w-4" />
+                    </button>
+                  ) : null}
                   {row.state !== 'deleted' ? (
                     <button
                       type="button"
-                      aria-label={isEditing ? 'Finish editing' : 'Edit row'}
+                      aria-label={isEditing ? '수정 완료' : '수정'}
                       className="rounded-lg border border-line bg-white p-2 text-gray-500"
                       onClick={() => onToggleEditing(row.clientId)}
                     >
@@ -73,7 +97,7 @@ export function EntityListMobileCards<TItem extends { id?: number; order: number
                   ) : null}
                   <button
                     type="button"
-                    aria-label={row.state === 'deleted' ? 'Restore row' : 'Delete row'}
+                    aria-label={row.state === 'deleted' ? '삭제 취소' : '삭제'}
                     className="rounded-lg border border-line bg-white p-2 text-gray-500"
                     onClick={() => onToggleDelete(row)}
                   >
@@ -107,7 +131,7 @@ export function EntityListMobileCards<TItem extends { id?: number; order: number
                           onClick={() => onToggleTreeRow?.(row.current)}
                         >
                           {collapsed ? <ChevronRight className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
-                          {collapsed ? 'Show children' : 'Hide children'}
+                          {collapsed ? '하위 메뉴 보기' : '하위 메뉴 숨기기'}
                         </button>
                       ) : null}
                       {row.errors[column.field] ? (
@@ -117,10 +141,53 @@ export function EntityListMobileCards<TItem extends { id?: number; order: number
                   </div>
                 ))}
               </dl>
-            </article>
+              </>
+              )}
+            </SortableMobileCard>
           );
         })
       )}
     </div>
+  );
+}
+
+interface SortableMobileCardProps {
+  id: string;
+  disabled: boolean;
+  className: string;
+  children: (helpers: {
+    setActivatorNodeRef: (element: HTMLElement | null) => void;
+    dragAttributes: ReturnType<typeof useSortable>['attributes'];
+    dragListeners: ReturnType<typeof useSortable>['listeners'];
+  }) => ReactNode;
+}
+
+function SortableMobileCard({ id, disabled, className, children }: SortableMobileCardProps) {
+  const {
+    attributes,
+    listeners,
+    setActivatorNodeRef,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id, disabled });
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+  };
+
+  return (
+    <article
+      ref={setNodeRef}
+      style={style}
+      className={`${className} ${isDragging ? 'relative z-10 opacity-70 shadow-lg' : ''}`}
+    >
+      {children({
+        setActivatorNodeRef,
+        dragAttributes: attributes,
+        dragListeners: listeners,
+      })}
+    </article>
   );
 }

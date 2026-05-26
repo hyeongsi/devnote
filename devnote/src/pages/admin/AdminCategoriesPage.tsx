@@ -74,7 +74,7 @@ export function AdminCategoriesPage() {
     <EntityList
       title="카테고리 관리"
       description="블로그 카테고리의 이름, 슬러그, 설명, 노출 여부를 관리합니다."
-      itemLabel="Category"
+      itemLabel="카테고리"
       columns={columns}
       fetchItems={getAdminCategories}
       saveItems={saveAdminCategories}

@@ -14,14 +14,14 @@ import { getAdminSidebarMenus, MENUS_CHANGED_EVENT } from '../../api/menus';
 import type { PublicNavItem } from '../../types';
 
 const fallbackAdminNavItems = [
-  { label: 'Dashboard', to: '/admin', icon: LayoutDashboard, end: true },
-  { label: 'Posts', to: '/posts', icon: FileText, end: false },
-  { label: 'Categories', to: '/admin/categories', icon: FolderKanban, end: false },
-  { label: 'Menus', to: '/admin/menus', icon: ListTree, end: false },
-  { label: 'Comments', to: '/posts/spring-boot', icon: MessageCircle, end: false },
-  { label: 'Users', to: '/login', icon: UserRound, end: false },
-  { label: 'AI Posting', to: '/admin/ai-posting', icon: Bot, end: false },
-  { label: 'Settings', to: '/login', icon: Settings, end: false },
+  { label: '대시보드', to: '/admin', icon: LayoutDashboard, end: true },
+  { label: '게시글 관리', to: '/posts', icon: FileText, end: false },
+  { label: '카테고리 관리', to: '/admin/categories', icon: FolderKanban, end: false },
+  { label: '메뉴 관리', to: '/admin/menus', icon: ListTree, end: false },
+  { label: '댓글 관리', to: '/posts/spring-boot', icon: MessageCircle, end: false },
+  { label: '사용자 관리', to: '/login', icon: UserRound, end: false },
+  { label: 'AI 자동 포스팅', to: '/admin/ai-posting', icon: Bot, end: false },
+  { label: '설정', to: '/login', icon: Settings, end: false },
 ];
 
 const adminIconByPath = [
@@ -59,7 +59,9 @@ export function AdminSidebar() {
   }, []);
 
   useEffect(() => {
-    void loadMenus();
+    queueMicrotask(() => {
+      void loadMenus();
+    });
 
     window.addEventListener(MENUS_CHANGED_EVENT, loadMenus);
 
