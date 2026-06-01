@@ -6,6 +6,8 @@ export interface PublicNavItem {
   end?: boolean;
 }
 
+export type MenuArea = 'ADMIN' | 'HEADER' | 'ROOT' | '';
+
 export interface BlogCategory {
   id?: number;
   slug: string;
@@ -72,6 +74,32 @@ export interface BlogPostDetail extends BlogPost {
   contentMarkdown: string;
 }
 
+export interface AiPostGenerateRequest {
+  topic: string;
+}
+
+export interface AiPostGenerateResponse {
+  title: string;
+  summary: string;
+  content: string;
+  tags: string[];
+  readTime: string;
+  recommendedTopics: string[];
+  recommendedCategorySlug: string;
+  thumbnailStyle: BlogPost['imageStyle'];
+}
+
+export interface PostCreateRequest {
+  slug: string;
+  categoryId: number;
+  title: string;
+  excerpt: string;
+  readTime: string;
+  thumbnailStyle: BlogPost['imageStyle'];
+  contentMarkdown: string;
+  tags: string[];
+}
+
 export interface ProjectPreview {
   id: number;
   title: string;
@@ -121,16 +149,19 @@ export interface ActivityItem {
 }
 
 export interface AdminMenuRow {
-  id: number;
+  id?: number;
   name: string;
   path: string;
   state: string;
   visible: boolean;
   order: number;
+  area?: MenuArea;
+  parentId?: number | null;
+  depth?: number;
 }
 
 export interface AdminCategoryRow {
-  id: number;
+  id?: number;
   slug?: string;
   name: string;
   description: string;
@@ -147,4 +178,16 @@ export interface AdminCategoryApiResponse {
   postCount: number;
   visible: boolean;
   displayOrder: number;
+}
+
+export interface AdminMenuApiResponse {
+  id: number;
+  name: string;
+  path: string;
+  state: string;
+  visible: boolean;
+  displayOrder: number;
+  area?: MenuArea;
+  parentId?: number | null;
+  depth?: number;
 }

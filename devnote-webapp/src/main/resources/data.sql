@@ -64,6 +64,68 @@ VALUES
         7
     );
 
+INSERT INTO menus (
+    id,
+    name,
+    path,
+    state,
+    visible,
+    display_order
+)
+VALUES
+    (1, '홈', '/', '운영 중', TRUE, 1),
+    (2, '블로그', '/posts', '운영 중', TRUE, 2),
+    (3, '프로젝트', '/projects', '운영 중', TRUE, 3),
+    (4, 'AI 자동 포스팅', '/admin/ai-posting', '운영 중', TRUE, 4),
+    (5, '기술 스택', '/stack', '준비 중', FALSE, 5),
+    (6, '소개', '/about', '준비 중', FALSE, 6),
+    (7, '문의', '/contact', '준비 중', FALSE, 7);
+
+UPDATE menus
+SET name = '루트', path = '/__root', state = 'SYSTEM', visible = FALSE, display_order = 0, area = 'ROOT', parent_id = NULL
+WHERE id = 1;
+
+UPDATE menus
+SET name = '운영자', path = '', state = '', visible = FALSE, display_order = 1, area = '', parent_id = 1
+WHERE id = 2;
+
+UPDATE menus
+SET name = '헤더', path = '', state = '', visible = FALSE, display_order = 2, area = '', parent_id = 1
+WHERE id = 3;
+
+UPDATE menus
+SET name = '대시보드', path = '/admin', state = '', visible = TRUE, display_order = 1, area = 'ADMIN', parent_id = 2
+WHERE id = 4;
+
+UPDATE menus
+SET name = '게시글 관리', path = '/posts', state = '', visible = TRUE, display_order = 2, area = 'ADMIN', parent_id = 2
+WHERE id = 5;
+
+UPDATE menus
+SET name = '카테고리 관리', path = '/admin/categories', state = '', visible = TRUE, display_order = 3, area = 'ADMIN', parent_id = 2
+WHERE id = 6;
+
+UPDATE menus
+SET name = '메뉴 관리', path = '/admin/menus', state = '', visible = TRUE, display_order = 4, area = 'ADMIN', parent_id = 2
+WHERE id = 7;
+
+INSERT INTO menus (
+    id,
+    name,
+    path,
+    state,
+    visible,
+    display_order,
+    area,
+    parent_id
+)
+VALUES
+    (8, 'AI 자동 포스팅', '/admin/ai-posting', '', TRUE, 5, 'ADMIN', 2),
+    (9, '홈', '/', '', TRUE, 1, 'HEADER', 3),
+    (10, '블로그', '/posts', '', TRUE, 2, 'HEADER', 3),
+    (11, '프로젝트', '/projects', '', TRUE, 3, 'HEADER', 3),
+    (12, '소개', '/about', '', FALSE, 4, 'HEADER', 3);
+
 INSERT INTO posts (
     id,
     slug,

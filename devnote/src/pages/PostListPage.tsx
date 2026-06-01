@@ -97,7 +97,7 @@ export function PostListPage() {
   } = usePagination({
     items: filteredPosts,
     itemsPerPage: POSTS_PER_PAGE,
-    resetDeps: [selectedCategory, query, sortBy],
+    resetKey: `${selectedCategory}:${query}:${sortBy}`,
   });
 
   const sidebarPopularPosts = categoryPopularPosts[selectedCategory] ?? popularPosts;
