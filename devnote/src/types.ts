@@ -74,6 +74,28 @@ export interface BlogPostDetail extends BlogPost {
   contentMarkdown: string;
 }
 
+export interface BlogPostSearchResult {
+  id: number;
+  slug: string;
+  category: string;
+  categorySlug: string;
+  title: string;
+  excerpt: string;
+  displayDate: string;
+  matchedText: string;
+}
+
+export interface BlogPostSearchApiResponse {
+  id: number;
+  slug: string;
+  categoryName: string;
+  categorySlug: string;
+  title: string;
+  excerpt: string;
+  displayDate: string;
+  matchedText: string;
+}
+
 export interface AiPostGenerateRequest {
   topic: string;
 }

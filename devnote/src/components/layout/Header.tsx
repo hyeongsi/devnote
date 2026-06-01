@@ -2,14 +2,17 @@ import { Code2, Menu, Moon, Search } from 'lucide-react';
 import { useCallback, useEffect, useState } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import { AUTH_CHANGED_EVENT, getCurrentUser, logout } from '../../api/auth';
+import { isSearchShortcut } from '../../features/searchCommands';
 import { usePublicMenus } from '../../hooks/usePublicMenus';
 import type { AuthUser } from '../../types';
 import { Button } from '../ui/Button';
+import { PostSearchDialog } from './PostSearchDialog';
 
 export function Header() {
   const navigate = useNavigate();
   const publicNavItems = usePublicMenus();
   const [currentUser, setCurrentUser] = useState<AuthUser | null>(null);
+  const [searchOpen, setSearchOpen] = useState(false);
 
   const loadCurrentUser = useCallback(async () => {
     try {
@@ -30,6 +33,20 @@ export function Header() {
       window.removeEventListener(AUTH_CHANGED_EVENT, loadCurrentUser);
     };
   }, [loadCurrentUser]);
+
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (!isSearchShortcut(event)) {
+        return;
+      }
+
+      event.preventDefault();
+      setSearchOpen(true);
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
 
   const handleLogout = useCallback(async () => {
     try {
@@ -57,9 +74,7 @@ export function Header() {
               key={`${item.label}-${item.to}`}
               to={item.to}
               end={item.end}
-              className={({ isActive }) =>
-                isActive ? 'text-primary' : 'transition hover:text-primary'
-              }
+              className={({ isActive }) => (isActive ? 'text-primary' : 'transition hover:text-primary')}
             >
               {item.label}
             </NavLink>
@@ -71,6 +86,7 @@ export function Header() {
             type="button"
             aria-label="검색"
             className="rounded-full p-2.5 text-gray-700 transition hover:bg-primary-soft hover:text-primary"
+            onClick={() => setSearchOpen(true)}
           >
             <Search className="h-5 w-5" />
           </button>
@@ -82,29 +98,16 @@ export function Header() {
             <Moon className="h-5 w-5" />
           </button>
           {currentUser ? (
-            <Button
-              size="sm"
-              variant="outline"
-              className="hidden md:inline-flex"
-              onClick={() => void handleLogout()}
-            >
+            <Button size="sm" variant="outline" className="hidden md:inline-flex" onClick={() => void handleLogout()}>
               로그아웃
             </Button>
-          ) : (
-            <Button
-              size="sm"
-              variant="dark"
-              className="hidden md:inline-flex"
-              onClick={() => navigate('/login')}
-            >
-              로그인
-            </Button>
-          )}
+          ) : null}
           <button type="button" aria-label="메뉴" className="rounded-full p-2.5 text-gray-700 lg:hidden">
             <Menu className="h-6 w-6" />
           </button>
         </div>
       </div>
+      {searchOpen ? <PostSearchDialog open={searchOpen} onClose={() => setSearchOpen(false)} /> : null}
     </header>
   );
 }

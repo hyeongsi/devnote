@@ -8,6 +8,7 @@ import org.springframework.web.server.ResponseStatusException;
 
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
+import java.util.Locale;
 import java.util.List;
 
 import static org.springframework.http.HttpStatus.BAD_REQUEST;
@@ -42,6 +43,19 @@ public class PostService {
                 ));
 
         return toDetailResponse(post);
+    }
+
+    public List<PostSearchResponse> searchPosts(String query) {
+        String normalizedQuery = normalize(query);
+        if (normalizedQuery.isBlank()) {
+            return List.of();
+        }
+
+        return postRepository.findPostList().stream()
+                .filter(post -> matches(post, normalizedQuery))
+                .limit(8)
+                .map(post -> toSearchResponse(post, normalizedQuery))
+                .toList();
     }
 
     @Transactional
@@ -126,6 +140,19 @@ public class PostService {
         return value == null || value.isBlank();
     }
 
+    private boolean matches(Post post, String normalizedQuery) {
+        return normalize(post.getTitle()).contains(normalizedQuery)
+                || normalize(post.getExcerpt()).contains(normalizedQuery)
+                || normalize(post.getContentMarkdown()).contains(normalizedQuery)
+                || normalize(post.getCategoryName()).contains(normalizedQuery)
+                || normalize(post.getCategorySlug()).contains(normalizedQuery)
+                || post.getTags().stream().anyMatch(tag -> normalize(tag).contains(normalizedQuery));
+    }
+
+    private String normalize(String value) {
+        return value == null ? "" : value.toLowerCase(Locale.ROOT).trim();
+    }
+
     private PostResponse toSummaryResponse(Post post) {
         return new PostResponse(
                 post.getId(),
@@ -140,6 +167,43 @@ public class PostService {
                 post.getTags(),
                 post.getThumbnailStyle()
         );
+    }
+
+    private PostSearchResponse toSearchResponse(Post post, String normalizedQuery) {
+        return new PostSearchResponse(
+                post.getId(),
+                post.getSlug(),
+                post.getCategoryName(),
+                post.getCategorySlug(),
+                post.getTitle(),
+                post.getExcerpt(),
+                post.getPublishedAt().format(DISPLAY_DATE_FORMAT),
+                findMatchedText(post, normalizedQuery)
+        );
+    }
+
+    private String findMatchedText(Post post, String normalizedQuery) {
+        List<String> candidates = List.of(
+                post.getContentMarkdown(),
+                post.getExcerpt(),
+                post.getTitle(),
+                post.getCategoryName(),
+                String.join(", ", post.getTags())
+        );
+
+        return candidates.stream()
+                .filter(value -> normalize(value).contains(normalizedQuery))
+                .findFirst()
+                .map(this::toSnippet)
+                .orElse(post.getExcerpt());
+    }
+
+    private String toSnippet(String value) {
+        String compact = value.replaceAll("\\s+", " ").trim();
+        if (compact.length() <= 140) {
+            return compact;
+        }
+        return compact.substring(0, 140).trim() + "...";
     }
 
     private PostDetailResponse toDetailResponse(Post post) {

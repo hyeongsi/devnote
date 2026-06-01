@@ -3,6 +3,8 @@ import type {
   BlogPostApiResponse,
   BlogPostDetail,
   BlogPostDetailApiResponse,
+  BlogPostSearchApiResponse,
+  BlogPostSearchResult,
   PostCreateRequest,
 } from '../types';
 
@@ -35,6 +37,17 @@ export async function getPost(categorySlug: string, postSlug: string): Promise<B
     ...mapPostResponse(post),
     contentMarkdown: post.contentMarkdown,
   };
+}
+
+export async function searchPosts(query: string): Promise<BlogPostSearchResult[]> {
+  const response = await fetch(`${POSTS_API_URL}/search?query=${encodeURIComponent(query)}`);
+
+  if (!response.ok) {
+    throw new Error(`게시글 검색 결과를 불러오지 못했습니다. (${response.status})`);
+  }
+
+  const posts = (await response.json()) as BlogPostSearchApiResponse[];
+  return posts.map(mapPostSearchResponse);
 }
 
 export async function createPost(request: PostCreateRequest): Promise<BlogPostDetail> {
@@ -98,5 +111,18 @@ function mapPostResponse(post: BlogPostApiResponse): BlogPost {
     viewCount: post.viewCount,
     tags: post.tags,
     imageStyle: post.thumbnailStyle,
+  };
+}
+
+function mapPostSearchResponse(post: BlogPostSearchApiResponse): BlogPostSearchResult {
+  return {
+    id: post.id,
+    slug: post.slug,
+    category: post.categoryName,
+    categorySlug: post.categorySlug,
+    title: post.title,
+    excerpt: post.excerpt,
+    displayDate: post.displayDate,
+    matchedText: post.matchedText,
   };
 }
