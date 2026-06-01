@@ -175,6 +175,33 @@ export function moveEntityTreeBlock<TItem extends { id?: number; order: number }
   ];
 }
 
+export function moveEntityListRow<TItem extends { id?: number; order: number }>(
+  rows: EntityListManagedRow<TItem>[],
+  activeClientId: string,
+  overClientId: string,
+) {
+  const activeIndex = rows.findIndex((row) => row.clientId === activeClientId);
+  const overIndex = rows.findIndex((row) => row.clientId === overClientId);
+
+  if (activeIndex < 0 || overIndex < 0 || activeIndex === overIndex) {
+    return rows;
+  }
+
+  if (rows[activeIndex].state === 'deleted' || rows[overIndex].state === 'deleted') {
+    return rows;
+  }
+
+  return arrayMove(rows, activeIndex, overIndex).map((row, index) =>
+    withDerivedTreeRowState({
+      ...row,
+      current: {
+        ...row.current,
+        order: index + 1,
+      },
+    }),
+  );
+}
+
 export function moveEntityTreeRow<TItem extends { id?: number; order: number }>(
   rows: EntityListManagedRow<TItem>[],
   clientId: string,

@@ -108,6 +108,7 @@ export interface EntityListProps<TItem extends { id?: number; order: number }, T
   getRowClassName?: (row: TItem, state: EntityRowState) => string;
   emptyMessage?: string;
   showReset?: boolean;
+  reorderable?: boolean;
   renderAddControl?: (context: EntityListAddControlContext<TItem, TAddContext>) => ReactNode;
   renderRowActions?: (context: EntityListExtraRowActionContext<TItem>) => ReactNode;
   tree?: {

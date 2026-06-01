@@ -13,7 +13,7 @@ import {
   deriveEntityRowState,
   getDirtyEntityFields,
 } from '../utils/entityListUtils';
-import { getEntityTreeInsertIndex, moveEntityTreeBlock } from '../utils/entityListTree';
+import { getEntityTreeInsertIndex, moveEntityListRow, moveEntityTreeBlock } from '../utils/entityListTree';
 
 interface UseEntityListOptions<TItem extends { id?: number; order: number }, TAddContext> {
   columns: EntityListColumn<TItem>[];
@@ -211,11 +211,11 @@ export function useEntityList<TItem extends { id?: number; order: number }, TAdd
   }, []);
 
   const moveRow = useCallback((activeClientId: string, overClientId: string) => {
-    if (!tree) {
-      return;
-    }
-
-    setRows((current) => moveEntityTreeBlock(current, activeClientId, overClientId, tree));
+    setRows((current) =>
+      tree
+        ? moveEntityTreeBlock(current, activeClientId, overClientId, tree)
+        : moveEntityListRow(current, activeClientId, overClientId),
+    );
   }, [tree]);
 
   const updateRow = useCallback((clientId: string, updater: (row: TItem, rows: TItem[]) => TItem) => {

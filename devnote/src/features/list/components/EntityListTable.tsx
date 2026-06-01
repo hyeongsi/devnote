@@ -24,6 +24,7 @@ interface EntityListTableProps<TItem extends { id?: number; order: number }> {
   onToggleEditing: (clientId: string) => void;
   onToggleDelete: (row: EntityListManagedRow<TItem>) => void;
   renderRowActions?: (row: EntityListManagedRow<TItem>) => ReactNode;
+  reorderable?: boolean;
   updateField: <TKey extends Extract<keyof TItem, string>>(
     clientId: string,
     field: TKey,
@@ -45,6 +46,7 @@ export function EntityListTable<TItem extends { id?: number; order: number }>({
   onToggleEditing,
   onToggleDelete,
   renderRowActions,
+  reorderable = false,
   updateField,
   tree,
   collapsedTreeRowIds,
@@ -85,12 +87,13 @@ export function EntityListTable<TItem extends { id?: number; order: number }>({
               const treeRowKey = treeRowId === undefined || treeRowId === null ? null : String(treeRowId);
               const hasChildren = tree ? hasEntityTreeChildren(row.current, allRows, tree) : false;
               const collapsed = treeRowKey ? collapsedTreeRowIds?.has(treeRowKey) ?? false : false;
+              const canDragRow = Boolean(tree?.draggable || reorderable);
 
               return (
                 <SortableTableRow
                   key={row.clientId}
                   id={`${sortableIdPrefix}${row.clientId}`}
-                  disabled={!tree?.draggable || row.state === 'deleted'}
+                  disabled={!canDragRow || row.state === 'deleted'}
                   className={`transition-colors hover:bg-primary-soft/35 ${
                     entityListStatePresentation[row.state].rowClassName
                   } ${getRowClassName?.(row.current, row.state) ?? ''}`}
@@ -105,12 +108,12 @@ export function EntityListTable<TItem extends { id?: number; order: number }>({
                           } ${column.className ?? ''}`}
                         >
                           <div className="space-y-1">
-                            {tree && column.id === fieldColumns[0]?.id ? (
+                            {(tree || reorderable) && column.id === fieldColumns[0]?.id ? (
                               <div
-                                style={{ paddingLeft: `${(tree.getDepth?.(row.current) ?? 0) * 18}px` }}
+                                style={{ paddingLeft: `${(tree?.getDepth?.(row.current) ?? 0) * 18}px` }}
                               >
                                 <div className="inline-flex items-center gap-2 text-left">
-                                  {tree.draggable ? (
+                                  {canDragRow ? (
                                     <button
                                       type="button"
                                       aria-label="드래그하여 이동"
@@ -122,26 +125,36 @@ export function EntityListTable<TItem extends { id?: number; order: number }>({
                                       <GripVertical className="h-4 w-4" />
                                     </button>
                                   ) : null}
-                                  <button
-                                    type="button"
-                                    className={`inline-flex items-center gap-2 text-left ${
-                                      hasChildren ? 'cursor-pointer' : 'cursor-default'
-                                    }`}
-                                    onClick={() => {
-                                      if (hasChildren) {
-                                        onToggleTreeRow?.(row.current);
-                                      }
-                                    }}
-                                  >
-                                    <span className="grid h-5 w-5 place-items-center text-gray-400">
-                                      {hasChildren ? (
-                                        collapsed ? (
-                                          <ChevronRight className="h-4 w-4" />
-                                        ) : (
-                                          <ChevronDown className="h-4 w-4" />
-                                        )
-                                      ) : null}
-                                    </span>
+                                  {tree ? (
+                                    <button
+                                      type="button"
+                                      className={`inline-flex items-center gap-2 text-left ${
+                                        hasChildren ? 'cursor-pointer' : 'cursor-default'
+                                      }`}
+                                      onClick={() => {
+                                        if (hasChildren) {
+                                          onToggleTreeRow?.(row.current);
+                                        }
+                                      }}
+                                    >
+                                      <span className="grid h-5 w-5 place-items-center text-gray-400">
+                                        {hasChildren ? (
+                                          collapsed ? (
+                                            <ChevronRight className="h-4 w-4" />
+                                          ) : (
+                                            <ChevronDown className="h-4 w-4" />
+                                          )
+                                        ) : null}
+                                      </span>
+                                      <EntityListField
+                                        row={row}
+                                        rows={allRows}
+                                        column={column}
+                                        isEditing={isEditing}
+                                        updateField={updateField}
+                                      />
+                                    </button>
+                                  ) : (
                                     <EntityListField
                                       row={row}
                                       rows={allRows}
@@ -149,7 +162,7 @@ export function EntityListTable<TItem extends { id?: number; order: number }>({
                                       isEditing={isEditing}
                                       updateField={updateField}
                                     />
-                                  </button>
+                                  )}
                                 </div>
                               </div>
                             ) : (

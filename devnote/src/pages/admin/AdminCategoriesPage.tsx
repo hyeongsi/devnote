@@ -80,6 +80,7 @@ export function AdminCategoriesPage() {
       saveItems={saveAdminCategories}
       getItemName={(item) => item.name}
       validateRow={validateCategoryRow}
+      reorderable
       createEmptyItem={(nextOrder) => ({
         slug: '',
         name: '',

@@ -26,6 +26,7 @@ export function EntityList<TItem extends { id?: number; order: number }, TAddCon
   getRowClassName,
   emptyMessage = 'No rows available.',
   showReset = false,
+  reorderable = false,
   renderAddControl,
   renderRowActions,
   tree,
@@ -107,7 +108,7 @@ export function EntityList<TItem extends { id?: number; order: number }, TAddCon
   );
 
   const handleDragEnd = useCallback((event: DragEndEvent, idPrefix = '') => {
-    if (!tree || !tree.draggable || !event.over || event.active.id === event.over.id) {
+    if ((!tree?.draggable && !reorderable) || !event.over || event.active.id === event.over.id) {
       return;
     }
 
@@ -116,7 +117,7 @@ export function EntityList<TItem extends { id?: number; order: number }, TAddCon
     const activeRow = rows.find((row) => row.clientId === activeId);
     const overRow = rows.find((row) => row.clientId === overId);
 
-    if (!canDropEntityTreeBlock(activeRow, overRow, tree)) {
+    if (tree?.draggable && !canDropEntityTreeBlock(activeRow, overRow, tree)) {
       showMessage({
         tone: 'warning',
         title: '같은 부모 메뉴에 속한 같은 레벨끼리만 이동할 수 있습니다.',
@@ -125,7 +126,7 @@ export function EntityList<TItem extends { id?: number; order: number }, TAddCon
     }
 
     moveRow(activeId, overId);
-  }, [moveRow, rows, showMessage, tree]);
+  }, [moveRow, reorderable, rows, showMessage, tree]);
 
   const renderExtraRowActions = useCallback(
     (row: EntityListManagedRow<TItem>) =>
@@ -243,6 +244,7 @@ export function EntityList<TItem extends { id?: number; order: number }, TAddCon
             onToggleDelete={(row) => void toggleDelete(row)}
             renderRowActions={renderExtraRowActions}
             updateField={updateField}
+            reorderable={reorderable}
             tree={tree}
             collapsedTreeRowIds={collapsedTreeRowIds}
             onToggleTreeRow={toggleTreeRow}
@@ -263,6 +265,7 @@ export function EntityList<TItem extends { id?: number; order: number }, TAddCon
             onToggleDelete={(row) => void toggleDelete(row)}
             renderRowActions={renderExtraRowActions}
             updateField={updateField}
+            reorderable={reorderable}
             tree={tree}
             collapsedTreeRowIds={collapsedTreeRowIds}
             onToggleTreeRow={toggleTreeRow}

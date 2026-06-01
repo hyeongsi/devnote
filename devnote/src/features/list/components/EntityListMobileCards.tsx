@@ -22,6 +22,7 @@ interface EntityListMobileCardsProps<TItem extends { id?: number; order: number 
   onToggleEditing: (clientId: string) => void;
   onToggleDelete: (row: EntityListManagedRow<TItem>) => void;
   renderRowActions?: (row: EntityListManagedRow<TItem>) => ReactNode;
+  reorderable?: boolean;
   updateField: <TKey extends Extract<keyof TItem, string>>(
     clientId: string,
     field: TKey,
@@ -42,6 +43,7 @@ export function EntityListMobileCards<TItem extends { id?: number; order: number
   onToggleEditing,
   onToggleDelete,
   renderRowActions,
+  reorderable = false,
   updateField,
   tree,
   collapsedTreeRowIds,
@@ -59,12 +61,13 @@ export function EntityListMobileCards<TItem extends { id?: number; order: number
           const treeRowKey = treeRowId === undefined || treeRowId === null ? null : String(treeRowId);
           const hasChildren = tree ? hasEntityTreeChildren(row.current, allRows, tree) : false;
           const collapsed = treeRowKey ? collapsedTreeRowIds?.has(treeRowKey) ?? false : false;
+          const canDragRow = Boolean(tree?.draggable || reorderable);
 
           return (
             <SortableMobileCard
               key={row.clientId}
               id={`${sortableIdPrefix}${row.clientId}`}
-              disabled={!tree?.draggable || row.state === 'deleted'}
+              disabled={!canDragRow || row.state === 'deleted'}
               className={`p-5 ${entityListStatePresentation[row.state].rowClassName}`}
             >
               {({ setActivatorNodeRef, dragAttributes, dragListeners }) => (
@@ -73,7 +76,7 @@ export function EntityListMobileCards<TItem extends { id?: number; order: number
                 <EntityListStatusBadge state={row.state} />
                 <div className="flex items-center gap-2">
                   {renderRowActions?.(row)}
-                  {tree?.draggable ? (
+                  {canDragRow ? (
                     <button
                       type="button"
                       aria-label="드래그하여 이동"
