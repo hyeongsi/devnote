@@ -11,11 +11,36 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 class PostControllerTest {
+
+    @Test
+    void searchPostsReturnsMatchingPosts() throws Exception {
+        PostService postService = mock(PostService.class);
+        MockMvc mockMvc = MockMvcBuilders.standaloneSetup(new PostController(postService)).build();
+
+        when(postService.searchPosts("spring security")).thenReturn(List.of(new PostSearchResponse(
+                10L,
+                "spring-security-practical-guide",
+                "Spring Boot",
+                "spring-boot",
+                "Spring Security guide",
+                "Spring Security basics",
+                "2026.05.20",
+                "Spring Security keeps requests protected."
+        )));
+
+        mockMvc.perform(get("/api/posts/search").param("query", "spring security"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].slug").value("spring-security-practical-guide"))
+                .andExpect(jsonPath("$[0].matchedText").value("Spring Security keeps requests protected."));
+
+        verify(postService).searchPosts("spring security");
+    }
 
     @Test
     void deletePostDeletesByCategoryAndSlug() throws Exception {
