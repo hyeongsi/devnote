@@ -107,6 +107,7 @@ export interface EntityListProps<TItem extends { id?: number; order: number }, T
   validateRow?: (row: TItem, rows: TItem[]) => Record<string, string>;
   getRowClassName?: (row: TItem, state: EntityRowState) => string;
   emptyMessage?: string;
+  showReset?: boolean;
   renderAddControl?: (context: EntityListAddControlContext<TItem, TAddContext>) => ReactNode;
   renderRowActions?: (context: EntityListExtraRowActionContext<TItem>) => ReactNode;
   tree?: {

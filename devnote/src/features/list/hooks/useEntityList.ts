@@ -91,8 +91,10 @@ export function useEntityList<TItem extends { id?: number; order: number }, TAdd
       const nextRows = (await fetchItems()).map((item) => createEntityListRow(item));
       setRows(nextRows);
       setEditingRowIds([]);
+      return true;
     } catch (error) {
       setLoadError(error instanceof Error ? error.message : 'A problem occurred while loading rows.');
+      return false;
     } finally {
       setIsLoading(false);
     }
@@ -318,6 +320,7 @@ export function useEntityList<TItem extends { id?: number; order: number }, TAdd
     markRowDeleted,
     moveRow,
     updateRow,
+    resetList: loadList,
     saveList,
     updateField,
   };

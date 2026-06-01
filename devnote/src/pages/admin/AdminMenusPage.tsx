@@ -64,6 +64,7 @@ export function AdminMenusPage() {
       getItemName={(item) => item.name}
       validateRow={validateMenuRow}
       getRowClassName={(row) => (isSystemAreaParent(row) ? 'bg-gray-50/80' : '')}
+      showReset
       tree={{
         getRowId: (item) => item.id,
         getParentId: (item) => item.parentId,

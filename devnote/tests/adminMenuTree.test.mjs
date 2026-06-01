@@ -113,10 +113,29 @@ assert.equal(canMoveAddedMenuToChild(addedRootMenu, [...rows, addedRootMenu]), t
 assert.deepEqual(moveAddedMenuToChild(addedRootMenu, [...rows, addedRootMenu]), {
   ...addedRootMenu,
   visible: true,
-  order: 1,
+  order: 2,
   area: 'HEADER',
-  parentId: 9,
-  depth: 2,
+  parentId: 3,
+  depth: 1,
+});
+
+const adminRowsWithNestedLastChild = [
+  rows[0],
+  rows[1],
+  rows[2],
+  { id: 10, name: 'AI 자동 포스팅', path: '/admin/ai-posting', state: '', visible: true, order: 1, area: 'ADMIN', parentId: 5, depth: 2 },
+  addedRootMenu,
+  rows[3],
+  rows[4],
+];
+
+assert.deepEqual(moveAddedMenuToChild(addedRootMenu, adminRowsWithNestedLastChild), {
+  ...addedRootMenu,
+  visible: true,
+  order: 3,
+  area: 'ADMIN',
+  parentId: 2,
+  depth: 1,
 });
 
 const addedHeaderChild = {

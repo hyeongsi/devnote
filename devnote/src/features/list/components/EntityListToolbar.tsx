@@ -1,4 +1,4 @@
-import { Plus, Save } from 'lucide-react';
+import { Plus, RotateCcw, Save } from 'lucide-react';
 import { memo } from 'react';
 import type { ReactNode } from 'react';
 
@@ -8,7 +8,9 @@ interface EntityListToolbarProps {
   itemLabel: string;
   hasChanges: boolean;
   isSaving: boolean;
+  showReset: boolean;
   onAdd: () => void;
+  onReset: () => void;
   onSave: () => void;
   addControl?: ReactNode;
 }
@@ -19,7 +21,9 @@ export const EntityListToolbar = memo(function EntityListToolbar({
   itemLabel,
   hasChanges,
   isSaving,
+  showReset,
   onAdd,
+  onReset,
   onSave,
   addControl,
 }: EntityListToolbarProps) {
@@ -43,6 +47,21 @@ export const EntityListToolbar = memo(function EntityListToolbar({
           <Save className="h-4 w-4" />
           {isSaving ? '저장 중...' : '변경 사항 저장'}
         </button>
+        {showReset ? (
+          <button
+            type="button"
+            className={`inline-flex h-10 items-center justify-center gap-2 rounded-xl border px-4 text-sm font-bold transition ${
+              hasChanges && !isSaving
+                ? 'border-line bg-white text-gray-600 hover:border-primary/30 hover:bg-primary-soft hover:text-primary'
+                : 'cursor-not-allowed border-gray-200 bg-gray-50 text-gray-300'
+            }`}
+            onClick={onReset}
+            disabled={!hasChanges || isSaving}
+          >
+            <RotateCcw className="h-4 w-4" />
+            초기화
+          </button>
+        ) : null}
         {addControl ?? (
           <button
             type="button"

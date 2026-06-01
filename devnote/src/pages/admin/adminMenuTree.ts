@@ -232,6 +232,7 @@ function getNextMenuOrder(rows: AdminMenuRow[], parentId: number) {
 
 function findPreviousSavedMenu(row: AdminMenuRow, rows: AdminMenuRow[]) {
   const rowIndex = rows.indexOf(row);
+  const rowDepth = row.depth ?? 0;
 
   if (rowIndex <= 0) {
     return undefined;
@@ -240,7 +241,7 @@ function findPreviousSavedMenu(row: AdminMenuRow, rows: AdminMenuRow[]) {
   for (let index = rowIndex - 1; index >= 0; index -= 1) {
     const candidate = rows[index];
 
-    if (candidate.id && candidate.area !== 'ROOT') {
+    if (candidate.id && candidate.area !== 'ROOT' && (candidate.depth ?? 0) === rowDepth) {
       return candidate;
     }
   }

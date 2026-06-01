@@ -25,6 +25,7 @@ export function EntityList<TItem extends { id?: number; order: number }, TAddCon
   validateRow,
   getRowClassName,
   emptyMessage = 'No rows available.',
+  showReset = false,
   renderAddControl,
   renderRowActions,
   tree,
@@ -54,6 +55,7 @@ export function EntityList<TItem extends { id?: number; order: number }, TAddCon
     markRowDeleted,
     moveRow,
     updateRow,
+    resetList,
     saveList,
     updateField,
   } = useEntityList<TItem, TAddContext>({
@@ -181,6 +183,26 @@ export function EntityList<TItem extends { id?: number; order: number }, TAddCon
     }
   }, [itemLabel, saveList, showMessage]);
 
+  const handleReset = useCallback(async () => {
+    const loaded = await resetList();
+
+    if (!loaded) {
+      showMessage({
+        tone: 'error',
+        title: `${itemLabel} 목록을 다시 불러오지 못했습니다.`,
+        description: '잠시 후 다시 시도해 주세요.',
+      });
+      return;
+    }
+
+    setCollapsedTreeRowIds(new Set());
+    showMessage({
+      tone: 'success',
+      title: `${itemLabel} 변경 사항을 초기화했습니다.`,
+      description: '서버의 최신 목록을 다시 불러왔습니다.',
+    });
+  }, [itemLabel, resetList, showMessage]);
+
   if (isLoading) {
     return (
       <EntityListStateBlock tone="loading">
@@ -201,7 +223,9 @@ export function EntityList<TItem extends { id?: number; order: number }, TAddCon
         itemLabel={itemLabel}
         hasChanges={hasChanges}
         isSaving={isSaving}
+        showReset={showReset}
         onAdd={() => addRow()}
+        onReset={() => void handleReset()}
         onSave={() => void handleSave()}
         addControl={renderAddControl?.({ rows, onAdd: addRow })}
       />
