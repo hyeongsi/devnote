@@ -16,15 +16,17 @@ export async function getBlogCategories(): Promise<BlogCategory[]> {
 
   const categories = (await response.json()) as BlogCategoryApiResponse[];
 
-  return categories.map((category) => ({
-    id: category.id,
-    slug: category.slug,
-    name: category.name,
-    description: category.description,
-    count: category.count,
-    visible: category.visible,
-    displayOrder: category.displayOrder,
-  }));
+  return categories
+    .map((category) => ({
+      id: category.id,
+      slug: category.slug,
+      name: category.name,
+      description: category.description,
+      count: category.count,
+      visible: category.visible,
+      displayOrder: category.displayOrder,
+    }))
+    .sort((left, right) => (left.displayOrder ?? 0) - (right.displayOrder ?? 0));
 }
 
 export async function getAdminCategories(): Promise<AdminCategoryRow[]> {
@@ -42,15 +44,17 @@ export async function getAdminCategories(): Promise<AdminCategoryRow[]> {
 
   const categories = (await response.json()) as AdminCategoryApiResponse[];
 
-  return categories.map((category) => ({
-    id: category.id,
-    slug: category.slug,
-    name: category.name,
-    description: category.description,
-    postCount: category.postCount,
-    visible: category.visible,
-    order: category.displayOrder,
-  }));
+  return categories
+    .map((category) => ({
+      id: category.id,
+      slug: category.slug,
+      name: category.name,
+      description: category.description,
+      postCount: category.postCount,
+      visible: category.visible,
+      order: category.displayOrder,
+    }))
+    .sort((left, right) => left.order - right.order);
 }
 
 export async function saveAdminCategories(items: AdminCategoryRow[]): Promise<void> {

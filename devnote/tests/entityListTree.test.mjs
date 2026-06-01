@@ -20,7 +20,7 @@ const outputPath = join(outputDir, `entityListTree-${Date.now()}.mjs`);
 await mkdir(outputDir, { recursive: true });
 await writeFile(outputPath, transpiled.outputText, 'utf8');
 
-const { canDropEntityTreeBlock, getEntityTreeInsertIndex, getEntityTreeSubtreeRows, moveEntityTreeBlock } = await import(
+const { canDropEntityTreeBlock, getEntityTreeInsertIndex, getEntityTreeSubtreeRows, moveEntityListRow, moveEntityTreeBlock } = await import(
   pathToFileURL(outputPath).href
 );
 
@@ -48,6 +48,17 @@ assert.equal(canDropEntityTreeBlock(rows[0], rows[3], tree), true);
 assert.equal(getEntityTreeInsertIndex(rows, { id: undefined, name: '', parentId: 2, order: 3 }, tree), 3);
 assert.equal(getEntityTreeInsertIndex(rows, { id: undefined, name: '', parentId: 3, order: 3 }, tree), 6);
 assert.equal(getEntityTreeInsertIndex(rows, { id: undefined, name: '', parentId: 1, order: 3 }, tree), 6);
+
+const movedFlatRows = moveEntityListRow(rows, 'blog', 'dashboard');
+assert.deepEqual(
+  movedFlatRows.map((row) => row.clientId),
+  ['admin', 'blog', 'dashboard', 'posts', 'header', 'home'],
+);
+assert.deepEqual(
+  movedFlatRows.map((row) => row.current.order),
+  [1, 2, 3, 4, 5, 6],
+);
+assert.equal(movedFlatRows[2].state, 'modified');
 
 const movedChild = moveEntityTreeBlock(rows, 'posts', 'dashboard', tree);
 assert.deepEqual(
