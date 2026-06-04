@@ -6,11 +6,11 @@ import { getPosts } from '../api/posts';
 import { Input } from '../components/ui/Input';
 import { Pagination } from '../components/ui/Pagination';
 import { Select } from '../components/ui/Select';
-import { categoryPopularPosts, popularPosts } from '../data/siteData';
 import { PostListItem } from '../features/PostListItem';
 import { PostSidebar } from '../features/PostSidebar';
 import { usePagination } from '../hooks/usePagination';
 import type { BlogCategory, BlogPost } from '../types';
+import { buildPopularPosts } from '../utils/popularPosts';
 
 const POSTS_PER_PAGE = 6;
 
@@ -100,7 +100,7 @@ export function PostListPage() {
     resetKey: `${selectedCategory}:${query}:${sortBy}`,
   });
 
-  const sidebarPopularPosts = categoryPopularPosts[selectedCategory] ?? popularPosts;
+  const sidebarPopularPosts = buildPopularPosts(posts, { categorySlug: selectedCategory });
   const sidebarCategories: BlogCategory[] = [
     {
       ...allCategory,
