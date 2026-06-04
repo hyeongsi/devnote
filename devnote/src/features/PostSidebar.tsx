@@ -44,21 +44,41 @@ export function PostSidebar({
 
       <SidebarPanel title={selectedCategory === 'all' ? '인기 게시글' : '이 카테고리 인기글'}>
         <div className="space-y-4">
-          {popularPosts.map((post) => (
-            <div
-              key={`${post.rank}-${post.title}`}
-              className="grid grid-cols-[28px_1fr_auto] items-start gap-3"
-            >
-              <span className="grid h-7 w-7 place-items-center rounded-full bg-primary-soft text-xs font-black text-primary">
-                {post.rank}
-              </span>
-              <div>
-                <p className="text-sm font-semibold leading-6 text-gray-800">{post.title}</p>
-                <p className="mt-1 text-xs text-muted">조회 {post.views}</p>
-              </div>
-              <span className="text-xs font-semibold text-gray-400">TOP</span>
-            </div>
-          ))}
+          {popularPosts.length > 0 ? (
+            popularPosts.map((post) => {
+              const content = (
+                <>
+                  <span className="grid h-7 w-7 place-items-center rounded-full bg-primary-soft text-xs font-black text-primary">
+                    {post.rank}
+                  </span>
+                  <div>
+                    <p className="text-sm font-semibold leading-6 text-gray-800">{post.title}</p>
+                    <p className="mt-1 text-xs text-muted">조회 {post.views}</p>
+                  </div>
+                  <span className="text-xs font-semibold text-gray-400">TOP</span>
+                </>
+              );
+              const className = 'grid grid-cols-[28px_1fr_auto] items-start gap-3';
+
+              return post.categorySlug && post.slug ? (
+                <Link
+                  key={`${post.rank}-${post.categorySlug}-${post.slug}`}
+                  to={`/posts/${post.categorySlug}/${post.slug}`}
+                  className={`${className} rounded-2xl transition hover:bg-gray-50`}
+                >
+                  {content}
+                </Link>
+              ) : (
+                <div key={`${post.rank}-${post.title}`} className={className}>
+                  {content}
+                </div>
+              );
+            })
+          ) : (
+            <p className="rounded-2xl border border-dashed border-line px-4 py-5 text-center text-sm font-semibold text-muted">
+              인기 게시글이 없습니다.
+            </p>
+          )}
         </div>
       </SidebarPanel>
     </aside>
