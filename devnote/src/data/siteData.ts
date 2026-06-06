@@ -9,7 +9,6 @@ import type {
   LoginProvider,
   ProjectPreview,
   PublicNavItem,
-  RankedPost,
   StackItem,
   TrafficPoint,
 } from '../types';
@@ -162,31 +161,6 @@ export function getPostPath(post: Pick<BlogPost, 'categorySlug' | 'slug'>) {
   return `/posts/${post.categorySlug}/${post.slug}`;
 }
 
-export const popularPosts: RankedPost[] = [
-  { rank: 1, title: 'AI 자동 포스팅 시스템 구축기', views: '2.3K' },
-  { rank: 2, title: 'Spring Security JWT 적용하기', views: '1.8K' },
-  { rank: 3, title: 'Docker로 개발 환경 구축하기', views: '1.6K' },
-  { rank: 4, title: 'Spring Data JPA 실전 가이드', views: '1.4K' },
-  { rank: 5, title: 'Spring Boot 3.x에서 예외 처리 정리', views: '1.2K' },
-];
-
-export const categoryPopularPosts: Record<string, RankedPost[]> = {
-  'spring-boot': [
-    { rank: 1, title: 'Spring Security JWT 적용하기', views: '1.8K' },
-    { rank: 2, title: 'Spring Data JPA 실전 가이드', views: '1.4K' },
-    { rank: 3, title: 'Spring Boot 3.x에서 예외 처리 정리', views: '1.2K' },
-    { rank: 4, title: 'Spring Boot와 OAuth2 로그인 연동', views: '1.0K' },
-    { rank: 5, title: 'Spring Boot Actuator 모니터링', views: '764' },
-  ],
-  'ai-automation': [
-    { rank: 1, title: 'AI 자동 포스팅 시스템 구축기', views: '2.3K' },
-    { rank: 2, title: '데이터 수집 파이프라인 자동화', views: '823' },
-    { rank: 3, title: 'ChatGPT API 활용 사례 10가지', views: '720' },
-    { rank: 4, title: '프로젝트 템플릿 자동 생성', views: '648' },
-    { rank: 5, title: '배치 파이프라인 운영 팁', views: '532' },
-  ],
-};
-
 export const loginProviders: LoginProvider[] = [
   { id: 'github', label: 'GitHub로 로그인', icon: 'github' },
   { id: 'google', label: 'Google로 로그인', icon: 'chrome' },
@@ -259,14 +233,6 @@ export const recentActivities: ActivityItem[] = [
   { id: 2, title: '게시글이 수정되었습니다', description: 'Spring Security JWT 적용하기', timeAgo: '1시간 전', tone: 'green' },
   { id: 3, title: '새 댓글이 등록되었습니다', description: 'AI 자동 포스팅 시스템 구축기', timeAgo: '2시간 전', tone: 'orange' },
   { id: 4, title: '신규 구독자가 추가되었습니다', description: 'user@example.com', timeAgo: '3시간 전', tone: 'violet' },
-];
-
-export const adminTopPosts: RankedPost[] = [
-  { rank: 1, title: 'AI 자동 포스팅 시스템 구축기', views: '2.3K' },
-  { rank: 2, title: 'Spring Security JWT 적용하기', views: '1.8K' },
-  { rank: 3, title: 'Docker로 개발 환경 구축하기', views: '1.6K' },
-  { rank: 4, title: 'Spring Data JPA 실전 가이드', views: '1.4K' },
-  { rank: 5, title: 'Spring Boot 3.x에서 예외 처리 정리', views: '1.2K' },
 ];
 
 export const adminMenuRows: AdminMenuRow[] = [

@@ -7,6 +7,7 @@ import ts from 'typescript';
 
 const sourceRoot = new URL('../src/', import.meta.url);
 const outputDir = join(tmpdir(), 'devnote-popular-post-tests', `${Date.now()}`);
+const siteDataSource = await readFile(new URL('data/siteData.ts', sourceRoot), 'utf8');
 
 async function transpileSource(relativePath) {
   const sourcePath = new URL(relativePath, sourceRoot);
@@ -110,3 +111,7 @@ assert.deepEqual(buildPopularPosts(posts, { categorySlug: 'spring-boot', limit: 
     categorySlug: 'spring-boot',
   },
 ]);
+
+assert.doesNotMatch(siteDataSource, /export const popularPosts/);
+assert.doesNotMatch(siteDataSource, /export const categoryPopularPosts/);
+assert.doesNotMatch(siteDataSource, /export const adminTopPosts/);

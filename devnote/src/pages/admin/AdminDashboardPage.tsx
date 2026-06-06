@@ -129,9 +129,9 @@ export function AdminDashboardPage() {
         <section className="rounded-[28px] border border-line bg-white p-6 shadow-[0_20px_60px_rgba(17,24,39,0.05)]">
           <div className="flex items-center justify-between">
             <h3 className="text-2xl font-black tracking-tight text-gray-950">인기 게시글 TOP 5</h3>
-            <button type="button" className="text-sm font-bold text-primary">
+            <Link to="/posts" className="text-sm font-bold text-primary">
               전체 보기 →
-            </button>
+            </Link>
           </div>
 
           <div className="mt-6 space-y-4">
@@ -144,34 +144,22 @@ export function AdminDashboardPage() {
                 {topPostsError}
               </p>
             ) : topPosts.length > 0 ? (
-              topPosts.map((post) => {
-                const content = (
-                  <>
-                    <span className="grid h-7 w-7 place-items-center rounded-full bg-primary-soft text-xs font-black text-primary">
-                      {post.rank}
-                    </span>
-                    <p className="text-sm font-semibold leading-6 text-gray-800">{post.title}</p>
-                    <span className="inline-flex items-center gap-1 text-xs font-semibold text-gray-400">
-                      <Eye className="h-3.5 w-3.5" />
-                      {post.views}
-                    </span>
-                  </>
-                );
-
-                return post.categorySlug && post.slug ? (
-                  <Link
-                    key={`${post.categorySlug}-${post.slug}`}
-                    to={`/posts/${post.categorySlug}/${post.slug}`}
-                    className="grid grid-cols-[28px_1fr_auto] items-center gap-3 rounded-2xl transition hover:bg-gray-50"
-                  >
-                    {content}
-                  </Link>
-                ) : (
-                  <div key={post.rank} className="grid grid-cols-[28px_1fr_auto] items-center gap-3">
-                    {content}
-                  </div>
-                );
-              })
+              topPosts.map((post) => (
+                <Link
+                  key={`${post.categorySlug}-${post.slug}`}
+                  to={`/posts/${post.categorySlug}/${post.slug}`}
+                  className="grid grid-cols-[28px_1fr_auto] items-center gap-3 rounded-2xl transition hover:bg-gray-50"
+                >
+                  <span className="grid h-7 w-7 place-items-center rounded-full bg-primary-soft text-xs font-black text-primary">
+                    {post.rank}
+                  </span>
+                  <p className="text-sm font-semibold leading-6 text-gray-800">{post.title}</p>
+                  <span className="inline-flex items-center gap-1 text-xs font-semibold text-gray-400">
+                    <Eye className="h-3.5 w-3.5" />
+                    {post.views}
+                  </span>
+                </Link>
+              ))
             ) : (
               <p className="rounded-2xl border border-dashed border-line px-4 py-8 text-center text-sm font-semibold text-muted">
                 인기 게시글이 없습니다.
