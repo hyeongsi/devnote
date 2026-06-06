@@ -141,8 +141,8 @@ export interface RankedPost {
   rank: number;
   title: string;
   views: string;
-  slug?: string;
-  categorySlug?: string;
+  slug: string;
+  categorySlug: string;
 }
 
 export interface LoginProvider {
