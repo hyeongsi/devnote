@@ -154,9 +154,17 @@ export interface LoginProvider {
 export interface AdminStat {
   label: string;
   value: string;
-  change: string;
+  note: string;
   tone: 'violet' | 'green' | 'blue' | 'orange' | 'pink';
   icon: LucideIcon;
+}
+
+export interface DashboardStats {
+  totalPosts: number;
+  totalViews: number;
+  totalLikes: number;
+  totalComments: number;
+  newSubscribers: number;
 }
 
 export interface TrafficPoint {

@@ -269,3 +269,23 @@ VALUES
     (3, 1, 'DevOps'),
     (3, 2, 'Container'),
     (3, 3, 'Infra');
+
+INSERT INTO post_likes (id, post_id, created_at)
+VALUES
+    (1, 1, DATEADD('DAY', -1, CURRENT_TIMESTAMP)),
+    (2, 1, DATEADD('DAY', -2, CURRENT_TIMESTAMP)),
+    (3, 2, DATEADD('DAY', -3, CURRENT_TIMESTAMP)),
+    (4, 2, DATEADD('DAY', -5, CURRENT_TIMESTAMP)),
+    (5, 3, DATEADD('DAY', -8, CURRENT_TIMESTAMP));
+
+INSERT INTO comments (id, post_id, content, created_at)
+VALUES
+    (1, 1, '예외 처리 구조를 이해하는 데 도움이 됐습니다.', DATEADD('DAY', -1, CURRENT_TIMESTAMP)),
+    (2, 2, 'JPA 조회 전략 설명이 유용합니다.', DATEADD('DAY', -4, CURRENT_TIMESTAMP)),
+    (3, 3, 'Docker 개발 환경에 적용해보겠습니다.', DATEADD('DAY', -9, CURRENT_TIMESTAMP));
+
+INSERT INTO subscribers (id, email, subscribed_at)
+VALUES
+    (1, 'recent-one@example.com', DATEADD('DAY', -1, CURRENT_TIMESTAMP)),
+    (2, 'recent-two@example.com', DATEADD('DAY', -6, CURRENT_TIMESTAMP)),
+    (3, 'older@example.com', DATEADD('DAY', -10, CURRENT_TIMESTAMP));

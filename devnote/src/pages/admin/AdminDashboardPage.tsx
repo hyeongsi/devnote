@@ -1,17 +1,17 @@
-import { Eye } from 'lucide-react';
+import { Eye, FileText, MessageSquare, ThumbsUp, UserPlus } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
+import { getDashboardStats } from '../../api/dashboard';
 import { getPosts } from '../../api/posts';
-import {
-  adminStats,
-  recentActivities,
-  trafficPoints,
-} from '../../data/siteData';
+import { recentActivities, trafficPoints } from '../../data/siteData';
 import { AdminStatCard } from '../../features/admin/AdminStatCard';
-import type { RankedPost } from '../../types';
+import type { AdminStat, DashboardStats, RankedPost } from '../../types';
 import { buildPopularPosts } from '../../utils/popularPosts';
 
 export function AdminDashboardPage() {
+  const [dashboardStats, setDashboardStats] = useState<DashboardStats | null>(null);
+  const [isLoadingStats, setIsLoadingStats] = useState(true);
+  const [statsError, setStatsError] = useState<string | null>(null);
   const [topPosts, setTopPosts] = useState<RankedPost[]>([]);
   const [isLoadingTopPosts, setIsLoadingTopPosts] = useState(true);
   const [topPostsError, setTopPostsError] = useState<string | null>(null);
@@ -23,6 +23,42 @@ export function AdminDashboardPage() {
       return `${x},${y}`;
     })
     .join(' ');
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadDashboardStats() {
+      setIsLoadingStats(true);
+      setStatsError(null);
+
+      try {
+        const stats = await getDashboardStats();
+
+        if (!cancelled) {
+          setDashboardStats(stats);
+        }
+      } catch (loadError) {
+        if (!cancelled) {
+          setDashboardStats(null);
+          setStatsError(
+            loadError instanceof Error
+              ? loadError.message
+              : '대시보드 통계를 불러오는 중 문제가 발생했습니다.',
+          );
+        }
+      } finally {
+        if (!cancelled) {
+          setIsLoadingStats(false);
+        }
+      }
+    }
+
+    void loadDashboardStats();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -60,6 +96,46 @@ export function AdminDashboardPage() {
     };
   }, []);
 
+  const adminStats: AdminStat[] = dashboardStats
+    ? [
+        {
+          label: '총 게시글',
+          value: formatStatValue(dashboardStats.totalPosts),
+          note: '현재 등록된 게시글',
+          tone: 'violet',
+          icon: FileText,
+        },
+        {
+          label: '총 조회수',
+          value: formatStatValue(dashboardStats.totalViews),
+          note: '전체 게시글 누적',
+          tone: 'green',
+          icon: Eye,
+        },
+        {
+          label: '좋아요 수',
+          value: formatStatValue(dashboardStats.totalLikes),
+          note: '전체 게시글 누적',
+          tone: 'blue',
+          icon: ThumbsUp,
+        },
+        {
+          label: '댓글 수',
+          value: formatStatValue(dashboardStats.totalComments),
+          note: '전체 게시글 누적',
+          tone: 'orange',
+          icon: MessageSquare,
+        },
+        {
+          label: '신규 구독자',
+          value: formatStatValue(dashboardStats.newSubscribers),
+          note: '최근 7일',
+          tone: 'pink',
+          icon: UserPlus,
+        },
+      ]
+    : [];
+
   return (
     <div className="space-y-6">
       <section className="rounded-[28px] border border-line bg-white p-6 shadow-[0_20px_60px_rgba(17,24,39,0.05)] md:p-8">
@@ -71,15 +147,30 @@ export function AdminDashboardPage() {
             <p className="mt-3 text-lg text-muted">오늘도 DevNote를 관리해보세요.</p>
           </div>
           <div className="rounded-2xl border border-line px-5 py-4 text-sm font-semibold text-gray-700">
-            2024.05.12 ~ 2024.05.18
+            실시간 누적 통계
           </div>
         </div>
 
-        <div className="mt-8 grid gap-4 xl:grid-cols-5">
-          {adminStats.map((stat) => (
-            <AdminStatCard key={stat.label} stat={stat} />
-          ))}
-        </div>
+        {isLoadingStats ? (
+          <div className="mt-8 grid gap-4 xl:grid-cols-5">
+            {Array.from({ length: 5 }, (_, index) => (
+              <div
+                key={index}
+                className="h-[190px] animate-pulse rounded-[24px] border border-line bg-gray-50"
+              />
+            ))}
+          </div>
+        ) : statsError ? (
+          <p className="mt-8 rounded-2xl border border-red-200 bg-red-50 px-5 py-8 text-center text-sm font-semibold text-red-600">
+            {statsError}
+          </p>
+        ) : (
+          <div className="mt-8 grid gap-4 xl:grid-cols-5">
+            {adminStats.map((stat) => (
+              <AdminStatCard key={stat.label} stat={stat} />
+            ))}
+          </div>
+        )}
       </section>
 
       <div className="grid gap-6 xl:grid-cols-[1.45fr_0.8fr_0.75fr]">
@@ -202,4 +293,8 @@ export function AdminDashboardPage() {
       </div>
     </div>
   );
+}
+
+function formatStatValue(value: number) {
+  return new Intl.NumberFormat('ko-KR').format(value);
 }
