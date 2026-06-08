@@ -1,4 +1,3 @@
-import { ArrowUpRight } from 'lucide-react';
 import type { AdminStat } from '../../types';
 
 const toneClasses: Record<AdminStat['tone'], string> = {
@@ -18,14 +17,10 @@ export function AdminStatCard({ stat }: { stat: AdminStat }) {
         <div className={`grid h-14 w-14 place-items-center rounded-2xl ${toneClasses[stat.tone]}`}>
           <Icon className="h-6 w-6" />
         </div>
-        <div className="inline-flex items-center gap-1 rounded-full bg-gray-50 px-3 py-1 text-xs font-bold text-emerald-600">
-          <ArrowUpRight className="h-3.5 w-3.5" />
-          {stat.change}
-        </div>
       </div>
       <p className="mt-5 text-sm font-semibold text-gray-500">{stat.label}</p>
       <strong className="mt-1 block text-4xl font-black tracking-tight text-gray-950">{stat.value}</strong>
-      <p className="mt-2 text-sm text-muted">지난 주 대비</p>
+      <p className="mt-2 text-sm text-muted">{stat.note}</p>
     </div>
   );
 }

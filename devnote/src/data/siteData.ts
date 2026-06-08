@@ -1,9 +1,7 @@
-import { Eye, FileText, MessageSquare, ThumbsUp, UserPlus } from 'lucide-react';
 import type {
   ActivityItem,
   AdminCategoryRow,
   AdminMenuRow,
-  AdminStat,
   BlogCategory,
   BlogPost,
   LoginProvider,
@@ -208,14 +206,6 @@ export const stackItems: StackItem[] = [
   { name: 'TypeScript', symbol: 'TS' },
   { name: 'OpenAI', symbol: 'AI' },
   { name: 'GitHub Actions', symbol: 'GH' },
-];
-
-export const adminStats: AdminStat[] = [
-  { label: '총 게시글', value: '156', change: '12', tone: 'violet', icon: FileText },
-  { label: '총 조회수', value: '12,548', change: '24.5%', tone: 'green', icon: Eye },
-  { label: '좋아요 수', value: '1,248', change: '15.2%', tone: 'blue', icon: ThumbsUp },
-  { label: '댓글 수', value: '328', change: '8.1%', tone: 'orange', icon: MessageSquare },
-  { label: '신규 구독자', value: '342', change: '18.7%', tone: 'pink', icon: UserPlus },
 ];
 
 export const trafficPoints: TrafficPoint[] = [
