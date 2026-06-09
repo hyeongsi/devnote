@@ -289,3 +289,12 @@ VALUES
     (1, 'recent-one@example.com', DATEADD('DAY', -1, CURRENT_TIMESTAMP)),
     (2, 'recent-two@example.com', DATEADD('DAY', -6, CURRENT_TIMESTAMP)),
     (3, 'older@example.com', DATEADD('DAY', -10, CURRENT_TIMESTAMP));
+
+INSERT INTO post_view_events (id, post_id, viewed_at)
+VALUES
+    (1, 1, DATEADD('DAY', -6, CURRENT_TIMESTAMP)),
+    (2, 2, DATEADD('DAY', -5, CURRENT_TIMESTAMP)),
+    (3, 3, DATEADD('DAY', -5, CURRENT_TIMESTAMP)),
+    (4, 1, DATEADD('DAY', -3, CURRENT_TIMESTAMP)),
+    (5, 2, DATEADD('DAY', -1, CURRENT_TIMESTAMP)),
+    (6, 3, CURRENT_TIMESTAMP);
