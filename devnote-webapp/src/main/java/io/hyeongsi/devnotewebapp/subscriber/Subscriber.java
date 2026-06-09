@@ -25,4 +25,16 @@ public class Subscriber {
 
     protected Subscriber() {
     }
+
+    public Long getId() {
+        return id;
+    }
+
+    public String getEmail() {
+        return email;
+    }
+
+    public LocalDateTime getSubscribedAt() {
+        return subscribedAt;
+    }
 }

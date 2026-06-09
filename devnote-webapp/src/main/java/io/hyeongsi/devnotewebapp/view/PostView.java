@@ -1,4 +1,4 @@
-package io.hyeongsi.devnotewebapp.like;
+package io.hyeongsi.devnotewebapp.view;
 
 import io.hyeongsi.devnotewebapp.post.Post;
 import jakarta.persistence.Column;
@@ -14,8 +14,8 @@ import jakarta.persistence.Table;
 import java.time.LocalDateTime;
 
 @Entity
-@Table(name = "post_likes")
-public class PostLike {
+@Table(name = "post_view_events")
+public class PostView {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -26,20 +26,17 @@ public class PostLike {
     private Post post;
 
     @Column(nullable = false)
-    private LocalDateTime createdAt;
+    private LocalDateTime viewedAt;
 
-    protected PostLike() {
+    protected PostView() {
     }
 
-    public Long getId() {
-        return id;
+    public PostView(Post post, LocalDateTime viewedAt) {
+        this.post = post;
+        this.viewedAt = viewedAt;
     }
 
-    public String getPostTitle() {
-        return post.getTitle();
-    }
-
-    public LocalDateTime getCreatedAt() {
-        return createdAt;
+    public LocalDateTime getViewedAt() {
+        return viewedAt;
     }
 }

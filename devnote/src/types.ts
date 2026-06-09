@@ -167,17 +167,22 @@ export interface DashboardStats {
   newSubscribers: number;
 }
 
-export interface TrafficPoint {
-  label: string;
+export interface DashboardTrafficPoint {
+  date: string;
   value: number;
 }
 
-export interface ActivityItem {
-  id: number;
-  title: string;
+export type DashboardActivityType =
+  | 'POST_CREATED'
+  | 'COMMENT_CREATED'
+  | 'POST_LIKED'
+  | 'SUBSCRIBER_CREATED';
+
+export interface DashboardActivity {
+  id: string;
+  type: DashboardActivityType;
   description: string;
-  timeAgo: string;
-  tone: 'blue' | 'green' | 'orange' | 'violet';
+  occurredAt: string;
 }
 
 export interface AdminMenuRow {

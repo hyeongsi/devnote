@@ -125,6 +125,10 @@ public class Post {
         return viewCount;
     }
 
+    public void incrementViewCount() {
+        viewCount += 1;
+    }
+
     public String getThumbnailStyle() {
         return thumbnailStyle;
     }

@@ -1,21 +1,33 @@
 import { Eye, FileText, MessageSquare, ThumbsUp, UserPlus } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { getDashboardStats } from '../../api/dashboard';
+import {
+  getDashboardActivities,
+  getDashboardStats,
+  getDashboardTraffic,
+} from '../../api/dashboard';
 import { getPosts } from '../../api/posts';
-import { recentActivities, trafficPoints } from '../../data/siteData';
 import { AdminStatCard } from '../../features/admin/AdminStatCard';
-import type { AdminStat, DashboardStats, RankedPost } from '../../types';
+import type {
+  AdminStat,
+  DashboardActivity,
+  DashboardActivityType,
+  DashboardStats,
+  DashboardTrafficPoint,
+  RankedPost,
+} from '../../types';
 import { buildPopularPosts } from '../../utils/popularPosts';
 
 export function AdminDashboardPage() {
   const [dashboardStats, setDashboardStats] = useState<DashboardStats | null>(null);
+  const [trafficPoints, setTrafficPoints] = useState<DashboardTrafficPoint[]>([]);
+  const [recentActivities, setRecentActivities] = useState<DashboardActivity[]>([]);
   const [isLoadingStats, setIsLoadingStats] = useState(true);
   const [statsError, setStatsError] = useState<string | null>(null);
   const [topPosts, setTopPosts] = useState<RankedPost[]>([]);
   const [isLoadingTopPosts, setIsLoadingTopPosts] = useState(true);
   const [topPostsError, setTopPostsError] = useState<string | null>(null);
-  const maxValue = Math.max(...trafficPoints.map((point) => point.value));
+  const maxValue = Math.max(1, ...trafficPoints.map((point) => point.value));
   const points = trafficPoints
     .map((point, index) => {
       const x = (index / (trafficPoints.length - 1)) * 100;
@@ -32,14 +44,22 @@ export function AdminDashboardPage() {
       setStatsError(null);
 
       try {
-        const stats = await getDashboardStats();
+        const [stats, traffic, activities] = await Promise.all([
+          getDashboardStats(),
+          getDashboardTraffic(),
+          getDashboardActivities(),
+        ]);
 
         if (!cancelled) {
           setDashboardStats(stats);
+          setTrafficPoints(traffic);
+          setRecentActivities(activities);
         }
       } catch (loadError) {
         if (!cancelled) {
           setDashboardStats(null);
+          setTrafficPoints([]);
+          setRecentActivities([]);
           setStatsError(
             loadError instanceof Error
               ? loadError.message
@@ -183,6 +203,13 @@ export function AdminDashboardPage() {
           </div>
 
           <div className="mt-8">
+            {isLoadingStats ? (
+              <div className="h-[240px] animate-pulse rounded-2xl bg-gray-50" />
+            ) : statsError ? (
+              <p className="grid h-[240px] place-items-center text-sm font-semibold text-red-600">
+                조회수 추이를 불러오지 못했습니다.
+              </p>
+            ) : (
             <svg viewBox="0 0 100 100" className="h-[240px] w-full">
               {[20, 40, 60, 80].map((line) => (
                 <line key={line} x1="0" y1={line} x2="100" y2={line} stroke="#ececf6" strokeDasharray="3 4" />
@@ -199,10 +226,10 @@ export function AdminDashboardPage() {
                 const x = (index / (trafficPoints.length - 1)) * 100;
                 const y = 100 - (point.value / maxValue) * 100;
                 return (
-                  <g key={point.label}>
+                  <g key={point.date}>
                     <circle cx={x} cy={y} r="2.2" fill="white" stroke="#6d5dfc" strokeWidth="2" />
                     <text x={x} y="106" textAnchor="middle" fontSize="4" fill="#97a0b4">
-                      {point.label}
+                      {formatTrafficDate(point.date)}
                     </text>
                   </g>
                 );
@@ -214,6 +241,7 @@ export function AdminDashboardPage() {
                 </linearGradient>
               </defs>
             </svg>
+            )}
           </div>
         </section>
 
@@ -262,32 +290,38 @@ export function AdminDashboardPage() {
         <section className="rounded-[28px] border border-line bg-white p-6 shadow-[0_20px_60px_rgba(17,24,39,0.05)]">
           <div className="flex items-center justify-between">
             <h3 className="text-2xl font-black tracking-tight text-gray-950">최근 활동</h3>
-            <button type="button" className="text-sm font-bold text-primary">
-              전체 보기 →
-            </button>
+            <span className="text-sm font-bold text-primary">최근 5건</span>
           </div>
 
           <div className="mt-6 space-y-5">
-            {recentActivities.map((activity) => (
-              <div key={activity.id} className="grid grid-cols-[16px_1fr_auto] items-start gap-3">
-                <span
-                  className={`mt-2 h-2.5 w-2.5 rounded-full ${
-                    activity.tone === 'blue'
-                      ? 'bg-sky-500'
-                      : activity.tone === 'green'
-                        ? 'bg-emerald-500'
-                        : activity.tone === 'orange'
-                          ? 'bg-orange-500'
-                          : 'bg-violet-500'
-                  }`}
-                />
-                <div>
-                  <p className="text-sm font-semibold text-gray-800">{activity.title}</p>
-                  <p className="mt-1 text-sm text-muted">{activity.description}</p>
-                </div>
-                <span className="text-xs font-semibold text-gray-400">{activity.timeAgo}</span>
-              </div>
-            ))}
+            {isLoadingStats ? (
+              <div className="h-[180px] animate-pulse rounded-2xl bg-gray-50" />
+            ) : statsError ? (
+              <p className="rounded-2xl border border-red-200 bg-red-50 px-4 py-8 text-center text-sm font-semibold text-red-600">
+                최근 활동을 불러오지 못했습니다.
+              </p>
+            ) : recentActivities.length > 0 ? (
+              recentActivities.map((activity) => {
+                const metadata = activityMetadata[activity.type];
+
+                return (
+                  <div key={activity.id} className="grid grid-cols-[16px_1fr_auto] items-start gap-3">
+                    <span className={`mt-2 h-2.5 w-2.5 rounded-full ${metadata.tone}`} />
+                    <div>
+                      <p className="text-sm font-semibold text-gray-800">{metadata.title}</p>
+                      <p className="mt-1 text-sm text-muted">{activity.description}</p>
+                    </div>
+                    <span className="text-xs font-semibold text-gray-400">
+                      {formatTimeAgo(activity.occurredAt)}
+                    </span>
+                  </div>
+                );
+              })
+            ) : (
+              <p className="rounded-2xl border border-dashed border-line px-4 py-8 text-center text-sm font-semibold text-muted">
+                최근 활동이 없습니다.
+              </p>
+            )}
           </div>
         </section>
       </div>
@@ -297,4 +331,38 @@ export function AdminDashboardPage() {
 
 function formatStatValue(value: number) {
   return new Intl.NumberFormat('ko-KR').format(value);
+}
+
+const activityMetadata: Record<
+  DashboardActivityType,
+  { title: string; tone: string }
+> = {
+  POST_CREATED: { title: '새 게시글이 등록되었습니다', tone: 'bg-sky-500' },
+  COMMENT_CREATED: { title: '새 댓글이 등록되었습니다', tone: 'bg-orange-500' },
+  POST_LIKED: { title: '게시글에 좋아요가 추가되었습니다', tone: 'bg-emerald-500' },
+  SUBSCRIBER_CREATED: { title: '신규 구독자가 추가되었습니다', tone: 'bg-violet-500' },
+};
+
+function formatTrafficDate(date: string) {
+  const [, month, day] = date.split('-');
+  return `${month}/${day}`;
+}
+
+function formatTimeAgo(occurredAt: string) {
+  const elapsedMilliseconds = Date.now() - new Date(occurredAt).getTime();
+  const elapsedMinutes = Math.max(0, Math.floor(elapsedMilliseconds / 60_000));
+
+  if (elapsedMinutes < 1) {
+    return '방금 전';
+  }
+  if (elapsedMinutes < 60) {
+    return `${elapsedMinutes}분 전`;
+  }
+
+  const elapsedHours = Math.floor(elapsedMinutes / 60);
+  if (elapsedHours < 24) {
+    return `${elapsedHours}시간 전`;
+  }
+
+  return `${Math.floor(elapsedHours / 24)}일 전`;
 }

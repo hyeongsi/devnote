@@ -33,4 +33,16 @@ public class Comment {
 
     protected Comment() {
     }
+
+    public Long getId() {
+        return id;
+    }
+
+    public String getPostTitle() {
+        return post.getTitle();
+    }
+
+    public LocalDateTime getCreatedAt() {
+        return createdAt;
+    }
 }

@@ -1,5 +1,4 @@
 import type {
-  ActivityItem,
   AdminCategoryRow,
   AdminMenuRow,
   BlogCategory,
@@ -8,7 +7,6 @@ import type {
   ProjectPreview,
   PublicNavItem,
   StackItem,
-  TrafficPoint,
 } from '../types';
 
 export const publicNavItems: PublicNavItem[] = [
@@ -206,23 +204,6 @@ export const stackItems: StackItem[] = [
   { name: 'TypeScript', symbol: 'TS' },
   { name: 'OpenAI', symbol: 'AI' },
   { name: 'GitHub Actions', symbol: 'GH' },
-];
-
-export const trafficPoints: TrafficPoint[] = [
-  { label: '05/12', value: 800 },
-  { label: '05/13', value: 1600 },
-  { label: '05/14', value: 1950 },
-  { label: '05/15', value: 2100 },
-  { label: '05/16', value: 1750 },
-  { label: '05/17', value: 2350 },
-  { label: '05/18', value: 2050 },
-];
-
-export const recentActivities: ActivityItem[] = [
-  { id: 1, title: '새 게시글이 등록되었습니다', description: 'Spring Data JPA 실전 가이드', timeAgo: '5분 전', tone: 'blue' },
-  { id: 2, title: '게시글이 수정되었습니다', description: 'Spring Security JWT 적용하기', timeAgo: '1시간 전', tone: 'green' },
-  { id: 3, title: '새 댓글이 등록되었습니다', description: 'AI 자동 포스팅 시스템 구축기', timeAgo: '2시간 전', tone: 'orange' },
-  { id: 4, title: '신규 구독자가 추가되었습니다', description: 'user@example.com', timeAgo: '3시간 전', tone: 'violet' },
 ];
 
 export const adminMenuRows: AdminMenuRow[] = [

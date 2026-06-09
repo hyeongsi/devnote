@@ -2,11 +2,15 @@ package io.hyeongsi.devnotewebapp.post;
 
 import io.hyeongsi.devnotewebapp.category.Category;
 import io.hyeongsi.devnotewebapp.category.CategoryRepository;
+import io.hyeongsi.devnotewebapp.view.PostView;
+import io.hyeongsi.devnotewebapp.view.PostViewRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.time.LocalDate;
+import java.time.Clock;
+import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.Locale;
 import java.util.List;
@@ -23,10 +27,19 @@ public class PostService {
 
     private final PostRepository postRepository;
     private final CategoryRepository categoryRepository;
+    private final PostViewRepository postViewRepository;
+    private final Clock clock;
 
-    public PostService(PostRepository postRepository, CategoryRepository categoryRepository) {
+    public PostService(
+            PostRepository postRepository,
+            CategoryRepository categoryRepository,
+            PostViewRepository postViewRepository,
+            Clock clock
+    ) {
         this.postRepository = postRepository;
         this.categoryRepository = categoryRepository;
+        this.postViewRepository = postViewRepository;
+        this.clock = clock;
     }
 
     public List<PostResponse> getPosts() {
@@ -35,12 +48,16 @@ public class PostService {
                 .toList();
     }
 
+    @Transactional
     public PostDetailResponse getPost(String categorySlug, String postSlug) {
         Post post = postRepository.findPostDetail(categorySlug, postSlug)
                 .orElseThrow(() -> new ResponseStatusException(
                         NOT_FOUND,
                         "Post not found: " + categorySlug + "/" + postSlug
                 ));
+
+        post.incrementViewCount();
+        postViewRepository.save(new PostView(post, LocalDateTime.now(clock)));
 
         return toDetailResponse(post);
     }
