@@ -4,6 +4,7 @@ import { AdminSidebar } from '../../features/admin/AdminSidebar';
 
 const pageTitles = [
   { prefix: '/admin/ai-posting', title: 'AI 자동 포스팅' },
+  { prefix: '/admin/posts', title: '게시글 관리' },
   { prefix: '/admin/categories', title: '카테고리 관리' },
   { prefix: '/admin/menus', title: '메뉴 관리' },
   { prefix: '/admin', title: '대시보드' },

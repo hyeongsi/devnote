@@ -10,6 +10,7 @@ import { AdminAiPostingPage } from './pages/admin/AdminAiPostingPage';
 import { AdminCategoriesPage } from './pages/admin/AdminCategoriesPage';
 import { AdminDashboardPage } from './pages/admin/AdminDashboardPage';
 import { AdminMenusPage } from './pages/admin/AdminMenusPage';
+import { AdminPostsPage } from './pages/admin/AdminPostsPage';
 
 export default function App() {
   return (
@@ -25,6 +26,7 @@ export default function App() {
       <Route element={<RequireAdmin />}>
         <Route path="/admin" element={<AdminShell />}>
           <Route index element={<AdminDashboardPage />} />
+          <Route path="posts" element={<AdminPostsPage />} />
           <Route path="ai-posting" element={<AdminAiPostingPage />} />
           <Route path="menus" element={<AdminMenusPage />} />
           <Route path="categories" element={<AdminCategoriesPage />} />

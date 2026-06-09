@@ -2,6 +2,8 @@ package io.hyeongsi.devnotewebapp.post;
 
 import io.hyeongsi.devnotewebapp.category.Category;
 import io.hyeongsi.devnotewebapp.category.CategoryRepository;
+import io.hyeongsi.devnotewebapp.comment.CommentRepository;
+import io.hyeongsi.devnotewebapp.like.PostLikeRepository;
 import io.hyeongsi.devnotewebapp.view.PostView;
 import io.hyeongsi.devnotewebapp.view.PostViewRepository;
 import org.springframework.stereotype.Service;
@@ -27,17 +29,23 @@ public class PostService {
 
     private final PostRepository postRepository;
     private final CategoryRepository categoryRepository;
+    private final CommentRepository commentRepository;
+    private final PostLikeRepository postLikeRepository;
     private final PostViewRepository postViewRepository;
     private final Clock clock;
 
     public PostService(
             PostRepository postRepository,
             CategoryRepository categoryRepository,
+            CommentRepository commentRepository,
+            PostLikeRepository postLikeRepository,
             PostViewRepository postViewRepository,
             Clock clock
     ) {
         this.postRepository = postRepository;
         this.categoryRepository = categoryRepository;
+        this.commentRepository = commentRepository;
+        this.postLikeRepository = postLikeRepository;
         this.postViewRepository = postViewRepository;
         this.clock = clock;
     }
@@ -83,6 +91,9 @@ public class PostService {
                         "Post not found: " + categorySlug + "/" + postSlug
                 ));
 
+        commentRepository.deleteAllByPost(post);
+        postLikeRepository.deleteAllByPost(post);
+        postViewRepository.deleteAllByPost(post);
         postRepository.delete(post);
     }
 
