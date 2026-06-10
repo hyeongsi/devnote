@@ -6,9 +6,9 @@ import { Button } from '../ui/Button';
 import { Input } from '../ui/Input';
 
 const introLinks = [
-  { label: '소개 (About)', to: '/' },
-  { label: '문의 (Contact)', to: '/' },
-  { label: '방명록', to: '/' },
+  { label: '소개 (About)', to: '/about' },
+  { label: '문의 (Contact)', to: '/contact' },
+  { label: '방명록', to: '/guestbook' },
 ];
 
 export function Footer() {
@@ -17,7 +17,7 @@ export function Footer() {
 
   return (
     <footer className="border-t border-line px-5 pb-10 pt-6 md:px-8 xl:px-12">
-      <section className="my-8 grid gap-4 rounded-[22px] border border-white/80 bg-gradient-to-r from-primary-soft via-white to-primary-soft/50 p-5 shadow-[0_20px_60px_rgba(125,103,255,0.08)] md:grid-cols-[1.3fr_1fr_auto] md:items-center md:p-7">
+      <section className="my-8 grid gap-4 rounded-lg border border-violet-100 bg-[#f5f2ff] p-5 md:grid-cols-[1.3fr_1fr_auto] md:items-center md:p-7">
         <div className="flex items-center gap-4">
           <div className="grid h-12 w-12 place-items-center rounded-2xl bg-white text-primary shadow-[0_12px_28px_rgba(109,93,252,0.18)]">
             <Mail className="h-5 w-5" />

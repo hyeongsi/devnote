@@ -1,11 +1,10 @@
-import { Code2, Menu, Moon, Search } from 'lucide-react';
+import { Menu, Search } from 'lucide-react';
 import { useCallback, useEffect, useState } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import { AUTH_CHANGED_EVENT, getCurrentUser, logout } from '../../api/auth';
 import { isSearchShortcut } from '../../features/searchCommands';
 import { usePublicMenus } from '../../hooks/usePublicMenus';
 import type { AuthUser } from '../../types';
-import { Button } from '../ui/Button';
 import { PostSearchDialog } from './PostSearchDialog';
 
 export function Header() {
@@ -61,10 +60,7 @@ export function Header() {
   return (
     <header className="sticky top-0 z-30 border-b border-line bg-white/92 backdrop-blur-xl">
       <div className="mx-auto flex h-20 max-w-[1400px] items-center justify-between px-5 md:px-8 xl:px-12">
-        <NavLink to="/" className="flex items-center gap-3 text-2xl font-black tracking-tight text-gray-950">
-          <span className="rounded-2xl bg-primary-soft p-2 text-primary">
-            <Code2 className="h-5 w-5" />
-          </span>
+        <NavLink to="/" className="text-2xl font-black text-gray-950">
           DevNote
         </NavLink>
 
@@ -90,17 +86,14 @@ export function Header() {
           >
             <Search className="h-5 w-5" />
           </button>
-          <button
-            type="button"
-            aria-label="다크 모드"
-            className="rounded-full p-2.5 text-gray-700 transition hover:bg-primary-soft hover:text-primary"
-          >
-            <Moon className="h-5 w-5" />
-          </button>
           {currentUser ? (
-            <Button size="sm" variant="outline" className="hidden md:inline-flex" onClick={() => void handleLogout()}>
+            <button
+              type="button"
+              className="hidden text-sm font-semibold text-gray-500 transition hover:text-primary md:inline"
+              onClick={() => void handleLogout()}
+            >
               로그아웃
-            </Button>
+            </button>
           ) : null}
           <button type="button" aria-label="메뉴" className="rounded-full p-2.5 text-gray-700 lg:hidden">
             <Menu className="h-6 w-6" />

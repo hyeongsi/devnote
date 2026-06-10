@@ -3,6 +3,9 @@ import { RequireAdmin } from './components/auth/RequireAdmin';
 import { AdminShell } from './components/layout/AdminShell';
 import { PageShell } from './components/layout/PageShell';
 import { HomePage } from './pages/HomePage';
+import { AboutPage } from './pages/AboutPage';
+import { ContactPage } from './pages/ContactPage';
+import { GuestbookPage } from './pages/GuestbookPage';
 import { LoginPage } from './pages/LoginPage';
 import { PostDetailPage } from './pages/PostDetailPage';
 import { PostListPage } from './pages/PostListPage';
@@ -17,6 +20,9 @@ export default function App() {
     <Routes>
       <Route element={<PageShell />}>
         <Route path="/" element={<HomePage />} />
+        <Route path="/about" element={<AboutPage />} />
+        <Route path="/contact" element={<ContactPage />} />
+        <Route path="/guestbook" element={<GuestbookPage />} />
         <Route path="/login" element={<LoginPage />} />
         <Route path="/posts" element={<PostListPage />} />
         <Route path="/posts/:categorySlug" element={<PostListPage />} />

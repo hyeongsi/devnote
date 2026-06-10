@@ -45,6 +45,10 @@
     @apply mx-auto my-4 min-h-screen w-[min(1480px,calc(100%-24px))] overflow-hidden rounded-[32px] border border-white/80 bg-white/95 shadow-[0_30px_90px_rgba(17,24,39,0.08)] md:my-6 md:w-[min(1480px,calc(100%-48px))];
   }
 
+  .public-shell {
+    @apply mx-auto min-h-screen w-full max-w-[1480px] overflow-hidden bg-white shadow-[0_20px_70px_rgba(17,24,39,0.06)];
+  }
+
   .section {
     @apply px-5 py-10 md:px-8 md:py-12 xl:px-12 xl:py-14;
   }
