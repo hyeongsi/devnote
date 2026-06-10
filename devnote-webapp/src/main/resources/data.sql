@@ -98,7 +98,7 @@ SET name = '대시보드', path = '/admin', state = '', visible = TRUE, display_
 WHERE id = 4;
 
 UPDATE menus
-SET name = '게시글 관리', path = '/posts', state = '', visible = TRUE, display_order = 2, area = 'ADMIN', parent_id = 2
+SET name = '게시글 관리', path = '/admin/posts', state = '', visible = TRUE, display_order = 2, area = 'ADMIN', parent_id = 2
 WHERE id = 5;
 
 UPDATE menus

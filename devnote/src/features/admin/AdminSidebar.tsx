@@ -15,7 +15,7 @@ import type { PublicNavItem } from '../../types';
 
 const fallbackAdminNavItems = [
   { label: '대시보드', to: '/admin', icon: LayoutDashboard, end: true },
-  { label: '게시글 관리', to: '/posts', icon: FileText, end: false },
+  { label: '게시글 관리', to: '/admin/posts', icon: FileText, end: false },
   { label: '카테고리 관리', to: '/admin/categories', icon: FolderKanban, end: false },
   { label: '메뉴 관리', to: '/admin/menus', icon: ListTree, end: false },
   { label: '댓글 관리', to: '/posts/spring-boot', icon: MessageCircle, end: false },
@@ -26,9 +26,9 @@ const fallbackAdminNavItems = [
 
 const adminIconByPath = [
   { match: '/admin/ai-posting', icon: Bot },
+  { match: '/admin/posts', icon: FileText },
   { match: '/admin/categories', icon: FolderKanban },
   { match: '/admin/menus', icon: ListTree },
-  { match: '/posts', icon: FileText },
   { match: '/login', icon: UserRound },
   { match: '/admin', icon: LayoutDashboard },
 ] as const;

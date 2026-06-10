@@ -2,6 +2,8 @@ package io.hyeongsi.devnotewebapp.post;
 
 import io.hyeongsi.devnotewebapp.category.Category;
 import io.hyeongsi.devnotewebapp.category.CategoryRepository;
+import io.hyeongsi.devnotewebapp.comment.CommentRepository;
+import io.hyeongsi.devnotewebapp.like.PostLikeRepository;
 import io.hyeongsi.devnotewebapp.view.PostView;
 import io.hyeongsi.devnotewebapp.view.PostViewRepository;
 import org.junit.jupiter.api.Test;
@@ -31,8 +33,17 @@ class PostServiceTest {
     void searchPostsMatchesTitleExcerptContentTagsAndCategory() {
         PostRepository postRepository = mock(PostRepository.class);
         CategoryRepository categoryRepository = mock(CategoryRepository.class);
+        CommentRepository commentRepository = mock(CommentRepository.class);
+        PostLikeRepository postLikeRepository = mock(PostLikeRepository.class);
         PostViewRepository postViewRepository = mock(PostViewRepository.class);
-        PostService postService = new PostService(postRepository, categoryRepository, postViewRepository, CLOCK);
+        PostService postService = new PostService(
+                postRepository,
+                categoryRepository,
+                commentRepository,
+                postLikeRepository,
+                postViewRepository,
+                CLOCK
+        );
         Category spring = new Category("spring-boot", "Spring Boot", "Spring Boot posts", true, 1);
         Category infra = new Category("infra", "Infra", "Infra posts", true, 2);
         Post contentMatch = new Post(
@@ -86,8 +97,17 @@ class PostServiceTest {
     void deletePostDeletesExistingPost() {
         PostRepository postRepository = mock(PostRepository.class);
         CategoryRepository categoryRepository = mock(CategoryRepository.class);
+        CommentRepository commentRepository = mock(CommentRepository.class);
+        PostLikeRepository postLikeRepository = mock(PostLikeRepository.class);
         PostViewRepository postViewRepository = mock(PostViewRepository.class);
-        PostService postService = new PostService(postRepository, categoryRepository, postViewRepository, CLOCK);
+        PostService postService = new PostService(
+                postRepository,
+                categoryRepository,
+                commentRepository,
+                postLikeRepository,
+                postViewRepository,
+                CLOCK
+        );
         Post post = mock(Post.class);
 
         when(postRepository.findPostDetail("spring-boot", "delete-me"))
@@ -95,6 +115,9 @@ class PostServiceTest {
 
         postService.deletePost("spring-boot", "delete-me");
 
+        verify(commentRepository).deleteAllByPost(post);
+        verify(postLikeRepository).deleteAllByPost(post);
+        verify(postViewRepository).deleteAllByPost(post);
         verify(postRepository).delete(post);
     }
 
@@ -102,8 +125,17 @@ class PostServiceTest {
     void deletePostThrowsNotFoundWhenPostDoesNotExist() {
         PostRepository postRepository = mock(PostRepository.class);
         CategoryRepository categoryRepository = mock(CategoryRepository.class);
+        CommentRepository commentRepository = mock(CommentRepository.class);
+        PostLikeRepository postLikeRepository = mock(PostLikeRepository.class);
         PostViewRepository postViewRepository = mock(PostViewRepository.class);
-        PostService postService = new PostService(postRepository, categoryRepository, postViewRepository, CLOCK);
+        PostService postService = new PostService(
+                postRepository,
+                categoryRepository,
+                commentRepository,
+                postLikeRepository,
+                postViewRepository,
+                CLOCK
+        );
 
         when(postRepository.findPostDetail("spring-boot", "missing"))
                 .thenReturn(Optional.empty());
@@ -117,8 +149,17 @@ class PostServiceTest {
     void createPostSavesNewPostWithCategoryAndTags() {
         PostRepository postRepository = mock(PostRepository.class);
         CategoryRepository categoryRepository = mock(CategoryRepository.class);
+        CommentRepository commentRepository = mock(CommentRepository.class);
+        PostLikeRepository postLikeRepository = mock(PostLikeRepository.class);
         PostViewRepository postViewRepository = mock(PostViewRepository.class);
-        PostService postService = new PostService(postRepository, categoryRepository, postViewRepository, CLOCK);
+        PostService postService = new PostService(
+                postRepository,
+                categoryRepository,
+                commentRepository,
+                postLikeRepository,
+                postViewRepository,
+                CLOCK
+        );
         Category category = new Category("spring-boot", "Spring Boot", "Spring Boot posts", true, 1);
         PostCreateRequest request = new PostCreateRequest(
                 "spring-security-practical-guide",
@@ -148,8 +189,17 @@ class PostServiceTest {
     void getPostIncrementsViewCountAndRecordsViewEvent() {
         PostRepository postRepository = mock(PostRepository.class);
         CategoryRepository categoryRepository = mock(CategoryRepository.class);
+        CommentRepository commentRepository = mock(CommentRepository.class);
+        PostLikeRepository postLikeRepository = mock(PostLikeRepository.class);
         PostViewRepository postViewRepository = mock(PostViewRepository.class);
-        PostService postService = new PostService(postRepository, categoryRepository, postViewRepository, CLOCK);
+        PostService postService = new PostService(
+                postRepository,
+                categoryRepository,
+                commentRepository,
+                postLikeRepository,
+                postViewRepository,
+                CLOCK
+        );
         Post post = mock(Post.class);
 
         when(postRepository.findPostDetail("spring-boot", "viewed-post")).thenReturn(Optional.of(post));
