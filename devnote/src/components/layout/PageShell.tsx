@@ -4,7 +4,7 @@ import { Header } from './Header';
 
 export function PageShell() {
   return (
-    <div className="app-shell">
+    <div className="public-shell">
       <Header />
       <main className="min-h-[calc(100vh-80px)]">
         <Outlet />

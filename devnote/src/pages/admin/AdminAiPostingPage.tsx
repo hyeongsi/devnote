@@ -343,7 +343,11 @@ export function AdminAiPostingPage() {
             </div>
 
             {isPreviewMode ? (
-              <article className="mt-6 rounded-2xl border border-line bg-white p-5 md:p-7">
+              <article
+                aria-label="생성 결과 미리보기"
+                tabIndex={0}
+                className="mt-6 max-h-[65vh] overflow-y-auto overscroll-contain rounded-2xl border border-line bg-white p-5 pr-3 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary md:p-7 md:pr-4 xl:max-h-[720px]"
+              >
                 {draft.title ? (
                   <h1 className="text-3xl font-extrabold leading-tight tracking-tight text-gray-950">
                     {draft.title}

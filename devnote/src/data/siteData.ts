@@ -4,18 +4,14 @@ import type {
   BlogCategory,
   BlogPost,
   LoginProvider,
-  ProjectPreview,
   PublicNavItem,
-  StackItem,
 } from '../types';
 
 export const publicNavItems: PublicNavItem[] = [
   { label: '홈', to: '/', end: true },
   { label: '블로그', to: '/posts' },
-  { label: '프로젝트', to: '/posts/devops' },
-  { label: '기술 스택', to: '/posts/spring-boot' },
-  { label: '소개', to: '/' },
-  { label: '문의', to: '/' },
+  { label: '소개', to: '/about' },
+  { label: '문의', to: '/contact' },
 ];
 
 export const blogCategories: BlogCategory[] = [
@@ -161,49 +157,6 @@ export const loginProviders: LoginProvider[] = [
   { id: 'github', label: 'GitHub로 로그인', icon: 'github' },
   { id: 'google', label: 'Google로 로그인', icon: 'chrome' },
   { id: 'email', label: '이메일로 회원가입', icon: 'mail' },
-];
-
-export const featuredProjects: ProjectPreview[] = [
-  {
-    id: 1,
-    title: 'AI Blog Auto Poster',
-    description: 'AI를 활용해 블로그 글을 자동 생성하고 배포하는 시스템',
-    period: '2024.03 ~ 진행 중',
-    tags: ['Spring Boot', 'OpenAI API', 'Scheduler'],
-    accent: 'violet',
-    icon: 'zap',
-  },
-  {
-    id: 2,
-    title: 'Dev Dashboard',
-    description: '개발 데이터를 시각화해 보여주는 대시보드 플랫폼',
-    period: '2024.01 ~ 2024.03',
-    tags: ['React', 'TypeScript', 'Recharts'],
-    accent: 'indigo',
-    icon: 'chart',
-  },
-  {
-    id: 3,
-    title: 'Auth Server',
-    description: 'JWT 기반 인증과 권한 관리를 제공하는 마이크로서비스',
-    period: '2023.11 ~ 2024.01',
-    tags: ['Spring Security', 'JWT', 'Redis'],
-    accent: 'green',
-    icon: 'lock',
-  },
-];
-
-export const stackItems: StackItem[] = [
-  { name: 'Java', symbol: 'J' },
-  { name: 'Spring Boot', symbol: 'SB' },
-  { name: 'MySQL', symbol: 'DB' },
-  { name: 'Redis', symbol: 'RD' },
-  { name: 'Docker', symbol: 'DK' },
-  { name: 'Kubernetes', symbol: 'K8' },
-  { name: 'React', symbol: 'R' },
-  { name: 'TypeScript', symbol: 'TS' },
-  { name: 'OpenAI', symbol: 'AI' },
-  { name: 'GitHub Actions', symbol: 'GH' },
 ];
 
 export const adminMenuRows: AdminMenuRow[] = [

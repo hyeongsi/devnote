@@ -9,7 +9,7 @@ import {
   UserRound,
 } from 'lucide-react';
 import { useCallback, useEffect, useState } from 'react';
-import { NavLink } from 'react-router-dom';
+import { Link, NavLink } from 'react-router-dom';
 import { getAdminSidebarMenus, MENUS_CHANGED_EVENT } from '../../api/menus';
 import type { PublicNavItem } from '../../types';
 
@@ -72,12 +72,16 @@ export function AdminSidebar() {
 
   return (
     <aside className="hidden w-[255px] shrink-0 border-r border-line bg-white md:flex md:flex-col">
-      <div className="flex h-20 items-center gap-3 border-b border-line px-7">
+      <Link
+        to="/"
+        aria-label="DevNote 메인으로 이동"
+        className="flex h-20 items-center gap-3 border-b border-line px-7 transition hover:bg-gray-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary"
+      >
         <span className="text-2xl font-black tracking-tight text-gray-950">DevNote</span>
         <span className="rounded-full bg-primary-soft px-2.5 py-1 text-xs font-bold text-primary">
           Admin
         </span>
-      </div>
+      </Link>
 
       <nav className="flex-1 space-y-1 px-4 py-5">
         {navItems.map((item) => {

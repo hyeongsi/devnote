@@ -122,21 +122,6 @@ export interface PostCreateRequest {
   tags: string[];
 }
 
-export interface ProjectPreview {
-  id: number;
-  title: string;
-  description: string;
-  period: string;
-  tags: string[];
-  accent: 'violet' | 'indigo' | 'green';
-  icon: 'zap' | 'chart' | 'lock';
-}
-
-export interface StackItem {
-  name: string;
-  symbol: string;
-}
-
 export interface RankedPost {
   rank: number;
   title: string;

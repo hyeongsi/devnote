@@ -123,8 +123,9 @@ VALUES
     (8, 'AI 자동 포스팅', '/admin/ai-posting', '', TRUE, 5, 'ADMIN', 2),
     (9, '홈', '/', '', TRUE, 1, 'HEADER', 3),
     (10, '블로그', '/posts', '', TRUE, 2, 'HEADER', 3),
-    (11, '프로젝트', '/projects', '', TRUE, 3, 'HEADER', 3),
-    (12, '소개', '/about', '', FALSE, 4, 'HEADER', 3);
+    (11, '프로젝트', '/projects', '', FALSE, 3, 'HEADER', 3),
+    (12, '소개', '/about', '', TRUE, 4, 'HEADER', 3),
+    (13, '문의', '/contact', '', TRUE, 5, 'HEADER', 3);
 
 INSERT INTO posts (
     id,
