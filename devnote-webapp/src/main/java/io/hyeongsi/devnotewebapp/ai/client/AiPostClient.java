@@ -4,5 +4,5 @@ import io.hyeongsi.devnotewebapp.ai.dto.AiPostGenerateResponse;
 
 public interface AiPostClient {
 
-    AiPostGenerateResponse generate(String topic);
+    AiPostGenerateResponse generate(AiPostGenerationContext context);
 }

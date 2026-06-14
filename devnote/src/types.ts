@@ -98,6 +98,11 @@ export interface BlogPostSearchApiResponse {
 
 export interface AiPostGenerateRequest {
   topic: string;
+  direction?: string;
+  keywords?: string[];
+  excludedKeywords?: string[];
+  level?: string;
+  lengthHint?: string;
 }
 
 export interface AiPostGenerateResponse {
@@ -109,6 +114,40 @@ export interface AiPostGenerateResponse {
   recommendedTopics: string[];
   recommendedCategorySlug: string;
   thumbnailStyle: BlogPost['imageStyle'];
+}
+
+export interface AiPostingTopic {
+  id: number;
+  name: string;
+  categoryId: number;
+  categoryName: string;
+  enabled: boolean;
+  displayOrder: number;
+  lastSucceededAt: string | null;
+}
+
+export type AiPostingRunStatus = 'RUNNING' | 'SUCCEEDED' | 'FAILED' | 'SKIPPED';
+
+export interface AiPostingRun {
+  id: number;
+  topicId: number | null;
+  topicName: string | null;
+  postId: number | null;
+  status: AiPostingRunStatus;
+  generatedTitle: string | null;
+  errorMessage: string | null;
+  startedAt: string;
+  completedAt: string | null;
+}
+
+export interface AiPostingStatus {
+  enabled: boolean;
+  geminiConfigured: boolean;
+  model: string;
+  zone: string;
+  cron: string;
+  nextRunAt: string;
+  nextTopic: AiPostingTopic | null;
 }
 
 export interface PostCreateRequest {

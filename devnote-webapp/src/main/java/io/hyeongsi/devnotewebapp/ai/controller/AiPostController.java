@@ -20,6 +20,6 @@ public class AiPostController {
 
     @PostMapping("/generate")
     public AiPostGenerateResponse generate(@RequestBody AiPostGenerateRequest request) {
-        return aiPostGenerateService.generate(request.topic());
+        return aiPostGenerateService.generate(request);
     }
 }

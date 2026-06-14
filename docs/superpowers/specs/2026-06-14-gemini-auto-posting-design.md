@@ -23,7 +23,7 @@ Google AI Studio에서 발급한 Gemini API 키를 서버 환경변수로 주입
 | 환경변수 | 필수 | 기본값 | 용도 |
 | --- | --- | --- | --- |
 | `GEMINI_API_KEY` | 운영 시 필수 | 없음 | Google AI Studio API 키 |
-| `GEMINI_MODEL` | 선택 | `gemini-3.5-flash` | 생성 모델 |
+| `GEMINI_MODEL` | 선택 | `gemini-2.5-flash` | 생성 모델 |
 | `AI_POSTING_ENABLED` | 선택 | `false` | 예약 실행 활성화 |
 | `AI_POSTING_CRON` | 선택 | `0 0 6 * * *` | 예약 실행 시각 |
 | `AI_POSTING_ZONE` | 선택 | `Asia/Seoul` | 예약 실행 및 일일 중복 판정 시간대 |

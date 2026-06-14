@@ -46,7 +46,7 @@
   }
 
   .public-shell {
-    @apply mx-auto min-h-screen w-full max-w-[1480px] overflow-hidden bg-white shadow-[0_20px_70px_rgba(17,24,39,0.06)];
+    @apply mx-auto min-h-screen w-full max-w-[1480px] overflow-x-clip bg-white shadow-[0_20px_70px_rgba(17,24,39,0.06)];
   }
 
   .section {

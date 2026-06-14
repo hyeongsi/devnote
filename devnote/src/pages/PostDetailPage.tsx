@@ -72,6 +72,7 @@ export function PostDetailPage() {
   const [isDeleting, setIsDeleting] = useState(false);
   const [isNotFound, setIsNotFound] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [activeHeadingId, setActiveHeadingId] = useState('');
 
   useEffect(() => {
     if (!categorySlug || !postSlug) {
@@ -164,6 +165,51 @@ export function PostDetailPage() {
     () => (post ? extractMarkdownHeadings(post.contentMarkdown) : []),
     [post],
   );
+
+  useEffect(() => {
+    if (headings.length === 0) {
+      return;
+    }
+
+    let animationFrameId = 0;
+
+    function updateActiveHeading() {
+      const article = document.querySelector<HTMLElement>('[data-testid="post-article"]');
+      const elements = article
+        ? Array.from(article.querySelectorAll<HTMLElement>('h2[id], h3[id], h4[id]'))
+        : [];
+      const activationOffset = 160;
+      const readingPosition = window.scrollY + activationOffset;
+      const currentHeading = elements.findLast((element) => {
+        let offsetTop = element.offsetTop;
+        let offsetParent = element.offsetParent as HTMLElement | null;
+
+        while (offsetParent) {
+          offsetTop += offsetParent.offsetTop;
+          offsetParent = offsetParent.offsetParent as HTMLElement | null;
+        }
+
+        return offsetTop <= readingPosition;
+      });
+
+      setActiveHeadingId(currentHeading?.id ?? elements[0]?.id ?? '');
+    }
+
+    function handleScroll() {
+      window.cancelAnimationFrame(animationFrameId);
+      animationFrameId = window.requestAnimationFrame(updateActiveHeading);
+    }
+
+    updateActiveHeading();
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    window.addEventListener('resize', handleScroll);
+
+    return () => {
+      window.cancelAnimationFrame(animationFrameId);
+      window.removeEventListener('scroll', handleScroll);
+      window.removeEventListener('resize', handleScroll);
+    };
+  }, [headings]);
 
   const canDeletePost = currentUser?.role === 'ROLE_ADMIN';
 
@@ -271,8 +317,12 @@ export function PostDetailPage() {
   const nextPost = currentPostIndex > 0 ? posts[currentPostIndex - 1] : undefined;
 
   return (
-    <section className="section grid gap-8 lg:grid-cols-[minmax(0,1fr)_260px] lg:items-start">
-      <article className="lg:pl-4 xl:pl-6">
+    <section className="section">
+      <div
+        data-testid="post-reading-grid"
+        className="grid gap-10 lg:grid-cols-[minmax(0,800px)_260px] lg:items-start lg:justify-center lg:gap-x-16"
+      >
+      <article data-testid="post-article" className="min-w-0">
         <div className="mb-5 flex flex-wrap items-center gap-2 text-sm text-gray-400">
           <Link to="/" className="font-medium transition hover:text-primary">
             홈
@@ -288,7 +338,7 @@ export function PostDetailPage() {
         </div>
 
         <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
-          <h1 className="text-[31px] font-extrabold leading-tight tracking-tight text-gray-950 md:text-[42px]">
+          <h1 className="max-w-[760px] text-[31px] font-extrabold leading-[1.25] tracking-tight text-gray-950 md:text-[42px]">
             {post.title}
           </h1>
           {canDeletePost ? (
@@ -305,7 +355,7 @@ export function PostDetailPage() {
             </Button>
           ) : null}
         </div>
-        <p className="mt-4 leading-8 text-muted">{post.excerpt}</p>
+        <p className="mt-5 max-w-[760px] text-[17px] leading-8 text-gray-600">{post.excerpt}</p>
 
         <div className="mt-6 flex flex-wrap items-center gap-4 text-sm text-muted">
           <strong className="text-gray-900">DevNote</strong>
@@ -319,9 +369,9 @@ export function PostDetailPage() {
         </div>
 
         <div
-          className={`my-8 grid h-56 place-items-center rounded-[28px] bg-gradient-to-br ${hero.className} md:h-[330px]`}
+          className={`my-10 grid h-36 place-items-center rounded-lg bg-gradient-to-br ${hero.className} md:h-44`}
         >
-          <div className="grid h-28 w-28 place-items-center rounded-[30px] border border-white/75 bg-white/70 shadow-[0_18px_42px_rgba(17,24,39,0.08)] md:h-32 md:w-32">
+          <div className="grid h-20 w-20 place-items-center rounded-lg border border-white/75 bg-white/70 shadow-[0_12px_28px_rgba(17,24,39,0.07)] [&>svg]:h-11 [&>svg]:w-11">
             {hero.icon}
           </div>
         </div>
@@ -344,18 +394,32 @@ export function PostDetailPage() {
         </div>
       </article>
 
-      <Card className="order-first rounded-[24px] p-6 lg:sticky lg:top-24 lg:order-none">
-        <h3 className="font-extrabold text-gray-950">목차</h3>
-        <div className="mt-4 grid gap-3 text-sm text-muted">
+      <nav
+        aria-label="게시글 목차"
+        className="order-first border-y border-line py-5 lg:sticky lg:top-24 lg:order-none lg:max-h-[calc(100vh-8rem)] lg:self-start lg:overflow-y-auto lg:border-y-0 lg:border-l lg:py-2 lg:pl-7 lg:pr-2"
+      >
+        <h3 className="text-sm font-extrabold text-gray-950">목차</h3>
+        <div className="mt-4 grid gap-0.5 text-sm">
           {headings.map((heading) => (
-            <a key={heading.id} href={`#${heading.id}`} className="transition hover:text-primary">
+            <a
+              key={heading.id}
+              href={`#${heading.id}`}
+              className={`border-l-2 py-1.5 leading-6 transition ${
+                heading.level >= 3 ? 'pl-6 text-[13px]' : 'pl-3'
+              } ${
+                activeHeadingId === heading.id || (!activeHeadingId && headings[0]?.id === heading.id)
+                  ? 'border-primary font-bold text-primary'
+                  : 'border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-900'
+              }`}
+            >
               {heading.text}
             </a>
           ))}
         </div>
-      </Card>
+      </nav>
+      </div>
 
-      <div className="lg:col-span-2">
+      <div data-testid="post-navigation" className="mt-10 lg:mx-auto lg:w-[1124px]">
         <div className="grid gap-3 rounded-[24px] border border-line bg-white p-4 sm:grid-cols-2">
           <Link
             to={previousPost ? getPostPath(previousPost) : '/posts'}

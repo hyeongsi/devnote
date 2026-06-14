@@ -1,18 +1,53 @@
 export interface MarkdownHeading {
   id: string;
-  level: 2;
+  level: number;
   text: string;
 }
 
 export type MarkdownBlock =
-  | { type: 'heading'; id: string; text: string }
+  | { type: 'heading'; id: string; level: number; text: string }
   | { type: 'paragraph'; text: string }
   | { type: 'blockquote'; text: string }
   | { type: 'list'; items: string[] }
   | { type: 'code'; language: string | null; code: string };
 
-export function parsePostMarkdown(markdown: string): MarkdownBlock[] {
+export function normalizePostMarkdown(markdown: string): string {
   const lines = markdown.replace(/\r\n/g, '\n').split('\n');
+  const normalized: string[] = [];
+  let inCodeBlock = false;
+
+  for (const line of lines) {
+    if (line.trimStart().startsWith('```')) {
+      inCodeBlock = !inCodeBlock;
+      normalized.push(line);
+      continue;
+    }
+
+    if (inCodeBlock) {
+      normalized.push(line);
+      continue;
+    }
+
+    const withListBreaks = line.replace(
+      /(\S[.!?。]|[가-힣A-Za-z0-9)])\s+(?=[*-]\s+\*\*)/g,
+      '$1\n',
+    );
+    const withHeadingBreaks = withListBreaks.replace(
+      /(\S)\s+(?=#{2,6}\s+\S)/g,
+      '$1\n\n',
+    ).replace(
+      /(#{2,6}\s+.+?[?!。])\s+(?=\S)/g,
+      '$1\n',
+    );
+
+    normalized.push(...withHeadingBreaks.split('\n'));
+  }
+
+  return normalized.join('\n');
+}
+
+export function parsePostMarkdown(markdown: string): MarkdownBlock[] {
+  const lines = normalizePostMarkdown(markdown).split('\n');
   const blocks: MarkdownBlock[] = [];
   let index = 0;
 
@@ -43,9 +78,10 @@ export function parsePostMarkdown(markdown: string): MarkdownBlock[] {
       continue;
     }
 
-    if (trimmed.startsWith('## ')) {
-      const text = trimmed.slice(3).trim();
-      blocks.push({ type: 'heading', id: toAnchorId(text), text });
+    const headingMatch = /^(#{2,6})\s+(.+)$/.exec(trimmed);
+    if (headingMatch) {
+      const text = headingMatch[2].trim();
+      blocks.push({ type: 'heading', id: toAnchorId(text), level: headingMatch[1].length, text });
       index += 1;
       continue;
     }
@@ -62,11 +98,11 @@ export function parsePostMarkdown(markdown: string): MarkdownBlock[] {
       continue;
     }
 
-    if (trimmed.startsWith('- ')) {
+    if (/^[-*]\s+/.test(trimmed)) {
       const items: string[] = [];
 
-      while (index < lines.length && lines[index].trim().startsWith('- ')) {
-        items.push(lines[index].trim().slice(2).trim());
+      while (index < lines.length && /^[-*]\s+/.test(lines[index].trim())) {
+        items.push(lines[index].trim().replace(/^[-*]\s+/, '').trim());
         index += 1;
       }
 
@@ -82,9 +118,9 @@ export function parsePostMarkdown(markdown: string): MarkdownBlock[] {
 
       if (
         !nextTrimmed ||
-        nextTrimmed.startsWith('## ') ||
+        /^#{2,6}\s+/.test(nextTrimmed) ||
         nextTrimmed.startsWith('> ') ||
-        nextTrimmed.startsWith('- ') ||
+        /^[-*]\s+/.test(nextTrimmed) ||
         nextTrimmed.startsWith('```')
       ) {
         break;
@@ -105,12 +141,12 @@ export function extractMarkdownHeadings(markdown: string): MarkdownHeading[] {
     .filter((block): block is Extract<MarkdownBlock, { type: 'heading' }> => block.type === 'heading')
     .map((block) => ({
       id: block.id,
-      level: 2,
+      level: block.level,
       text: block.text,
     }));
 }
 
-function toAnchorId(text: string): string {
+export function toAnchorId(text: string): string {
   return text
     .toLowerCase()
     .replace(/[^\p{L}\p{N}\s-]/gu, '')

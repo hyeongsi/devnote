@@ -1,6 +1,7 @@
 package io.hyeongsi.devnotewebapp.ai;
 
 import io.hyeongsi.devnotewebapp.ai.controller.AiPostController;
+import io.hyeongsi.devnotewebapp.ai.dto.AiPostGenerateRequest;
 import io.hyeongsi.devnotewebapp.ai.dto.AiPostGenerateResponse;
 import io.hyeongsi.devnotewebapp.ai.service.AiPostGenerateService;
 import org.junit.jupiter.api.Test;
@@ -11,6 +12,7 @@ import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import java.util.List;
 
 import static org.mockito.Mockito.mock;
+import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -24,7 +26,9 @@ class AiPostControllerTest {
         AiPostGenerateService service = mock(AiPostGenerateService.class);
         MockMvc mockMvc = MockMvcBuilders.standaloneSetup(new AiPostController(service)).build();
 
-        when(service.generate("Spring Security")).thenReturn(new AiPostGenerateResponse(
+        when(service.generate(argThat((AiPostGenerateRequest request) ->
+                request != null && "Spring Security".equals(request.topic())
+        ))).thenReturn(new AiPostGenerateResponse(
                 "Spring Security를 실무 관점에서 이해하기",
                 "Spring Security의 핵심 개념과 실무 활용 방식을 정리합니다.",
                 "## Spring Security란?\n\n학습형 본문입니다.",
@@ -45,6 +49,8 @@ class AiPostControllerTest {
                 .andExpect(jsonPath("$.tags[0]").value("Spring Security"))
                 .andExpect(jsonPath("$.recommendedCategorySlug").value("spring-boot"));
 
-        verify(service).generate("Spring Security");
+        verify(service).generate(argThat((AiPostGenerateRequest request) ->
+                request != null && "Spring Security".equals(request.topic())
+        ));
     }
 }
