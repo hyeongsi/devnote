@@ -116,7 +116,7 @@ public class PostService {
                 category,
                 request.title().trim(),
                 request.excerpt().trim(),
-                LocalDate.now(),
+                LocalDate.now(clock),
                 request.readTime().trim(),
                 0,
                 request.thumbnailStyle().trim(),

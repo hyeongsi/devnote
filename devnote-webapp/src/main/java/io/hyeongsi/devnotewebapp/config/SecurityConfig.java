@@ -33,6 +33,7 @@ public class SecurityConfig {
                         "/h2-console/**",
                         "/api/posts/**",
                         "/api/ai/posts/**",
+                        "/api/admin/ai-posting/**",
                         "/api/categories/admin/**",
                         "/api/menus/admin/**",
                         "/api/auth/login",

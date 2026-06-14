@@ -1,10 +1,14 @@
 package io.hyeongsi.devnotewebapp.ai.service;
 
 import io.hyeongsi.devnotewebapp.ai.client.AiPostClient;
+import io.hyeongsi.devnotewebapp.ai.client.AiPostGenerationContext;
+import io.hyeongsi.devnotewebapp.ai.dto.AiPostGenerateRequest;
 import io.hyeongsi.devnotewebapp.ai.dto.AiPostGenerateResponse;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
+
+import java.util.List;
 
 @Service
 public class AiPostGenerateService {
@@ -16,11 +20,25 @@ public class AiPostGenerateService {
     }
 
     public AiPostGenerateResponse generate(String topic) {
+        return generate(new AiPostGenerateRequest(topic, "", List.of(), List.of(), "초급도 이해할 수 있게", "보통"));
+    }
+
+    public AiPostGenerateResponse generate(AiPostGenerateRequest request) {
+        String topic = request == null ? null : request.topic();
         if (topic == null || topic.isBlank()) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Topic is required");
         }
 
-        AiPostGenerateResponse response = aiPostClient.generate(topic.trim());
+        AiPostGenerateResponse response = aiPostClient.generate(new AiPostGenerationContext(
+                topic.trim(),
+                normalize(request.direction()),
+                safeList(request.keywords()),
+                safeList(request.excludedKeywords()),
+                defaultValue(request.level(), "초급도 이해할 수 있게"),
+                defaultValue(request.lengthHint(), "보통"),
+                "",
+                List.of()
+        ));
 
         if (response == null || response.title() == null || response.title().isBlank()
                 || response.content() == null || response.content().isBlank()) {
@@ -28,6 +46,19 @@ public class AiPostGenerateService {
         }
 
         return response;
+    }
+
+    private List<String> safeList(List<String> values) {
+        return values == null ? List.of() : values.stream().filter(value -> value != null && !value.isBlank()).toList();
+    }
+
+    private String normalize(String value) {
+        return value == null ? "" : value.trim();
+    }
+
+    private String defaultValue(String value, String fallback) {
+        String normalized = normalize(value);
+        return normalized.isBlank() ? fallback : normalized;
     }
 
     String buildPrompt(String topic) {

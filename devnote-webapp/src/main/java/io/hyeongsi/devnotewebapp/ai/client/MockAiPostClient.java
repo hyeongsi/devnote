@@ -1,17 +1,14 @@
 package io.hyeongsi.devnotewebapp.ai.client;
 
 import io.hyeongsi.devnotewebapp.ai.dto.AiPostGenerateResponse;
-import org.springframework.stereotype.Service;
-
 import java.util.List;
 import java.util.Locale;
 
-@Service
 public class MockAiPostClient implements AiPostClient {
 
     @Override
-    public AiPostGenerateResponse generate(String topic) {
-        String normalizedTopic = topic.trim();
+    public AiPostGenerateResponse generate(AiPostGenerationContext context) {
+        String normalizedTopic = context.topic().trim();
         String categorySlug = recommendCategorySlug(normalizedTopic);
 
         return new AiPostGenerateResponse(

@@ -1,7 +1,31 @@
-import { BookOpenCheck, Eye, Lightbulb, Loader2, PencilLine, Save, Sparkles } from 'lucide-react';
+import {
+  BookOpenCheck,
+  Bot,
+  CheckCircle2,
+  Clock3,
+  Eye,
+  Lightbulb,
+  Loader2,
+  PencilLine,
+  Play,
+  Plus,
+  Save,
+  Sparkles,
+  Trash2,
+  XCircle,
+} from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { generateAiPost } from '../../api/aiPosts';
+import {
+  createAiPostingTopic,
+  disableAiPostingTopic,
+  getAiPostingRuns,
+  getAiPostingStatus,
+  getAiPostingTopics,
+  runAiPostingNow,
+  updateAiPostingTopic,
+} from '../../api/aiAutoPosting';
 import { getAdminCategories } from '../../api/categories';
 import { createPost } from '../../api/posts';
 import { Button } from '../../components/ui/Button';
@@ -11,7 +35,14 @@ import { Select } from '../../components/ui/Select';
 import { Textarea } from '../../components/ui/Textarea';
 import { useFeedback } from '../../features/feedback/FeedbackContext';
 import { PostMarkdownRenderer } from '../../features/post/PostMarkdownRenderer';
-import type { AdminCategoryRow, BlogPost, PostCreateRequest } from '../../types';
+import type {
+  AdminCategoryRow,
+  AiPostingRun,
+  AiPostingStatus,
+  AiPostingTopic,
+  BlogPost,
+  PostCreateRequest,
+} from '../../types';
 
 const thumbnailOptions: Array<{ value: BlogPost['imageStyle']; label: string }> = [
   { value: 'ai', label: 'AI' },
@@ -53,6 +84,12 @@ export function AdminAiPostingPage() {
   const [isSaving, setIsSaving] = useState(false);
   const [isPreviewMode, setIsPreviewMode] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [autoStatus, setAutoStatus] = useState<AiPostingStatus | null>(null);
+  const [autoTopics, setAutoTopics] = useState<AiPostingTopic[]>([]);
+  const [autoRuns, setAutoRuns] = useState<AiPostingRun[]>([]);
+  const [newTopicName, setNewTopicName] = useState('');
+  const [newTopicCategoryId, setNewTopicCategoryId] = useState(0);
+  const [isManagingAutomation, setIsManagingAutomation] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -80,6 +117,30 @@ export function AdminAiPostingPage() {
     };
   }, []);
 
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadAutomation() {
+      try {
+        const [status, topics, runs] = await loadAutomationData();
+        if (!cancelled) {
+          setAutoStatus(status);
+          setAutoTopics(topics);
+          setAutoRuns(runs);
+        }
+      } catch (error) {
+        if (!cancelled) {
+          setErrorMessage(error instanceof Error ? error.message : '자동 포스팅 정보를 불러오지 못했습니다.');
+        }
+      }
+    }
+
+    void loadAutomation();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
   const selectedCategory = useMemo(
     () => categories.find((category) => category.id === draft.categoryId),
     [categories, draft.categoryId],
@@ -97,7 +158,14 @@ export function AdminAiPostingPage() {
     setErrorMessage(null);
 
     try {
-      const response = await generateAiPost({ topic: trimmedTopic });
+      const response = await generateAiPost({
+        topic: trimmedTopic,
+        direction: direction.trim(),
+        keywords: parseTags(keywords),
+        excludedKeywords: parseTags(excludedKeywords),
+        level,
+        lengthHint,
+      });
       const recommendedCategory = categories.find(
         (category) => category.slug === response.recommendedCategorySlug,
       );
@@ -202,6 +270,69 @@ export function AdminAiPostingPage() {
     }));
   }
 
+  async function refreshAutomation() {
+    const [status, topics, runs] = await loadAutomationData();
+    setAutoStatus(status);
+    setAutoTopics(topics);
+    setAutoRuns(runs);
+  }
+
+  async function handleAddTopic() {
+    if (!newTopicName.trim() || !newTopicCategoryId) {
+      setErrorMessage('주제명과 기본 카테고리를 선택해 주세요.');
+      return;
+    }
+    setIsManagingAutomation(true);
+    try {
+      await createAiPostingTopic({
+        name: newTopicName.trim(),
+        categoryId: newTopicCategoryId,
+        enabled: true,
+      });
+      setNewTopicName('');
+      await refreshAutomation();
+    } finally {
+      setIsManagingAutomation(false);
+    }
+  }
+
+  async function handleSaveTopic(topic: AiPostingTopic) {
+    setIsManagingAutomation(true);
+    try {
+      await updateAiPostingTopic(topic);
+      await refreshAutomation();
+    } finally {
+      setIsManagingAutomation(false);
+    }
+  }
+
+  async function handleDisableTopic(id: number) {
+    setIsManagingAutomation(true);
+    try {
+      await disableAiPostingTopic(id);
+      await refreshAutomation();
+    } finally {
+      setIsManagingAutomation(false);
+    }
+  }
+
+  async function handleRunNow() {
+    const accepted = window.confirm('다음 주제로 게시글을 즉시 생성하고 게시할까요?');
+    if (!accepted) return;
+    setIsManagingAutomation(true);
+    try {
+      const run = await runAiPostingNow();
+      showMessage({
+        tone: run.status === 'SUCCEEDED' ? 'success' : 'error',
+        title: run.status === 'SUCCEEDED' ? '자동 게시를 완료했습니다.' : '자동 게시가 완료되지 않았습니다.',
+        description: run.generatedTitle ?? run.errorMessage ?? undefined,
+      });
+      await refreshAutomation();
+    } finally {
+      setIsManagingAutomation(false);
+    }
+  }
+
   return (
     <div className="space-y-6">
       <section className="rounded-[24px] border border-line bg-white p-6 shadow-[0_18px_50px_rgba(17,24,39,0.05)] md:p-8">
@@ -212,12 +343,12 @@ export function AdminAiPostingPage() {
               주제 기반 학습형 블로그 초안 생성
             </h2>
             <p className="mt-3 text-base leading-7 text-muted">
-              실제 GPT API는 호출하지 않고, 백엔드 Mock 응답으로 학습형 글 초안을 생성합니다.
-              생성된 글은 수정한 뒤 기존 게시글 구조로 저장됩니다.
+              Google AI Studio의 Gemini API로 초안을 만들고, 등록한 개발 주제를 순환해
+              매일 오전 6시에 게시글을 자동 발행합니다.
             </p>
           </div>
           <div className="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-bold text-emerald-800">
-            API Key 저장 없음
+            API Key는 서버 환경변수로 관리
           </div>
         </div>
       </section>
@@ -227,6 +358,156 @@ export function AdminAiPostingPage() {
           {errorMessage}
         </div>
       ) : null}
+
+      <section className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_360px]">
+        <Card className="rounded-[24px] p-6">
+          <div className="flex flex-col gap-4 border-b border-line pb-5 md:flex-row md:items-center md:justify-between">
+            <div className="flex items-center gap-3">
+              <div className="grid h-11 w-11 place-items-center rounded-xl bg-primary-soft text-primary">
+                <Bot className="h-5 w-5" />
+              </div>
+              <div>
+                <p className="text-sm font-bold text-primary">Daily Publishing</p>
+                <h3 className="text-xl font-black text-gray-950">매일 오전 6시 자동 게시</h3>
+              </div>
+            </div>
+            <Button
+              type="button"
+              size="sm"
+              className="gap-2"
+              disabled={isManagingAutomation || !autoStatus?.geminiConfigured}
+              onClick={() => void handleRunNow()}
+            >
+              {isManagingAutomation ? <Loader2 className="h-4 w-4 animate-spin" /> : <Play className="h-4 w-4" />}
+              지금 실행
+            </Button>
+          </div>
+
+          <div className="mt-5 grid gap-4 sm:grid-cols-3">
+            <AutomationStat
+              label="Gemini API"
+              value={autoStatus?.geminiConfigured ? '연결됨' : '환경변수 필요'}
+              active={Boolean(autoStatus?.geminiConfigured)}
+            />
+            <AutomationStat
+              label="예약 실행"
+              value={autoStatus?.enabled ? '활성화' : '비활성화'}
+              active={Boolean(autoStatus?.enabled)}
+            />
+            <AutomationStat
+              label="다음 주제"
+              value={autoStatus?.nextTopic?.name ?? '등록된 주제 없음'}
+              active={Boolean(autoStatus?.nextTopic)}
+            />
+          </div>
+
+          <div className="mt-6 flex flex-col gap-3 rounded-xl border border-line bg-gray-50 p-4 text-sm text-gray-600 sm:flex-row sm:items-center sm:justify-between">
+            <span className="flex items-center gap-2">
+              <Clock3 className="h-4 w-4 text-primary" />
+              다음 실행 {autoStatus ? formatDateTime(autoStatus.nextRunAt) : '-'}
+            </span>
+            <span>{autoStatus?.model ?? 'Gemini 모델 확인 중'}</span>
+          </div>
+
+          <div className="mt-6 grid gap-3 md:grid-cols-[minmax(0,1fr)_220px_auto]">
+            <Input
+              value={newTopicName}
+              onChange={(event) => setNewTopicName(event.target.value)}
+              placeholder="새 개발 주제 예: Spring Boot"
+            />
+            <Select
+              value={newTopicCategoryId || ''}
+              onChange={(event) => setNewTopicCategoryId(Number(event.target.value))}
+            >
+              <option value="">기본 카테고리</option>
+              {categories.map((category) => (
+                <option key={category.id} value={category.id}>{category.name}</option>
+              ))}
+            </Select>
+            <Button type="button" variant="outline" className="gap-2" onClick={() => void handleAddTopic()}>
+              <Plus className="h-4 w-4" />
+              주제 추가
+            </Button>
+          </div>
+
+          <div className="mt-4 divide-y divide-line border-y border-line">
+            {autoTopics.length > 0 ? autoTopics.map((item, index) => (
+              <div key={item.id} className="grid gap-3 py-4 md:grid-cols-[40px_minmax(0,1fr)_180px_auto] md:items-center">
+                <span className="text-sm font-black text-gray-400">{String(index + 1).padStart(2, '0')}</span>
+                <Input
+                  value={item.name}
+                  onChange={(event) => setAutoTopics((current) => current.map((topicItem) =>
+                    topicItem.id === item.id ? { ...topicItem, name: event.target.value } : topicItem
+                  ))}
+                />
+                <Select
+                  value={item.categoryId}
+                  onChange={(event) => setAutoTopics((current) => current.map((topicItem) =>
+                    topicItem.id === item.id
+                      ? {
+                          ...topicItem,
+                          categoryId: Number(event.target.value),
+                          categoryName: categories.find((category) => category.id === Number(event.target.value))?.name ?? '',
+                        }
+                      : topicItem
+                  ))}
+                >
+                  {categories.map((category) => (
+                    <option key={category.id} value={category.id}>{category.name}</option>
+                  ))}
+                </Select>
+                <div className="flex items-center justify-end gap-2">
+                  <label className="flex items-center gap-2 text-sm font-semibold text-gray-600">
+                    <input
+                      type="checkbox"
+                      checked={item.enabled}
+                      onChange={(event) => setAutoTopics((current) => current.map((topicItem) =>
+                        topicItem.id === item.id ? { ...topicItem, enabled: event.target.checked } : topicItem
+                      ))}
+                    />
+                    사용
+                  </label>
+                  <Button type="button" size="sm" variant="outline" onClick={() => void handleSaveTopic(item)}>저장</Button>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="ghost"
+                    title="주제 비활성화"
+                    onClick={() => void handleDisableTopic(item.id)}
+                  >
+                    <Trash2 className="h-4 w-4 text-red-500" />
+                  </Button>
+                </div>
+              </div>
+            )) : (
+              <p className="py-8 text-center text-sm text-muted">순환할 개발 주제를 추가해 주세요.</p>
+            )}
+          </div>
+        </Card>
+
+        <Card className="rounded-[24px] p-6">
+          <p className="text-sm font-bold text-gray-500">Run History</p>
+          <h3 className="mt-1 text-xl font-black text-gray-950">최근 자동 게시</h3>
+          <div className="mt-5 divide-y divide-line">
+            {autoRuns.length > 0 ? autoRuns.slice(0, 8).map((run) => (
+              <div key={run.id} className="py-4">
+                <div className="flex items-start gap-3">
+                  {run.status === 'SUCCEEDED'
+                    ? <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-emerald-500" />
+                    : <XCircle className="mt-0.5 h-5 w-5 shrink-0 text-amber-500" />}
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-bold text-gray-900">
+                      {run.generatedTitle ?? run.topicName ?? run.status}
+                    </p>
+                    <p className="mt-1 text-xs text-muted">{formatDateTime(run.startedAt)}</p>
+                    {run.errorMessage ? <p className="mt-2 text-xs leading-5 text-red-600">{run.errorMessage}</p> : null}
+                  </div>
+                </div>
+              </div>
+            )) : <p className="py-8 text-sm text-muted">아직 실행 이력이 없습니다.</p>}
+          </div>
+        </Card>
+      </section>
 
       <div className="grid gap-6 xl:grid-cols-[minmax(0,420px)_1fr]">
         <Card className="rounded-[24px] p-6">
@@ -519,6 +800,32 @@ export function AdminAiPostingPage() {
       </div>
     </div>
   );
+}
+
+function AutomationStat({ label, value, active }: { label: string; value: string; active: boolean }) {
+  return (
+    <div className="border-l-2 border-line pl-4">
+      <p className="text-xs font-bold text-gray-400">{label}</p>
+      <p className={`mt-1 text-sm font-black ${active ? 'text-gray-950' : 'text-amber-700'}`}>{value}</p>
+    </div>
+  );
+}
+
+function formatDateTime(value: string) {
+  return new Intl.DateTimeFormat('ko-KR', {
+    month: 'short',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  }).format(new Date(value));
+}
+
+function loadAutomationData() {
+  return Promise.all([
+    getAiPostingStatus(),
+    getAiPostingTopics(),
+    getAiPostingRuns(),
+  ]);
 }
 
 function parseTags(value: string) {
