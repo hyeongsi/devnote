@@ -25,7 +25,6 @@ public class AiAutoPostingAdminService {
     private final AiPostTopicRepository topicRepository;
     private final AiPostRunRepository runRepository;
     private final CategoryRepository categoryRepository;
-    private final AiPostTopicSelectionService selectionService;
     private final AiAutoPostingService autoPostingService;
     private final AiAutoPostingProperties properties;
     private final Clock clock;
@@ -34,7 +33,6 @@ public class AiAutoPostingAdminService {
             AiPostTopicRepository topicRepository,
             AiPostRunRepository runRepository,
             CategoryRepository categoryRepository,
-            AiPostTopicSelectionService selectionService,
             AiAutoPostingService autoPostingService,
             AiAutoPostingProperties properties,
             Clock clock
@@ -42,14 +40,13 @@ public class AiAutoPostingAdminService {
         this.topicRepository = topicRepository;
         this.runRepository = runRepository;
         this.categoryRepository = categoryRepository;
-        this.selectionService = selectionService;
         this.autoPostingService = autoPostingService;
         this.properties = properties;
         this.clock = clock;
     }
 
     public AiAutoPostingDtos.StatusResponse status() {
-        AiPostTopic next = selectionService.selectNext(topicRepository.findAllByEnabledTrueOrderByDisplayOrderAscIdAsc())
+        AiPostTopic next = topicRepository.findNextEnabledTopic()
                 .orElse(null);
         ZoneId zone = ZoneId.of(properties.zone());
         LocalDate today = LocalDate.now(clock.withZone(zone));
@@ -69,8 +66,7 @@ public class AiAutoPostingAdminService {
     }
 
     public List<AiAutoPostingDtos.TopicResponse> topics() {
-        return topicRepository.findAll().stream()
-                .sorted(java.util.Comparator.comparing(AiPostTopic::getDisplayOrder).thenComparing(AiPostTopic::getId))
+        return topicRepository.findAllOrdered().stream()
                 .map(this::toTopic)
                 .toList();
     }
@@ -120,7 +116,7 @@ public class AiAutoPostingAdminService {
     }
 
     public List<AiAutoPostingDtos.RunResponse> runs() {
-        return runRepository.findTop20ByOrderByStartedAtDesc().stream().map(this::toRun).toList();
+        return runRepository.findRecentRuns(20).stream().map(this::toRun).toList();
     }
 
     public AiAutoPostingDtos.RunResponse runNow() {
