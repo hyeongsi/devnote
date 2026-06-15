@@ -30,7 +30,6 @@ public class SecurityConfig {
         http
                 .cors(Customizer.withDefaults())
                 .csrf(csrf -> csrf.ignoringRequestMatchers(
-                        "/h2-console/**",
                         "/api/posts/**",
                         "/api/ai/posts/**",
                         "/api/admin/ai-posting/**",
@@ -39,9 +38,7 @@ public class SecurityConfig {
                         "/api/auth/login",
                         "/api/auth/logout"
                 ))
-                .headers(headers -> headers.frameOptions(frameOptions -> frameOptions.sameOrigin()))
                 .authorizeHttpRequests(authorize -> authorize
-                        .requestMatchers("/h2-console/**").permitAll()
                         .requestMatchers("/api/auth/login", "/api/auth/me", "/api/auth/logout").permitAll()
                         .requestMatchers("/api/admin/**").hasRole("ADMIN")
                         .requestMatchers("/api/ai/posts/**").hasRole("ADMIN")

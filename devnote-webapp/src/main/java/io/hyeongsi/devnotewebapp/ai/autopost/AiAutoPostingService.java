@@ -22,7 +22,6 @@ public class AiAutoPostingService {
 
     private final AiPostTopicRepository topicRepository;
     private final AiPostRunRepository runRepository;
-    private final AiPostTopicSelectionService selectionService;
     private final AiPostClient aiPostClient;
     private final PostService postService;
     private final PostRepository postRepository;
@@ -32,7 +31,6 @@ public class AiAutoPostingService {
     public AiAutoPostingService(
             AiPostTopicRepository topicRepository,
             AiPostRunRepository runRepository,
-            AiPostTopicSelectionService selectionService,
             AiPostClient aiPostClient,
             PostService postService,
             PostRepository postRepository,
@@ -41,7 +39,6 @@ public class AiAutoPostingService {
     ) {
         this.topicRepository = topicRepository;
         this.runRepository = runRepository;
-        this.selectionService = selectionService;
         this.aiPostClient = aiPostClient;
         this.postService = postService;
         this.postRepository = postRepository;
@@ -55,8 +52,7 @@ public class AiAutoPostingService {
         LocalDateTime start = today.atStartOfDay();
         LocalDateTime end = today.plusDays(1).atStartOfDay();
 
-        if (runRepository.existsByStatusAndStartedAtGreaterThanEqualAndStartedAtLessThan(
-                AiPostRunStatus.SUCCEEDED, start, end)) {
+        if (runRepository.existsSucceededBetween(start, end)) {
             return runRepository.save(AiPostRun.skipped("Today's automatic post is already published", now(zone)));
         }
         return execute(false);
@@ -69,11 +65,11 @@ public class AiAutoPostingService {
     private AiPostRun execute(boolean manual) {
         ZoneId zone = ZoneId.of(properties.zone());
         LocalDateTime now = now(zone);
-        if (runRepository.existsByStatus(AiPostRunStatus.RUNNING)) {
+        if (runRepository.existsRunning()) {
             return runRepository.save(AiPostRun.skipped("Another automatic posting run is in progress", now));
         }
 
-        AiPostTopic topic = selectionService.selectNext(topicRepository.findAllByEnabledTrueOrderByDisplayOrderAscIdAsc())
+        AiPostTopic topic = topicRepository.findNextEnabledTopic()
                 .orElse(null);
         if (topic == null) {
             return runRepository.save(AiPostRun.skipped("No enabled AI posting topics", now));
@@ -81,12 +77,11 @@ public class AiAutoPostingService {
 
         AiPostRun run = runRepository.save(new AiPostRun(topic, now));
         try {
-            List<String> recentTitles = runRepository
-                    .findTop5ByTopicAndStatusOrderByCompletedAtDesc(topic, AiPostRunStatus.SUCCEEDED)
-                    .stream()
-                    .map(AiPostRun::getGeneratedTitle)
-                    .filter(title -> title != null && !title.isBlank())
-                    .toList();
+            List<String> recentTitles = runRepository.findRecentGeneratedTitles(
+                    topic,
+                    AiPostRunStatus.SUCCEEDED,
+                    5
+            );
             AiPostGenerateResponse generated = aiPostClient.generate(new AiPostGenerationContext(
                     topic.getName(),
                     "실무에서 바로 활용할 수 있는 학습형 글",
