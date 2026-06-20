@@ -1,6 +1,6 @@
 import type { AiPostingRun, AiPostingStatus, AiPostingTopic } from '../types';
 
-const AI_AUTO_POSTING_API_URL = 'http://localhost:8080/api/admin/ai-posting';
+const AI_AUTO_POSTING_API_URL = '/api/admin/ai-posting';
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const response = await fetch(`${AI_AUTO_POSTING_API_URL}${path}`, {

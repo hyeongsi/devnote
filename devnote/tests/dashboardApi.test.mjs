@@ -91,19 +91,19 @@ assert.deepEqual(activities, [
 ]);
 assert.deepEqual(calls, [
   {
-    url: 'http://localhost:8080/api/admin/dashboard/stats',
+    url: '/api/admin/dashboard/stats',
     options: {
       credentials: 'include',
     },
   },
   {
-    url: 'http://localhost:8080/api/admin/dashboard/traffic',
+    url: '/api/admin/dashboard/traffic',
     options: {
       credentials: 'include',
     },
   },
   {
-    url: 'http://localhost:8080/api/admin/dashboard/activities',
+    url: '/api/admin/dashboard/activities',
     options: {
       credentials: 'include',
     },

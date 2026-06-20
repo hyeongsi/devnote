@@ -8,7 +8,7 @@ import type {
   PostCreateRequest,
 } from '../types';
 
-const POSTS_API_URL = 'http://localhost:8080/api/posts';
+const POSTS_API_URL = '/api/posts';
 
 export async function getPosts(): Promise<BlogPost[]> {
   const response = await fetch(POSTS_API_URL);

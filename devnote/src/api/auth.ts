@@ -1,6 +1,6 @@
 import type { AuthLoginRequest, AuthUser } from '../types';
 
-const AUTH_API_URL = 'http://localhost:8080/api/auth';
+const AUTH_API_URL = '/api/auth';
 export const AUTH_CHANGED_EVENT = 'devnote:auth-changed';
 
 export async function login(request: AuthLoginRequest): Promise<AuthUser> {

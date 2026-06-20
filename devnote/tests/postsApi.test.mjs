@@ -70,7 +70,7 @@ assert.equal(searchResults[0].category, 'Spring Boot');
 assert.equal(searchResults[0].matchedText, 'Spring Security match in content');
 assert.deepEqual(calls, [
   {
-    url: 'http://localhost:8080/api/posts',
+    url: '/api/posts',
     options: {
       method: 'POST',
       headers: {
@@ -90,14 +90,14 @@ assert.deepEqual(calls, [
     },
   },
   {
-    url: 'http://localhost:8080/api/posts/spring-boot/delete-me',
+    url: '/api/posts/spring-boot/delete-me',
     options: {
       method: 'DELETE',
       credentials: 'include',
     },
   },
   {
-    url: 'http://localhost:8080/api/posts/search?query=spring%20security',
+    url: '/api/posts/search?query=spring%20security',
     options: undefined,
   },
 ]);

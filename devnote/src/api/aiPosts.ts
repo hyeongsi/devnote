@@ -1,6 +1,6 @@
 import type { AiPostGenerateRequest, AiPostGenerateResponse } from '../types';
 
-const AI_POSTS_API_URL = 'http://localhost:8080/api/ai/posts';
+const AI_POSTS_API_URL = '/api/ai/posts';
 
 export async function generateAiPost(
   request: AiPostGenerateRequest,

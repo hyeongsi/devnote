@@ -1,6 +1,6 @@
 import type { DashboardActivity, DashboardStats, DashboardTrafficPoint } from '../types';
 
-const DASHBOARD_API_URL = 'http://localhost:8080/api/admin/dashboard';
+const DASHBOARD_API_URL = '/api/admin/dashboard';
 
 export async function getDashboardStats(): Promise<DashboardStats> {
   return getDashboardResource<DashboardStats>('stats');
