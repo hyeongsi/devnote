@@ -49,6 +49,22 @@ public class SecurityConfig {
                         .requestMatchers("/api/menus").permitAll()
                         .requestMatchers("/api/categories/admin/**").hasRole("ADMIN")
                         .requestMatchers("/api/categories/**").permitAll()
+                        .requestMatchers(
+                            "/",
+                            "/index.html",
+                            "/favicon.ico",
+                            "/favicon.svg",
+                            "/icons.svg",
+                            "/assets/**",
+                            "/about",
+                            "/contact",
+                            "/guestbook",
+                            "/login",
+                            "/posts",
+                            "/posts/**",
+                            "/admin",
+                            "/admin/**"
+                        ).permitAll()
                         .anyRequest().authenticated()
                 )
                 .httpBasic(AbstractHttpConfigurer::disable)

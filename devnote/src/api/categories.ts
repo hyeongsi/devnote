@@ -5,7 +5,7 @@ import type {
   BlogCategoryApiResponse,
 } from '../types';
 
-const CATEGORIES_API_URL = 'http://localhost:8080/api/categories';
+const CATEGORIES_API_URL = '/api/categories';
 
 export async function getBlogCategories(): Promise<BlogCategory[]> {
   const response = await fetch(CATEGORIES_API_URL);

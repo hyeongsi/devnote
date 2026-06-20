@@ -6,7 +6,7 @@ import {
   mapMenusToSavePayload,
 } from './menuMapping';
 
-const MENUS_API_URL = 'http://localhost:8080/api/menus';
+const MENUS_API_URL = '/api/menus';
 export const MENUS_CHANGED_EVENT = 'devnote:menus-changed';
 
 export async function getPublicMenus() {

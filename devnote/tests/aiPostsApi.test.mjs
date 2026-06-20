@@ -46,7 +46,7 @@ const response = await generateAiPost({ topic: 'Spring Security' });
 assert.equal(response.recommendedCategorySlug, 'spring-boot');
 assert.deepEqual(calls, [
   {
-    url: 'http://localhost:8080/api/ai/posts/generate',
+    url: '/api/ai/posts/generate',
     options: {
       method: 'POST',
       headers: {
