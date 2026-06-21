@@ -11,11 +11,12 @@ public class AiPostClientConfig {
     @Bean
     AiPostClient aiPostClient(
             @Value("${devnote.ai.gemini.api-key:}") String apiKey,
-            @Value("${devnote.ai.gemini.model:gemini-2.5-flash}") String model
+            @Value("${devnote.ai.gemini.model:gemini-2.5-flash}") String model,
+            @Value("${devnote.ai.gemini.max-output-tokens:16384}") int maxOutputTokens
     ) {
         if (apiKey == null || apiKey.isBlank()) {
             return new MockAiPostClient();
         }
-        return new GeminiAiPostClient(apiKey, model, new ObjectMapper());
+        return new GeminiAiPostClient(apiKey, model, new ObjectMapper(), maxOutputTokens);
     }
 }
