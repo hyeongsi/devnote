@@ -157,27 +157,6 @@ jobs:
           ls -lh "${RELEASE_FILE}" "${CURRENT_FILE}"
 
       # ─────────────────────────────
-      # React 배포
-      # ─────────────────────────────
-      - name: Deploy React static files
-        run: |
-          set -euo pipefail
-
-          WEB_ROOT="/var/www/devnote/html"
-
-          test -d "${WEB_ROOT}"
-          test -w "${WEB_ROOT}"
-
-          rsync -av --delete \
-            devnote/dist/ \
-            "${WEB_ROOT}/"
-
-          test -f "${WEB_ROOT}/index.html"
-
-          echo "React deployment completed."
-          du -sh "${WEB_ROOT}"
-
-      # ─────────────────────────────
       # Spring Boot 재시작
       # ─────────────────────────────
       - name: Restart DevNote
@@ -198,9 +177,14 @@ jobs:
               --connect-timeout 2 \
               --max-time 5 \
               -o /dev/null \
-              http://127.0.0.1:8080/actuator/health; then
+              http://127.0.0.1:8080/actuator/health \
+              && curl -fsS \
+                --connect-timeout 2 \
+                --max-time 5 \
+                -o /dev/null \
+                http://127.0.0.1:8080/api/menus; then
 
-              echo "DevNote backend health check passed."
+              echo "DevNote backend health and public menu checks passed."
               sudo -n /usr/bin/systemctl is-active --quiet devnote
               exit 0
             fi
@@ -240,6 +224,42 @@ jobs:
 
           sleep 5
           sudo -n /usr/bin/systemctl status devnote --no-pager
+
+      # ─────────────────────────────
+      # Nginx API 프록시 확인
+      # ─────────────────────────────
+      - name: Verify Nginx API proxy
+        run: |
+          set -euo pipefail
+
+          curl -fsS \
+            --connect-timeout 2 \
+            --max-time 10 \
+            http://127.0.0.1/api/menus \
+            -o /dev/null
+
+          echo "Nginx API proxy is responding."
+
+      # ─────────────────────────────
+      # React 배포
+      # ─────────────────────────────
+      - name: Deploy React static files
+        run: |
+          set -euo pipefail
+
+          WEB_ROOT="/var/www/devnote/html"
+
+          test -d "${WEB_ROOT}"
+          test -w "${WEB_ROOT}"
+
+          rsync -av --delete \
+            devnote/dist/ \
+            "${WEB_ROOT}/"
+
+          test -f "${WEB_ROOT}/index.html"
+
+          echo "React deployment completed."
+          du -sh "${WEB_ROOT}"
 
       # ─────────────────────────────
       # 프론트엔드 확인

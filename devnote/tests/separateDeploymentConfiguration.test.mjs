@@ -30,3 +30,19 @@ const nginxConfig = await readFile(
 assert.match(nginxConfig, /try_files \$uri \$uri\/ \/index\.html;/);
 assert.match(nginxConfig, /location \/api\/ \{/);
 assert.match(nginxConfig, /proxy_pass http:\/\/127\.0\.0\.1:8080;/);
+
+const deploymentWorkflow = await readFile(
+  new URL('../../.github/workflows/deploy.yml', import.meta.url),
+  'utf8',
+);
+const backendVerificationIndex = deploymentWorkflow.indexOf('- name: Verify backend');
+const proxyVerificationIndex = deploymentWorkflow.indexOf('- name: Verify Nginx API proxy');
+const frontendDeploymentIndex = deploymentWorkflow.indexOf('- name: Deploy React static files');
+
+assert.notEqual(backendVerificationIndex, -1);
+assert.notEqual(proxyVerificationIndex, -1);
+assert.notEqual(frontendDeploymentIndex, -1);
+assert.ok(backendVerificationIndex < proxyVerificationIndex);
+assert.ok(proxyVerificationIndex < frontendDeploymentIndex);
+assert.match(deploymentWorkflow, /http:\/\/127\.0\.0\.1:8080\/api\/menus/);
+assert.match(deploymentWorkflow, /http:\/\/127\.0\.0\.1\/api\/menus/);
