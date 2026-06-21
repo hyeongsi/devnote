@@ -1,0 +1,311 @@
+```yaml
+name: Deploy DevNote
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: devnote-production
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: [self-hosted, Linux, X64]
+
+    defaults:
+      run:
+        shell: bash
+
+    steps:
+      # ─────────────────────────────
+      # 저장소 Checkout
+      # ─────────────────────────────
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      # ─────────────────────────────
+      # React 빌드
+      # ─────────────────────────────
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: devnote/package-lock.json
+
+      - name: Install React dependencies
+        working-directory: devnote
+        run: |
+          set -euo pipefail
+          npm ci
+
+      - name: Build React
+        working-directory: devnote
+        run: |
+          set -euo pipefail
+          npm run build
+
+      - name: Verify React build
+        run: |
+          set -euo pipefail
+
+          test -d devnote/dist
+          test -f devnote/dist/index.html
+
+          echo "React build completed."
+          du -sh devnote/dist
+
+      # ─────────────────────────────
+      # Spring Boot 빌드
+      # ─────────────────────────────
+      - name: Setup Java
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: 21
+          cache: gradle
+
+      - name: Grant Gradle wrapper permission
+        working-directory: devnote-webapp
+        run: chmod +x gradlew
+
+      - name: Build Spring Boot
+        working-directory: devnote-webapp
+        run: |
+          set -euo pipefail
+          ./gradlew clean bootJar
+
+      - name: Find Spring Boot JAR
+        id: backend
+        run: |
+          set -euo pipefail
+
+          JAR_FILE="$(
+            find devnote-webapp/build/libs \
+              -maxdepth 1 \
+              -type f \
+              -name '*.jar' \
+              ! -name '*-plain.jar' \
+              -print \
+              -quit
+          )"
+
+          if [ -z "${JAR_FILE}" ]; then
+            echo "Spring Boot JAR를 찾지 못했습니다."
+            exit 1
+          fi
+
+          echo "jar=${JAR_FILE}" >> "${GITHUB_OUTPUT}"
+          echo "Selected JAR: ${JAR_FILE}"
+
+          ls -lh "${JAR_FILE}"
+
+      # ─────────────────────────────
+      # Nginx 설정 사전 검사
+      # ─────────────────────────────
+      - name: Validate Nginx configuration
+        run: |
+          set -euo pipefail
+          sudo -n /usr/sbin/nginx -t
+
+      # ─────────────────────────────
+      # Spring Boot 배포
+      # ─────────────────────────────
+      - name: Deploy Spring Boot JAR
+        run: |
+          set -euo pipefail
+
+          RELEASE_DIR="/opt/devnote/releases"
+          CURRENT_FILE="${RELEASE_DIR}/devnote.jar"
+          BACKUP_FILE="${RELEASE_DIR}/devnote.jar.previous"
+
+          SHORT_SHA="${GITHUB_SHA:0:7}"
+          DEPLOY_TIME="$(TZ=Asia/Seoul date +'%Y%m%d%H%M%S')"
+
+          RELEASE_NAME="devnote-${SHORT_SHA}-${DEPLOY_TIME}.jar"
+          RELEASE_FILE="${RELEASE_DIR}/${RELEASE_NAME}"
+
+          # 이 디렉터리는 사전에 runner 사용자 소유로 생성돼 있어야 한다.
+          test -d "${RELEASE_DIR}"
+          test -w "${RELEASE_DIR}"
+
+          echo "배포 파일: ${RELEASE_FILE}"
+
+          # 현재 실행 파일 백업
+          if [ -f "${CURRENT_FILE}" ]; then
+            cp -f "${CURRENT_FILE}" "${BACKUP_FILE}.tmp"
+            chmod 644 "${BACKUP_FILE}.tmp"
+            mv -f "${BACKUP_FILE}.tmp" "${BACKUP_FILE}"
+          fi
+
+          # SHA + 배포시간 형식으로 보관용 JAR 생성
+          cp "${{ steps.backend.outputs.jar }}" "${RELEASE_FILE}.tmp"
+          chmod 644 "${RELEASE_FILE}.tmp"
+          mv "${RELEASE_FILE}.tmp" "${RELEASE_FILE}"
+
+          # systemd가 실행하는 실제 파일 교체
+          cp "${RELEASE_FILE}" "${CURRENT_FILE}.tmp"
+          chmod 644 "${CURRENT_FILE}.tmp"
+          mv -f "${CURRENT_FILE}.tmp" "${CURRENT_FILE}"
+
+          echo "Spring Boot JAR deployment completed."
+          ls -lh "${RELEASE_FILE}" "${CURRENT_FILE}"
+
+      # ─────────────────────────────
+      # React 배포
+      # ─────────────────────────────
+      - name: Deploy React static files
+        run: |
+          set -euo pipefail
+
+          WEB_ROOT="/var/www/devnote/html"
+
+          test -d "${WEB_ROOT}"
+          test -w "${WEB_ROOT}"
+
+          rsync -av --delete \
+            devnote/dist/ \
+            "${WEB_ROOT}/"
+
+          test -f "${WEB_ROOT}/index.html"
+
+          echo "React deployment completed."
+          du -sh "${WEB_ROOT}"
+
+      # ─────────────────────────────
+      # Spring Boot 재시작
+      # ─────────────────────────────
+      - name: Restart DevNote
+        run: |
+          set -euo pipefail
+          sudo -n /usr/bin/systemctl restart devnote
+
+      # ─────────────────────────────
+      # 백엔드 실행 확인
+      # ─────────────────────────────
+      - name: Verify backend
+        id: verify_backend
+        run: |
+          set -euo pipefail
+
+          for i in {1..30}; do
+            # HTTP 상태가 404나 401이어도 서버 연결 자체가 성공하면 정상으로 판단한다.
+            if curl -sS \
+              --connect-timeout 2 \
+              --max-time 5 \
+              -o /dev/null \
+              http://127.0.0.1:8080/; then
+
+              echo "DevNote backend is responding."
+              sudo -n /usr/bin/systemctl is-active --quiet devnote
+              exit 0
+            fi
+
+            echo "Waiting for backend... ${i}/30"
+            sleep 2
+          done
+
+          echo "DevNote backend health check failed."
+          sudo -n /usr/bin/systemctl status devnote --no-pager || true
+          exit 1
+
+      # ─────────────────────────────
+      # 실패 시 이전 JAR 복구
+      # ─────────────────────────────
+      - name: Roll back backend
+        if: failure() && steps.verify_backend.outcome == 'failure'
+        run: |
+          set -euo pipefail
+
+          RELEASE_DIR="/opt/devnote/releases"
+          CURRENT_FILE="${RELEASE_DIR}/devnote.jar"
+          BACKUP_FILE="${RELEASE_DIR}/devnote.jar.previous"
+
+          if [ ! -f "${BACKUP_FILE}" ]; then
+            echo "이전 JAR 백업 파일이 없어 롤백할 수 없습니다."
+            exit 1
+          fi
+
+          echo "Restoring previous JAR."
+
+          cp "${BACKUP_FILE}" "${CURRENT_FILE}.rollback"
+          chmod 644 "${CURRENT_FILE}.rollback"
+          mv -f "${CURRENT_FILE}.rollback" "${CURRENT_FILE}"
+
+          sudo -n /usr/bin/systemctl restart devnote
+
+          sleep 5
+          sudo -n /usr/bin/systemctl status devnote --no-pager
+
+      # ─────────────────────────────
+      # 프론트엔드 확인
+      # ─────────────────────────────
+      - name: Verify frontend
+        run: |
+          set -euo pipefail
+
+          test -f /var/www/devnote/html/index.html
+
+          curl -fsS \
+            --connect-timeout 2 \
+            --max-time 10 \
+            http://127.0.0.1/ \
+            -o /dev/null
+
+          echo "DevNote frontend is responding."
+
+      # ─────────────────────────────
+      # 오래된 JAR 정리
+      # devnote.jar와 devnote.jar.previous는 제외
+      # ─────────────────────────────
+      - name: Clean old Spring Boot releases
+        run: |
+          set -euo pipefail
+
+          cd /opt/devnote/releases
+
+          mapfile -t OLD_RELEASES < <(
+            find . \
+              -maxdepth 1 \
+              -type f \
+              -name 'devnote-*.jar' \
+              -printf '%T@ %p\n' \
+              | sort -nr \
+              | tail -n +6 \
+              | cut -d' ' -f2-
+          )
+
+          if [ "${#OLD_RELEASES[@]}" -gt 0 ]; then
+            printf 'Removing old release: %s\n' "${OLD_RELEASES[@]}"
+            rm -f -- "${OLD_RELEASES[@]}"
+          else
+            echo "No old releases to remove."
+          fi
+
+      # ─────────────────────────────
+      # 최종 상태 출력
+      # ─────────────────────────────
+      - name: Show service status
+        if: always()
+        run: |
+          sudo -n /usr/bin/systemctl status devnote --no-pager || true
+          sudo -n /usr/bin/systemctl status nginx --no-pager || true
+
+          echo "Current backend JAR:"
+          ls -lh /opt/devnote/releases/devnote.jar || true
+
+          echo "Recent releases:"
+          find /opt/devnote/releases \
+            -maxdepth 1 \
+            -type f \
+            -name 'devnote-*.jar' \
+            -printf '%TY-%Tm-%Td %TH:%TM:%TS %f\n' \
+            | sort -r \
+            | head -n 5
+```
