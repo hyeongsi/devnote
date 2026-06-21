@@ -194,14 +194,13 @@ jobs:
           set -euo pipefail
 
           for i in {1..30}; do
-            # HTTP 상태가 404나 401이어도 서버 연결 자체가 성공하면 정상으로 판단한다.
-            if curl -sS \
+            if curl -fsS \
               --connect-timeout 2 \
               --max-time 5 \
               -o /dev/null \
-              http://127.0.0.1:8080/; then
+              http://127.0.0.1:8080/actuator/health; then
 
-              echo "DevNote backend is responding."
+              echo "DevNote backend health check passed."
               sudo -n /usr/bin/systemctl is-active --quiet devnote
               exit 0
             fi
