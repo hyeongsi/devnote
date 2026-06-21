@@ -1,4 +1,3 @@
-```yaml
 name: Deploy DevNote
 
 on:
@@ -308,4 +307,3 @@ jobs:
             -printf '%TY-%Tm-%Td %TH:%TM:%TS %f\n' \
             | sort -r \
             | head -n 5
-```
