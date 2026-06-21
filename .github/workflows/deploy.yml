@@ -42,7 +42,7 @@ jobs:
         working-directory: devnote
         run: |
           set -euo pipefail
-          npm ci
+          npm install
 
       - name: Build React
         working-directory: devnote
