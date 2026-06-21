@@ -21,6 +21,8 @@ public class GeminiAiPostClient implements AiPostClient {
     private final GeminiModelGateway gateway;
     private final ObjectMapper objectMapper;
     private final int maxOutputTokens;
+    private final int maxSplitDepth;
+    private final int maxGenerationCalls;
     private final Consumer<Duration> sleeper;
 
     public GeminiAiPostClient(String apiKey, String model, ObjectMapper objectMapper) {
@@ -28,10 +30,23 @@ public class GeminiAiPostClient implements AiPostClient {
     }
 
     public GeminiAiPostClient(String apiKey, String model, ObjectMapper objectMapper, int maxOutputTokens) {
+        this(apiKey, model, objectMapper, maxOutputTokens, 2, 40);
+    }
+
+    public GeminiAiPostClient(
+            String apiKey,
+            String model,
+            ObjectMapper objectMapper,
+            int maxOutputTokens,
+            int maxSplitDepth,
+            int maxGenerationCalls
+    ) {
         Client client = Client.builder().apiKey(apiKey).build();
         this.gateway = (prompt, config) -> toResult(client.models.generateContent(model, prompt, config));
         this.objectMapper = objectMapper;
-        this.maxOutputTokens = maxOutputTokens;
+        this.maxOutputTokens = requirePositive(maxOutputTokens, "maxOutputTokens");
+        this.maxSplitDepth = requirePositive(maxSplitDepth, "maxSplitDepth");
+        this.maxGenerationCalls = requirePositive(maxGenerationCalls, "maxGenerationCalls");
         this.sleeper = GeminiAiPostClient::sleep;
     }
 
@@ -41,10 +56,30 @@ public class GeminiAiPostClient implements AiPostClient {
             int maxOutputTokens,
             Consumer<Duration> sleeper
     ) {
+        this(gateway, objectMapper, maxOutputTokens, 2, 40, sleeper);
+    }
+
+    GeminiAiPostClient(
+            GeminiModelGateway gateway,
+            ObjectMapper objectMapper,
+            int maxOutputTokens,
+            int maxSplitDepth,
+            int maxGenerationCalls,
+            Consumer<Duration> sleeper
+    ) {
         this.gateway = gateway;
         this.objectMapper = objectMapper;
-        this.maxOutputTokens = maxOutputTokens;
+        this.maxOutputTokens = requirePositive(maxOutputTokens, "maxOutputTokens");
+        this.maxSplitDepth = requirePositive(maxSplitDepth, "maxSplitDepth");
+        this.maxGenerationCalls = requirePositive(maxGenerationCalls, "maxGenerationCalls");
         this.sleeper = sleeper;
+    }
+
+    private static int requirePositive(int value, String name) {
+        if (value < 1) {
+            throw new IllegalArgumentException(name + " must be at least 1");
+        }
+        return value;
     }
 
     @Override
