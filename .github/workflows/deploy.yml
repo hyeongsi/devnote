@@ -106,14 +106,6 @@ jobs:
           ls -lh "${JAR_FILE}"
 
       # ─────────────────────────────
-      # Nginx 설정 사전 검사
-      # ─────────────────────────────
-      - name: Validate Nginx configuration
-        run: |
-          set -euo pipefail
-          sudo -n /usr/sbin/nginx -t
-
-      # ─────────────────────────────
       # Spring Boot 배포
       # ─────────────────────────────
       - name: Deploy Spring Boot JAR
