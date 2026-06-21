@@ -18,6 +18,31 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 class GeminiAiPostClientTest {
 
     @Test
+    void generatesChildUnitsInPlanOrderAndAssemblesTheirHeadings() {
+        FakeGateway gateway = new FakeGateway(
+                result(planWithTwoUnitsJson(), "STOP"),
+                result("환경변수 본문", "STOP"),
+                result("systemd 본문", "STOP"),
+                result(successfulReviewJson(), "STOP")
+        );
+
+        AiPostGenerateResponse response = client(gateway).generate(context());
+
+        assertThat(response.content()).isEqualTo("""
+                ## 운영 환경 적용
+
+                ### 환경변수 구성
+
+                환경변수 본문
+
+                ### systemd 설정
+
+                systemd 본문""");
+        assertThat(gateway.promptsFor("ops/env")).hasSize(1);
+        assertThat(gateway.promptsFor("ops/systemd")).hasSize(1);
+    }
+
+    @Test
     void generatesSectionsAsMarkdownAndAssemblesThemInPlanOrder() {
         FakeGateway gateway = new FakeGateway(
                 result(planJson(), "STOP"),
@@ -85,7 +110,9 @@ class GeminiAiPostClientTest {
 
         assertThat(response.content()).contains("완결된 소개").doesNotContain("잘린 소개");
         assertThat(gateway.sectionPrompts("introduction")).hasSize(2);
-        assertThat(gateway.sectionPrompts("introduction").get(1)).startsWith("SECTION_RETRY_AFTER_MAX_TOKENS");
+        assertThat(gateway.sectionPrompts("introduction").get(1))
+                .startsWith("SECTION_RETRY_AFTER_MAX_TOKENS")
+                .contains("contentKey: introduction/overview");
     }
 
     @Test
@@ -151,8 +178,47 @@ class GeminiAiPostClientTest {
                   "recommendedCategorySlug": "spring-boot",
                   "thumbnailStyle": "code",
                   "sections": [
-                    {"key": "introduction", "heading": "Spring Boot 소개", "brief": "주제와 필요성"},
-                    {"key": "ops-deployment", "heading": "운영 환경 적용", "brief": "설정과 예제"}
+                    {
+                      "key": "introduction",
+                      "heading": "Spring Boot 소개",
+                      "brief": "주제와 필요성",
+                      "units": [
+                        {"key": "overview", "heading": "Spring Boot 소개", "brief": "주제와 필요성"}
+                      ]
+                    },
+                    {
+                      "key": "ops-deployment",
+                      "heading": "운영 환경 적용",
+                      "brief": "설정과 예제",
+                      "units": [
+                        {"key": "configuration", "heading": "운영 환경 적용", "brief": "설정과 예제"}
+                      ]
+                    }
+                  ]
+                }
+                """;
+    }
+
+    private String planWithTwoUnitsJson() {
+        return """
+                {
+                  "title": "Spring Boot 운영 설정",
+                  "summary": "운영 환경 적용 방법을 설명합니다.",
+                  "tags": ["Spring Boot", "운영"],
+                  "readTime": "10분 읽기",
+                  "recommendedTopics": ["Spring Profiles"],
+                  "recommendedCategorySlug": "spring-boot",
+                  "thumbnailStyle": "code",
+                  "sections": [
+                    {
+                      "key": "ops",
+                      "heading": "운영 환경 적용",
+                      "brief": "운영 환경 구성",
+                      "units": [
+                        {"key": "env", "heading": "환경변수 구성", "brief": "환경변수 설정"},
+                        {"key": "systemd", "heading": "systemd 설정", "brief": "systemd 서비스 설정"}
+                      ]
+                    }
                   ]
                 }
                 """;
@@ -208,6 +274,12 @@ class GeminiAiPostClientTest {
                             || prompt.startsWith("SECTION_REPAIR")
                             || prompt.startsWith("SECTION_RETRY_AFTER_MAX_TOKENS"))
                             && prompt.contains("sectionKey: " + sectionKey))
+                    .toList();
+        }
+
+        private List<String> promptsFor(String contentKey) {
+            return prompts.stream()
+                    .filter(prompt -> prompt.contains("contentKey: " + contentKey))
                     .toList();
         }
     }

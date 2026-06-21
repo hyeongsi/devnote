@@ -9,9 +9,11 @@ import com.google.genai.types.GenerateContentResponse;
 import io.hyeongsi.devnotewebapp.ai.dto.AiPostGenerateResponse;
 
 import java.time.Duration;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
@@ -91,13 +93,15 @@ public class GeminiAiPostClient implements AiPostClient {
         );
         validatePlan(plan);
 
-        Map<String, String> sections = new LinkedHashMap<>();
+        Map<String, List<GeminiGeneratedUnit>> sections = new LinkedHashMap<>();
         for (GeminiPostPlan.Section section : plan.sections()) {
-            String markdown = generateSection(context, plan, section);
-            if (markdown == null || markdown.isBlank()) {
-                throw new IllegalStateException("Gemini returned an empty section: " + section.key());
+            List<GeminiGeneratedUnit> units = section.units().stream()
+                    .map(unit -> generateUnit(context, plan, section, unit))
+                    .toList();
+            if (units.stream().anyMatch(unit -> unit.markdown() == null || unit.markdown().isBlank())) {
+                throw new IllegalStateException("Gemini returned an empty unit in section: " + section.key());
             }
-            sections.put(section.key(), markdown.strip());
+            sections.put(section.key(), units);
         }
 
         String content = assemble(plan, sections);
@@ -143,21 +147,29 @@ public class GeminiAiPostClient implements AiPostClient {
         return requireStop(invoke(() -> gateway.generate(prompt, config)));
     }
 
-    private String generateSection(
+    private GeminiGeneratedUnit generateUnit(
             AiPostGenerationContext context,
             GeminiPostPlan plan,
-            GeminiPostPlan.Section section
+            GeminiPostPlan.Section section,
+            GeminiPostPlan.Unit unit
     ) {
         GenerateContentConfig config = GenerateContentConfig.builder()
                 .temperature(0.7f)
                 .maxOutputTokens(maxOutputTokens)
                 .responseMimeType("text/plain")
                 .build();
-        GeminiModelResult result = invoke(() -> gateway.generate(buildSectionPrompt(context, plan, section), config));
+        String contentKey = section.key() + "/" + unit.key();
+        GeminiModelResult result = invoke(() -> gateway.generate(
+                buildUnitPrompt(context, plan, section, unit, contentKey), config
+        ));
         if ("MAX_TOKENS".equals(result.finishReason())) {
-            result = invoke(() -> gateway.generate(buildMaxTokensRetryPrompt(context, plan, section), config));
+            result = invoke(() -> gateway.generate(
+                    buildMaxTokensRetryPrompt(context, plan, section, unit, contentKey), config
+            ));
         }
-        return requireStop(result);
+        return GeminiGeneratedUnit.completed(
+                contentKey, unit.heading(), unit.brief(), 3, requireStop(result)
+        );
     }
 
     private String generateRepair(
@@ -214,22 +226,65 @@ public class GeminiAiPostClient implements AiPostClient {
                 || plan.sections() == null || plan.sections().isEmpty()) {
             throw new IllegalStateException("Gemini returned an incomplete post plan");
         }
-        long uniqueKeys = plan.sections().stream().map(GeminiPostPlan.Section::key).distinct().count();
-        if (uniqueKeys != plan.sections().size()) {
-            throw new IllegalStateException("Gemini returned duplicate section keys");
+        Set<String> sectionKeys = new HashSet<>();
+        Set<String> contentKeys = new HashSet<>();
+        for (GeminiPostPlan.Section section : plan.sections()) {
+            requirePlanText(section.key());
+            requirePlanText(section.heading());
+            requirePlanText(section.brief());
+            if (!sectionKeys.add(section.key())) {
+                throw new IllegalStateException("Gemini returned duplicate section keys");
+            }
+            if (section.units() == null || section.units().isEmpty() || section.units().size() > 5) {
+                throw new IllegalStateException("Gemini plan sections must contain 1-5 units");
+            }
+            for (GeminiPostPlan.Unit unit : section.units()) {
+                requirePlanText(unit.key());
+                requirePlanText(unit.heading());
+                requirePlanText(unit.brief());
+                if (!contentKeys.add(section.key() + "/" + unit.key())) {
+                    throw new IllegalStateException("Gemini returned duplicate content keys");
+                }
+            }
         }
     }
 
-    private String assemble(GeminiPostPlan plan, Map<String, String> sections) {
+    private void requirePlanText(String value) {
+        if (value == null || value.isBlank()) {
+            throw new IllegalStateException("Gemini returned an incomplete post plan");
+        }
+    }
+
+    private String assemble(GeminiPostPlan plan, Map<String, List<GeminiGeneratedUnit>> sections) {
         return plan.sections().stream()
-                .map(section -> "## " + section.heading() + "\n\n" + sections.get(section.key()))
+                .map(section -> renderSection(section, sections.get(section.key())))
                 .collect(Collectors.joining("\n\n"));
+    }
+
+    private String renderSection(GeminiPostPlan.Section section, List<GeminiGeneratedUnit> units) {
+        boolean includeUnitHeading = units.size() > 1;
+        String body = units.stream()
+                .map(unit -> renderUnit(unit, includeUnitHeading))
+                .collect(Collectors.joining("\n\n"));
+        return "## " + section.heading() + "\n\n" + body;
+    }
+
+    private String renderUnit(GeminiGeneratedUnit unit, boolean includeHeading) {
+        String body = unit.children().isEmpty()
+                ? unit.markdown()
+                : unit.children().stream()
+                        .map(child -> renderUnit(child, true))
+                        .collect(Collectors.joining("\n\n"));
+        if (!includeHeading) {
+            return body;
+        }
+        return "#".repeat(unit.depth()) + " " + unit.heading() + "\n\n" + body;
     }
 
     private void repairRejectedSections(
             AiPostGenerationContext context,
             GeminiPostPlan plan,
-            Map<String, String> sections,
+            Map<String, List<GeminiGeneratedUnit>> sections,
             GeminiPostReview review
     ) {
         Map<String, List<GeminiPostReview.Issue>> issuesBySection = review.issues().stream()
@@ -254,14 +309,27 @@ public class GeminiAiPostClient implements AiPostClient {
                     context,
                     plan,
                     section,
-                    sections.get(section.key()),
+                    renderSectionBody(sections.get(section.key())),
                     entry.getValue()
             );
             if (replacement == null || replacement.isBlank()) {
                 throw new IllegalStateException("Gemini returned an empty repaired section: " + section.key());
             }
-            sections.put(section.key(), replacement.strip());
+            sections.put(section.key(), List.of(GeminiGeneratedUnit.completed(
+                    section.key() + "/repair",
+                    section.heading(),
+                    section.brief(),
+                    3,
+                    replacement
+            )));
         }
+    }
+
+    private String renderSectionBody(List<GeminiGeneratedUnit> units) {
+        boolean includeUnitHeading = units.size() > 1;
+        return units.stream()
+                .map(unit -> renderUnit(unit, includeUnitHeading))
+                .collect(Collectors.joining("\n\n"));
     }
 
     private String describeIssues(GeminiPostReview review) {
@@ -278,6 +346,8 @@ public class GeminiAiPostClient implements AiPostClient {
                 POST_PLAN
                 한국어 개발 블로그 포스팅의 메타데이터와 상세 목차를 설계해라.
                 각 섹션에는 영문 소문자와 하이픈으로 된 고유한 key를 부여해라.
+                각 섹션에는 1-5개의 작성 단위를 두고 key, heading, brief를 작성해라.
+                단위 key도 영문 소문자와 하이픈을 사용해 sectionKey/unitKey 형태의 안정적인 식별자로 쓸 수 있게 해라.
                 글의 깊이에 필요한 만큼 섹션을 구성하고, 코드 예제가 필요한 위치를 brief에 명시해라.
 
                 주제: %s
@@ -295,10 +365,12 @@ public class GeminiAiPostClient implements AiPostClient {
         );
     }
 
-    private String buildSectionPrompt(
+    private String buildUnitPrompt(
             AiPostGenerationContext context,
             GeminiPostPlan plan,
-            GeminiPostPlan.Section section
+            GeminiPostPlan.Section section,
+            GeminiPostPlan.Unit unit,
+            String contentKey
     ) {
         return """
                 SECTION_GENERATION
@@ -306,22 +378,25 @@ public class GeminiAiPostClient implements AiPostClient {
                 글 제목: %s
                 독자 난이도: %s
                 sectionKey: %s
-                섹션 제목: %s
+                contentKey: %s
+                단위 제목: %s
                 작성 목표: %s
 
-                이 섹션의 본문만 한국어 Markdown으로 작성해라.
-                섹션 제목은 서버가 조립하므로 포함하지 마라.
+                이 작성 단위의 본문만 한국어 Markdown으로 작성해라.
+                섹션과 작성 단위 제목은 서버가 조립하므로 포함하지 마라.
                 설명의 깊이와 코드 예제 수를 임의로 축소하지 말고 주제를 충분히 이해시키는 데 필요한 내용을 작성해라.
                 코드 블록과 문장을 반드시 완결해라.
                 """.formatted(
-                context.topic(), plan.title(), context.level(), section.key(), section.heading(), section.brief()
+                context.topic(), plan.title(), context.level(), section.key(), contentKey, unit.heading(), unit.brief()
         );
     }
 
     private String buildMaxTokensRetryPrompt(
             AiPostGenerationContext context,
             GeminiPostPlan plan,
-            GeminiPostPlan.Section section
+            GeminiPostPlan.Section section,
+            GeminiPostPlan.Unit unit,
+            String contentKey
     ) {
         return """
                 SECTION_RETRY_AFTER_MAX_TOKENS
@@ -329,14 +404,15 @@ public class GeminiAiPostClient implements AiPostClient {
                 글 제목: %s
                 독자 난이도: %s
                 sectionKey: %s
-                섹션 제목: %s
+                contentKey: %s
+                단위 제목: %s
                 작성 목표: %s
 
                 이전 응답이 출력 한도에 도달했다. 핵심 설명과 필요한 예제의 품질은 유지하되
-                반복되는 설명을 제거하고 이 섹션의 본문을 처음부터 완결된 한국어 Markdown으로 다시 작성해라.
-                섹션 제목은 포함하지 말고 코드 블록과 문장을 반드시 닫아라.
+                반복되는 설명을 제거하고 이 작성 단위의 본문을 처음부터 완결된 한국어 Markdown으로 다시 작성해라.
+                섹션과 작성 단위 제목은 포함하지 말고 코드 블록과 문장을 반드시 닫아라.
                 """.formatted(
-                context.topic(), plan.title(), context.level(), section.key(), section.heading(), section.brief()
+                context.topic(), plan.title(), context.level(), section.key(), contentKey, unit.heading(), unit.brief()
         );
     }
 
@@ -399,11 +475,30 @@ public class GeminiAiPostClient implements AiPostClient {
 
     private Map<String, Object> planSchema() {
         Map<String, Object> string = Map.of("type", "string");
+        Map<String, Object> key = Map.of(
+                "type", "string",
+                "pattern", "^[a-z0-9]+(?:-[a-z0-9]+)*$"
+        );
         Map<String, Object> stringArray = Map.of("type", "array", "items", string);
+        Map<String, Object> unit = Map.of(
+                "type", "object",
+                "properties", Map.of("key", key, "heading", string, "brief", string),
+                "required", List.of("key", "heading", "brief")
+        );
         Map<String, Object> section = Map.of(
                 "type", "object",
-                "properties", Map.of("key", string, "heading", string, "brief", string),
-                "required", List.of("key", "heading", "brief")
+                "properties", Map.of(
+                        "key", key,
+                        "heading", string,
+                        "brief", string,
+                        "units", Map.of(
+                                "type", "array",
+                                "items", unit,
+                                "minItems", 1,
+                                "maxItems", 5
+                        )
+                ),
+                "required", List.of("key", "heading", "brief", "units")
         );
         return Map.of(
                 "type", "object",
