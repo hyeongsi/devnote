@@ -39,6 +39,7 @@ public class SecurityConfig {
                         "/api/auth/logout"
                 ))
                 .authorizeHttpRequests(authorize -> authorize
+                        .requestMatchers("/actuator/health", "/actuator/health/**", "/error").permitAll()
                         .requestMatchers("/api/auth/login", "/api/auth/me", "/api/auth/logout").permitAll()
                         .requestMatchers("/api/admin/**").hasRole("ADMIN")
                         .requestMatchers("/api/ai/posts/**").hasRole("ADMIN")
