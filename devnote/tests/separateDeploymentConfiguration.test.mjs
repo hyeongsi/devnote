@@ -21,7 +21,10 @@ const productionProperties = await readFile(
 );
 assert.match(productionProperties, /server\.forward-headers-strategy=framework/);
 assert.match(productionProperties, /server\.address=\$\{SERVER_ADDRESS:127\.0\.0\.1\}/);
-assert.match(productionProperties, /server\.servlet\.session\.cookie\.secure=true/);
+assert.match(
+  productionProperties,
+  /server\.servlet\.session\.cookie\.secure=\$\{SESSION_COOKIE_SECURE:false\}/,
+);
 
 const nginxConfig = await readFile(
   new URL('../../deploy/nginx/devnote.conf.example', import.meta.url),
