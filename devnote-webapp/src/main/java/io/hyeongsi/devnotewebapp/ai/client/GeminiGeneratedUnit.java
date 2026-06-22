@@ -23,6 +23,9 @@ record GeminiGeneratedUnit(
         if (markdown != null && !children.isEmpty()) {
             throw new IllegalArgumentException("a generated unit cannot have markdown and children");
         }
+        if (markdown == null && children.isEmpty()) {
+            throw new IllegalArgumentException("a generated unit must have markdown or children");
+        }
     }
 
     static GeminiGeneratedUnit completed(
@@ -46,10 +49,6 @@ record GeminiGeneratedUnit(
             throw new IllegalArgumentException("branch children must not be empty");
         }
         return new GeminiGeneratedUnit(contentKey, heading, brief, depth, null, children);
-    }
-
-    static GeminiGeneratedUnit leaf(String contentKey, String heading, String brief, int depth) {
-        return new GeminiGeneratedUnit(contentKey, heading, brief, depth, null, List.of());
     }
 
     boolean completed() {
