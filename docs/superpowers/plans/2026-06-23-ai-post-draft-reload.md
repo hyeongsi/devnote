@@ -36,7 +36,7 @@
 - Test: `devnote-webapp/src/test/java/io/hyeongsi/devnotewebapp/ai/AiPostGenerateServiceTest.java`
 - Test: `devnote-webapp/src/test/java/io/hyeongsi/devnotewebapp/ai/AiPostControllerTest.java`
 
-- [ ] **Step 1: 생성 성공 저장과 실패 미저장 테스트 작성**
+- [x] **Step 1: 생성 성공 저장과 실패 미저장 테스트 작성**
 
 서비스 테스트에 저장소와 고정 `Clock`을 주입하고 다음 핵심 검증을 추가한다.
 
@@ -52,13 +52,13 @@ verify(draftRepository).save(argThat(draft ->
 
 AI 클라이언트가 예외를 던지는 테스트에서는 `verifyNoInteractions(draftRepository)`로 실패 기록이 생성되지 않음을 검증한다. 컨트롤러 테스트에는 `$.draftId` 응답 검증을 추가한다.
 
-- [ ] **Step 2: 실패 확인**
+- [x] **Step 2: 실패 확인**
 
 Run: `cd devnote-webapp && ./gradlew test --tests "*AiPostGenerateServiceTest" --tests "*AiPostControllerTest"`
 
 Expected: `AiPostDraft`, `GeneratedDraft`, 새 생성 서비스 생성자가 없어 컴파일 실패.
 
-- [ ] **Step 3: 최소 모델과 저장 구현**
+- [x] **Step 3: 최소 모델과 저장 구현**
 
 상태는 다음과 같이 제한한다.
 
@@ -75,13 +75,13 @@ public enum AiPostDraftStatus {
 public record GeneratedDraft(Long draftId, AiPostGenerateResponse result) {}
 ```
 
-- [ ] **Step 4: 대상 테스트 통과 확인**
+- [x] **Step 4: 대상 테스트 통과 확인**
 
 Run: `cd devnote-webapp && ./gradlew test --tests "*AiPostGenerateServiceTest" --tests "*AiPostControllerTest"`
 
 Expected: 대상 테스트 PASS.
 
-- [ ] **Step 5: 커밋**
+- [x] **Step 5: 커밋**
 
 ```bash
 git add devnote-webapp/src/main/java/io/hyeongsi/devnotewebapp/ai devnote-webapp/src/test/java/io/hyeongsi/devnotewebapp/ai
@@ -98,7 +98,7 @@ git commit -m "feat: AI 생성 결과 임시저장 추가"
 - Test: `devnote-webapp/src/test/java/io/hyeongsi/devnotewebapp/ai/autopost/AiAutoPostingAdminServiceTest.java`
 - Test: `devnote-webapp/src/test/java/io/hyeongsi/devnotewebapp/ai/autopost/AiAutoPostingControllerTest.java`
 
-- [ ] **Step 1: 통합 이력, 조회 제한, 게시 전환 테스트 작성**
+- [x] **Step 1: 통합 이력, 조회 제한, 게시 전환 테스트 작성**
 
 통합 이력 테스트는 자동 실행과 임시저장을 생성 시각 역순으로 정렬하고 다음 속성을 검증한다.
 
@@ -112,13 +112,13 @@ assertThat(history).extracting(HistoryItem::topic, HistoryItem::loadable)
 
 게시 테스트는 `postService.createPost(request)` 반환 ID가 초안의 `publish(postId, now)`에 반영되는지 검증한다. `PUBLISHED` 초안 조회와 게시에는 `409 CONFLICT`가 발생해야 한다.
 
-- [ ] **Step 2: 실패 확인**
+- [x] **Step 2: 실패 확인**
 
 Run: `cd devnote-webapp && ./gradlew test --tests "*AiAutoPostingAdminServiceTest" --tests "*AiAutoPostingControllerTest"`
 
 Expected: 이력/초안 API 메서드와 DTO가 없어 컴파일 실패.
 
-- [ ] **Step 3: 관리자 서비스와 컨트롤러 최소 구현**
+- [x] **Step 3: 관리자 서비스와 컨트롤러 최소 구현**
 
 다음 계약을 구현한다.
 
@@ -133,13 +133,13 @@ public record PublishDraftRequest(PostCreateRequest post) {}
 
 엔드포인트는 `GET /runs`, `GET /drafts/{id}`, `POST /drafts/{id}/publish`를 사용한다. 게시 메서드에는 `@Transactional`을 적용해 게시글 생성과 상태 전환을 원자적으로 처리한다.
 
-- [ ] **Step 4: 대상 테스트 통과 확인**
+- [x] **Step 4: 대상 테스트 통과 확인**
 
 Run: `cd devnote-webapp && ./gradlew test --tests "*AiAutoPostingAdminServiceTest" --tests "*AiAutoPostingControllerTest"`
 
 Expected: 대상 테스트 PASS.
 
-- [ ] **Step 5: 커밋**
+- [x] **Step 5: 커밋**
 
 ```bash
 git add devnote-webapp/src/main/java/io/hyeongsi/devnotewebapp/ai devnote-webapp/src/test/java/io/hyeongsi/devnotewebapp/ai
@@ -157,7 +157,7 @@ git commit -m "feat: AI 임시저장 조회 및 게시 API 추가"
 - Modify: `devnote/tests/adminAiPostingManagement.test.mjs`
 - Create: `devnote/tests/aiPostDraftApi.test.mjs`
 
-- [ ] **Step 1: 프런트 실패 테스트 작성**
+- [x] **Step 1: 프런트 실패 테스트 작성**
 
 API 테스트는 생성 응답의 `draftId`, 초안 상세 조회, 게시 URL과 본문을 검증한다.
 
@@ -169,13 +169,13 @@ assert.equal(calls[2].url, '/api/admin/ai-posting/drafts/41/publish');
 
 화면 소스 테스트는 `activeDraftId`, `getAiPostingDraft`, `publishAiPostingDraft`, `run.loadable` 분기를 검증한다.
 
-- [ ] **Step 2: 실패 확인**
+- [x] **Step 2: 실패 확인**
 
 Run: `cd devnote && node tests/aiPostsApi.test.mjs && node tests/aiPostDraftApi.test.mjs && node tests/adminAiPostingManagement.test.mjs`
 
 Expected: 새 타입/함수/화면 상태가 없어 assertion 실패.
 
-- [ ] **Step 3: API와 화면 최소 구현**
+- [x] **Step 3: API와 화면 최소 구현**
 
 생성 성공 시 `activeDraftId`를 설정하고 자동화 데이터를 새로고침한다. 임시저장 클릭 시 상세 응답으로 주제, 편집 폼, 태그, 추천 데이터를 교체한다. 저장 시 활성 ID가 있으면 다음 호출을 사용한다.
 
@@ -187,13 +187,13 @@ const savedPost = activeDraftId
 
 이력 항목은 `run.topic`만 표시하고 `run.loadable`일 때만 클릭 가능한 `button`으로 렌더링한다.
 
-- [ ] **Step 4: 대상 테스트와 빌드 통과 확인**
+- [x] **Step 4: 대상 테스트와 빌드 통과 확인**
 
 Run: `cd devnote && node tests/aiPostsApi.test.mjs && node tests/aiPostDraftApi.test.mjs && node tests/adminAiPostingManagement.test.mjs && npm run build`
 
 Expected: 테스트 PASS, TypeScript/Vite build 성공.
 
-- [ ] **Step 5: 커밋**
+- [x] **Step 5: 커밋**
 
 ```bash
 git add devnote/src devnote/tests
@@ -205,13 +205,13 @@ git commit -m "feat: AI 임시저장 불러오기 화면 구현"
 **Files:**
 - Modify: `docs/superpowers/plans/2026-06-23-ai-post-draft-reload.md`
 
-- [ ] **Step 1: 백엔드 전체 테스트 실행**
+- [x] **Step 1: 백엔드 전체 테스트 실행**
 
 Run: `cd devnote-webapp && ./gradlew test`
 
 Expected: 전체 테스트 PASS.
 
-- [ ] **Step 2: 프런트 전체 테스트·정적 검사 실행**
+- [x] **Step 2: 프런트 전체 테스트·정적 검사 실행**
 
 Run: `cd devnote && Get-ChildItem tests -Filter *.test.mjs | ForEach-Object { node $_.FullName }`
 
@@ -221,13 +221,13 @@ Run: `cd devnote && npm run lint && npm run build`
 
 Expected: lint와 build 성공.
 
-- [ ] **Step 3: 변경 범위 확인**
+- [x] **Step 3: 변경 범위 확인**
 
 Run: `git diff --check && git status --short`
 
 Expected: 공백 오류 없음. 사용자 소유 `.tools/`는 변경하거나 스테이징하지 않는다.
 
-- [ ] **Step 4: 계획 체크박스와 최종 상태 커밋**
+- [x] **Step 4: 계획 체크박스와 최종 상태 커밋**
 
 완료한 체크박스를 `[x]`로 변경한 뒤 다음을 실행한다.
 
