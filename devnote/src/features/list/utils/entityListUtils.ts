@@ -5,8 +5,17 @@ import type {
   EntityRowState,
 } from '../types/entityListTypes';
 
+let fallbackRowIdSequence = 0;
+
 export function createEntityListRowId() {
-  return `entity-row-${crypto.randomUUID()}`;
+  const randomUuid = globalThis.crypto?.randomUUID?.();
+
+  if (randomUuid) {
+    return `entity-row-${randomUuid}`;
+  }
+
+  fallbackRowIdSequence += 1;
+  return `entity-row-${Date.now().toString(36)}-${fallbackRowIdSequence.toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
 }
 
 export function isSameEntityValue(left: unknown, right: unknown) {
