@@ -12,6 +12,9 @@ record GeminiPostPlan(
         String thumbnailStyle,
         List<Section> sections
 ) {
-    record Section(String key, String heading, String brief) {
+    record Section(String key, String heading, String brief, List<Unit> units) {
+    }
+
+    record Unit(String key, String heading, String brief) {
     }
 }
