@@ -1,6 +1,7 @@
 package io.hyeongsi.devnotewebapp.ai;
 
 import io.hyeongsi.devnotewebapp.ai.controller.AiPostController;
+import io.hyeongsi.devnotewebapp.ai.draft.AiPostDraftDtos;
 import io.hyeongsi.devnotewebapp.ai.dto.AiPostGenerateRequest;
 import io.hyeongsi.devnotewebapp.ai.dto.AiPostGenerateResponse;
 import io.hyeongsi.devnotewebapp.ai.service.AiPostGenerateService;
@@ -28,7 +29,7 @@ class AiPostControllerTest {
 
         when(service.generate(argThat((AiPostGenerateRequest request) ->
                 request != null && "Spring Security".equals(request.topic())
-        ))).thenReturn(new AiPostGenerateResponse(
+        ))).thenReturn(new AiPostDraftDtos.GeneratedDraft(41L, new AiPostGenerateResponse(
                 "Spring Security를 실무 관점에서 이해하기",
                 "Spring Security의 핵심 개념과 실무 활용 방식을 정리합니다.",
                 "## Spring Security란?\n\n학습형 본문입니다.",
@@ -37,7 +38,7 @@ class AiPostControllerTest {
                 List.of("JWT 인증 방식", "OAuth2 로그인"),
                 "spring-boot",
                 "laptop"
-        ));
+        )));
 
         mockMvc.perform(post("/api/ai/posts/generate")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -45,9 +46,10 @@ class AiPostControllerTest {
                                 {"topic":"Spring Security"}
                                 """))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.title").value("Spring Security를 실무 관점에서 이해하기"))
-                .andExpect(jsonPath("$.tags[0]").value("Spring Security"))
-                .andExpect(jsonPath("$.recommendedCategorySlug").value("spring-boot"));
+                .andExpect(jsonPath("$.draftId").value(41))
+                .andExpect(jsonPath("$.result.title").value("Spring Security를 실무 관점에서 이해하기"))
+                .andExpect(jsonPath("$.result.tags[0]").value("Spring Security"))
+                .andExpect(jsonPath("$.result.recommendedCategorySlug").value("spring-boot"));
 
         verify(service).generate(argThat((AiPostGenerateRequest request) ->
                 request != null && "Spring Security".equals(request.topic())

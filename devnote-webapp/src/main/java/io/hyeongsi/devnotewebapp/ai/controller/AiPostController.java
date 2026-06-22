@@ -1,7 +1,7 @@
 package io.hyeongsi.devnotewebapp.ai.controller;
 
 import io.hyeongsi.devnotewebapp.ai.dto.AiPostGenerateRequest;
-import io.hyeongsi.devnotewebapp.ai.dto.AiPostGenerateResponse;
+import io.hyeongsi.devnotewebapp.ai.draft.AiPostDraftDtos;
 import io.hyeongsi.devnotewebapp.ai.service.AiPostGenerateService;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -19,7 +19,7 @@ public class AiPostController {
     }
 
     @PostMapping("/generate")
-    public AiPostGenerateResponse generate(@RequestBody AiPostGenerateRequest request) {
+    public AiPostDraftDtos.GeneratedDraft generate(@RequestBody AiPostGenerateRequest request) {
         return aiPostGenerateService.generate(request);
     }
 }
