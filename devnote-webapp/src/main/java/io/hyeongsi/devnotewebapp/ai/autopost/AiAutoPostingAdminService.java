@@ -1,7 +1,14 @@
 package io.hyeongsi.devnotewebapp.ai.autopost;
 
+import io.hyeongsi.devnotewebapp.ai.draft.AiPostDraft;
+import io.hyeongsi.devnotewebapp.ai.draft.AiPostDraftDtos;
+import io.hyeongsi.devnotewebapp.ai.draft.AiPostDraftRepository;
+import io.hyeongsi.devnotewebapp.ai.draft.AiPostDraftStatus;
 import io.hyeongsi.devnotewebapp.category.Category;
 import io.hyeongsi.devnotewebapp.category.CategoryRepository;
+import io.hyeongsi.devnotewebapp.post.PostDetailResponse;
+import io.hyeongsi.devnotewebapp.post.PostService;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
@@ -13,9 +20,11 @@ import java.time.LocalTime;
 import java.time.ZoneId;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Stream;
 import java.util.stream.Collectors;
 
 import static org.springframework.http.HttpStatus.BAD_REQUEST;
+import static org.springframework.http.HttpStatus.CONFLICT;
 import static org.springframework.http.HttpStatus.NOT_FOUND;
 
 @Service
@@ -27,6 +36,8 @@ public class AiAutoPostingAdminService {
     private final CategoryRepository categoryRepository;
     private final AiAutoPostingService autoPostingService;
     private final AiAutoPostingProperties properties;
+    private final AiPostDraftRepository draftRepository;
+    private final PostService postService;
     private final Clock clock;
 
     public AiAutoPostingAdminService(
@@ -35,6 +46,8 @@ public class AiAutoPostingAdminService {
             CategoryRepository categoryRepository,
             AiAutoPostingService autoPostingService,
             AiAutoPostingProperties properties,
+            AiPostDraftRepository draftRepository,
+            PostService postService,
             Clock clock
     ) {
         this.topicRepository = topicRepository;
@@ -42,6 +55,8 @@ public class AiAutoPostingAdminService {
         this.categoryRepository = categoryRepository;
         this.autoPostingService = autoPostingService;
         this.properties = properties;
+        this.draftRepository = draftRepository;
+        this.postService = postService;
         this.clock = clock;
     }
 
@@ -115,8 +130,33 @@ public class AiAutoPostingAdminService {
         }
     }
 
-    public List<AiAutoPostingDtos.RunResponse> runs() {
-        return runRepository.findRecentRuns(20).stream().map(this::toRun).toList();
+    public List<AiPostDraftDtos.HistoryItem> runs() {
+        Stream<AiPostDraftDtos.HistoryItem> automaticRuns = runRepository.findRecentRuns(20).stream()
+                .map(this::toHistoryItem);
+        Stream<AiPostDraftDtos.HistoryItem> drafts = draftRepository
+                .findAllByOrderByCreatedAtDescIdDesc(PageRequest.of(0, 20))
+                .stream()
+                .map(this::toHistoryItem);
+
+        return Stream.concat(automaticRuns, drafts)
+                .sorted((left, right) -> right.occurredAt().compareTo(left.occurredAt()))
+                .limit(20)
+                .toList();
+    }
+
+    public AiPostDraftDtos.DraftDetail draft(Long id) {
+        return toDraftDetail(loadableDraft(id));
+    }
+
+    @Transactional
+    public PostDetailResponse publishDraft(Long id, AiPostDraftDtos.PublishDraftRequest request) {
+        if (request == null || request.post() == null) {
+            throw new ResponseStatusException(BAD_REQUEST, "Post request is required");
+        }
+        AiPostDraft draft = loadableDraft(id);
+        PostDetailResponse post = postService.createPost(request.post());
+        draft.publish(post.id(), LocalDateTime.now(clock));
+        return post;
     }
 
     public AiAutoPostingDtos.RunResponse runNow() {
@@ -162,6 +202,54 @@ public class AiAutoPostingAdminService {
                 run.getErrorMessage(),
                 run.getStartedAt(),
                 run.getCompletedAt()
+        );
+    }
+
+    private AiPostDraft loadableDraft(Long id) {
+        AiPostDraft draft = draftRepository.findById(id)
+                .orElseThrow(() -> new ResponseStatusException(NOT_FOUND, "AI post draft not found"));
+        if (draft.getStatus() != AiPostDraftStatus.DRAFT) {
+            throw new ResponseStatusException(CONFLICT, "AI post draft is already published");
+        }
+        return draft;
+    }
+
+    private AiPostDraftDtos.DraftDetail toDraftDetail(AiPostDraft draft) {
+        return new AiPostDraftDtos.DraftDetail(
+                draft.getId(),
+                draft.getTopic(),
+                draft.getTitle(),
+                draft.getSummary(),
+                draft.getContent(),
+                draft.getTags(),
+                draft.getReadTime(),
+                draft.getRecommendedTopics(),
+                draft.getRecommendedCategorySlug(),
+                draft.getThumbnailStyle()
+        );
+    }
+
+    private AiPostDraftDtos.HistoryItem toHistoryItem(AiPostDraft draft) {
+        return new AiPostDraftDtos.HistoryItem(
+                "draft-" + draft.getId(),
+                draft.getId(),
+                draft.getTopic(),
+                draft.getStatus().name(),
+                draft.getStatus() == AiPostDraftStatus.DRAFT,
+                draft.getCreatedAt(),
+                null
+        );
+    }
+
+    private AiPostDraftDtos.HistoryItem toHistoryItem(AiPostRun run) {
+        return new AiPostDraftDtos.HistoryItem(
+                "run-" + run.getId(),
+                null,
+                run.getTopic() == null ? run.getStatus().name() : run.getTopic().getName(),
+                run.getStatus().name(),
+                false,
+                run.getStartedAt(),
+                run.getErrorMessage()
         );
     }
 }
