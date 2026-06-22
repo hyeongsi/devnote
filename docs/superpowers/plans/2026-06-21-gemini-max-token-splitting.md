@@ -10,6 +10,24 @@
 
 ---
 
+### Task 0: Enforce Gemini Provider Request Limits
+
+**Files:**
+- Create: `devnote-webapp/src/main/java/io/hyeongsi/devnotewebapp/ai/client/GeminiRequestRateLimiter.java`
+- Modify: `devnote-webapp/src/main/java/io/hyeongsi/devnotewebapp/ai/client/GeminiAiPostClient.java`
+- Test: `devnote-webapp/src/test/java/io/hyeongsi/devnotewebapp/ai/client/GeminiRequestRateLimiterTest.java`
+- Test: `devnote-webapp/src/test/java/io/hyeongsi/devnotewebapp/ai/client/GeminiAiPostClientTest.java`
+
+- [ ] Write failing tests using a mutable `Clock`: requests 1-5 in a rolling minute pass, request 6 fails, and a request passes after the oldest timestamp reaches 60 seconds.
+- [ ] Write failing tests: requests 1-20 on an Asia/Seoul calendar day pass, request 21 fails, and the counter resets at the next Seoul midnight.
+- [ ] Implement a synchronized in-memory limiter with fixed limits of 5 requests per rolling minute and 20 requests per Seoul calendar day.
+- [ ] Call the limiter immediately before every `gateway.generate` attempt inside `GeminiAiPostClient.invoke`, including HTTP 429 retries.
+- [ ] Verify a rejected request never reaches the fake gateway and reports whether the minute or daily limit was exhausted.
+- [ ] Run `./gradlew test --tests '*GeminiRequestRateLimiterTest' --tests '*GeminiAiPostClientTest'`.
+- [ ] Commit as `feat: enforce Gemini request limits`.
+
+---
+
 ### Task 1: Configure Split Safety Limits
 
 **Files:**
