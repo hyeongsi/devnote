@@ -105,7 +105,7 @@ export interface AiPostGenerateRequest {
   lengthHint?: string;
 }
 
-export interface AiPostGenerateResponse {
+export interface AiPostGenerateResult {
   title: string;
   summary: string;
   content: string;
@@ -114,6 +114,11 @@ export interface AiPostGenerateResponse {
   recommendedTopics: string[];
   recommendedCategorySlug: string;
   thumbnailStyle: BlogPost['imageStyle'];
+}
+
+export interface AiPostGenerateResponse {
+  draftId: number;
+  result: AiPostGenerateResult;
 }
 
 export interface AiPostingTopic {
@@ -138,6 +143,29 @@ export interface AiPostingRun {
   errorMessage: string | null;
   startedAt: string;
   completedAt: string | null;
+}
+
+export interface AiPostingHistoryItem {
+  key: string;
+  draftId: number | null;
+  topic: string;
+  status: AiPostingRunStatus | 'DRAFT' | 'PUBLISHED';
+  loadable: boolean;
+  occurredAt: string;
+  errorMessage: string | null;
+}
+
+export interface AiPostDraftDetail {
+  id: number;
+  topic: string;
+  title: string;
+  summary: string;
+  content: string;
+  tags: string[];
+  readTime: string;
+  recommendedTopics: string[];
+  recommendedCategorySlug: string;
+  thumbnailStyle: BlogPost['imageStyle'];
 }
 
 export interface AiPostingStatus {

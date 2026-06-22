@@ -1,4 +1,12 @@
-import type { AiPostingRun, AiPostingStatus, AiPostingTopic } from '../types';
+import type {
+  AiPostDraftDetail,
+  AiPostingHistoryItem,
+  AiPostingRun,
+  AiPostingStatus,
+  AiPostingTopic,
+  BlogPostDetailApiResponse,
+  PostCreateRequest,
+} from '../types';
 
 const AI_AUTO_POSTING_API_URL = '/api/admin/ai-posting';
 
@@ -33,7 +41,18 @@ export function getAiPostingTopics() {
 }
 
 export function getAiPostingRuns() {
-  return request<AiPostingRun[]>('/runs');
+  return request<AiPostingHistoryItem[]>('/runs');
+}
+
+export function getAiPostingDraft(id: number) {
+  return request<AiPostDraftDetail>(`/drafts/${id}`);
+}
+
+export function publishAiPostingDraft(id: number, post: PostCreateRequest) {
+  return request<BlogPostDetailApiResponse>(`/drafts/${id}/publish`, {
+    method: 'POST',
+    body: JSON.stringify({ post }),
+  });
 }
 
 export function createAiPostingTopic(requestBody: {

@@ -20,9 +20,11 @@ import { generateAiPost } from '../../api/aiPosts';
 import {
   createAiPostingTopic,
   disableAiPostingTopic,
+  getAiPostingDraft,
   getAiPostingRuns,
   getAiPostingStatus,
   getAiPostingTopics,
+  publishAiPostingDraft,
   runAiPostingNow,
   updateAiPostingTopic,
 } from '../../api/aiAutoPosting';
@@ -37,7 +39,8 @@ import { useFeedback } from '../../features/feedback/FeedbackContext';
 import { PostMarkdownRenderer } from '../../features/post/PostMarkdownRenderer';
 import type {
   AdminCategoryRow,
-  AiPostingRun,
+  AiPostDraftDetail,
+  AiPostingHistoryItem,
   AiPostingStatus,
   AiPostingTopic,
   BlogPost,
@@ -86,7 +89,8 @@ export function AdminAiPostingPage() {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [autoStatus, setAutoStatus] = useState<AiPostingStatus | null>(null);
   const [autoTopics, setAutoTopics] = useState<AiPostingTopic[]>([]);
-  const [autoRuns, setAutoRuns] = useState<AiPostingRun[]>([]);
+  const [autoRuns, setAutoRuns] = useState<AiPostingHistoryItem[]>([]);
+  const [activeDraftId, setActiveDraftId] = useState<number | null>(null);
   const [newTopicName, setNewTopicName] = useState('');
   const [newTopicCategoryId, setNewTopicCategoryId] = useState(0);
   const [isManagingAutomation, setIsManagingAutomation] = useState(false);
@@ -166,25 +170,28 @@ export function AdminAiPostingPage() {
         level,
         lengthHint,
       });
+      const generated = response.result;
       const recommendedCategory = categories.find(
-        (category) => category.slug === response.recommendedCategorySlug,
+        (category) => category.slug === generated.recommendedCategorySlug,
       );
       const fallbackCategory = categories[0];
       const nextCategoryId = recommendedCategory?.id ?? fallbackCategory?.id ?? 0;
 
       setDraft({
-        slug: createSlug(response.title, trimmedTopic),
+        slug: createSlug(generated.title, trimmedTopic),
         categoryId: nextCategoryId,
-        title: response.title,
-        excerpt: response.summary,
-        readTime: response.readTime,
-        thumbnailStyle: response.thumbnailStyle,
-        contentMarkdown: response.content,
-        tags: response.tags,
+        title: generated.title,
+        excerpt: generated.summary,
+        readTime: generated.readTime,
+        thumbnailStyle: generated.thumbnailStyle,
+        contentMarkdown: generated.content,
+        tags: generated.tags,
       });
-      setTagText(response.tags.join(', '));
-      setRecommendedTopics(response.recommendedTopics);
-      setRecommendedCategorySlug(response.recommendedCategorySlug);
+      setActiveDraftId(response.draftId);
+      setTagText(generated.tags.join(', '));
+      setRecommendedTopics(generated.recommendedTopics);
+      setRecommendedCategorySlug(generated.recommendedCategorySlug);
+      await refreshAutomation();
       showMessage({
         tone: 'success',
         title: 'AI 글 초안을 생성했습니다.',
@@ -235,7 +242,10 @@ export function AdminAiPostingPage() {
     setErrorMessage(null);
 
     try {
-      const savedPost = await createPost(request);
+      const savedPost = activeDraftId
+        ? await publishAiPostingDraft(activeDraftId, request)
+        : await createPost(request);
+      setActiveDraftId(null);
       showMessage({
         tone: 'success',
         title: '게시글을 저장했습니다.',
@@ -275,6 +285,46 @@ export function AdminAiPostingPage() {
     setAutoStatus(status);
     setAutoTopics(topics);
     setAutoRuns(runs);
+  }
+
+  async function handleLoadDraft(id: number) {
+    setErrorMessage(null);
+    try {
+      const savedDraft = await getAiPostingDraft(id);
+      applySavedDraft(savedDraft);
+      setActiveDraftId(savedDraft.id);
+      setIsPreviewMode(false);
+      showMessage({
+        tone: 'success',
+        title: '임시저장 글을 불러왔습니다.',
+        description: '내용을 확인하고 편집한 뒤 게시할 수 있습니다.',
+      });
+    } catch (error) {
+      const description = error instanceof Error ? error.message : '임시저장 글을 불러오지 못했습니다.';
+      setErrorMessage(description);
+      await refreshAutomation();
+    }
+  }
+
+  function applySavedDraft(savedDraft: AiPostDraftDetail) {
+    const recommendedCategory = categories.find(
+      (category) => category.slug === savedDraft.recommendedCategorySlug,
+    );
+    const fallbackCategory = categories[0];
+    setTopic(savedDraft.topic);
+    setDraft({
+      slug: createSlug(savedDraft.title, savedDraft.topic),
+      categoryId: recommendedCategory?.id ?? fallbackCategory?.id ?? 0,
+      title: savedDraft.title,
+      excerpt: savedDraft.summary,
+      readTime: savedDraft.readTime,
+      thumbnailStyle: savedDraft.thumbnailStyle,
+      contentMarkdown: savedDraft.content,
+      tags: savedDraft.tags,
+    });
+    setTagText(savedDraft.tags.join(', '));
+    setRecommendedTopics(savedDraft.recommendedTopics);
+    setRecommendedCategorySlug(savedDraft.recommendedCategorySlug);
   }
 
   async function handleAddTopic() {
@@ -490,16 +540,21 @@ export function AdminAiPostingPage() {
           <h3 className="mt-1 text-xl font-black text-gray-950">최근 자동 게시</h3>
           <div className="mt-5 divide-y divide-line">
             {autoRuns.length > 0 ? autoRuns.slice(0, 8).map((run) => (
-              <div key={run.id} className="py-4">
+              <div key={run.key} className="py-4">
                 <div className="flex items-start gap-3">
                   {run.status === 'SUCCEEDED'
                     ? <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-emerald-500" />
                     : <XCircle className="mt-0.5 h-5 w-5 shrink-0 text-amber-500" />}
                   <div className="min-w-0">
-                    <p className="truncate text-sm font-bold text-gray-900">
-                      {run.generatedTitle ?? run.topicName ?? run.status}
-                    </p>
-                    <p className="mt-1 text-xs text-muted">{formatDateTime(run.startedAt)}</p>
+                    <button
+                      type="button"
+                      disabled={!run.loadable || run.draftId === null}
+                      className="block max-w-full truncate text-left text-sm font-bold text-gray-900 enabled:hover:text-primary enabled:hover:underline disabled:cursor-default"
+                      onClick={() => run.draftId !== null && void handleLoadDraft(run.draftId)}
+                    >
+                      {run.topic}
+                    </button>
+                    <p className="mt-1 text-xs text-muted">{formatDateTime(run.occurredAt)}</p>
                     {run.errorMessage ? <p className="mt-2 text-xs leading-5 text-red-600">{run.errorMessage}</p> : null}
                   </div>
                 </div>
