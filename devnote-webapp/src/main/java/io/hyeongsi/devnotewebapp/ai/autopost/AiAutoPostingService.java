@@ -7,6 +7,8 @@ import io.hyeongsi.devnotewebapp.post.PostCreateRequest;
 import io.hyeongsi.devnotewebapp.post.PostDetailResponse;
 import io.hyeongsi.devnotewebapp.post.PostRepository;
 import io.hyeongsi.devnotewebapp.post.PostService;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
 import java.text.Normalizer;
@@ -19,6 +21,8 @@ import java.util.Locale;
 
 @Service
 public class AiAutoPostingService {
+
+    private static final Logger log = LoggerFactory.getLogger(AiAutoPostingService.class);
 
     private final AiPostTopicRepository topicRepository;
     private final AiPostRunRepository runRepository;
@@ -53,7 +57,11 @@ public class AiAutoPostingService {
         LocalDateTime end = today.plusDays(1).atStartOfDay();
 
         if (runRepository.existsSucceededBetween(start, end)) {
-            return runRepository.save(AiPostRun.skipped("Today's automatic post is already published", now(zone)));
+            AiPostRun skipped = runRepository.save(
+                    AiPostRun.skipped("Today's automatic post is already published", now(zone))
+            );
+            log.warn("ai-autopost run skipped runType=SCHEDULED reason=\"{}\"", skipped.getErrorMessage());
+            return skipped;
         }
         return execute(false);
     }
@@ -65,17 +73,30 @@ public class AiAutoPostingService {
     private AiPostRun execute(boolean manual) {
         ZoneId zone = ZoneId.of(properties.zone());
         LocalDateTime now = now(zone);
+        String runType = manual ? "MANUAL" : "SCHEDULED";
         if (runRepository.existsRunning()) {
-            return runRepository.save(AiPostRun.skipped("Another automatic posting run is in progress", now));
+            AiPostRun skipped = runRepository.save(AiPostRun.skipped("Another automatic posting run is in progress", now));
+            log.warn("ai-autopost run skipped runType={} reason=\"{}\"", runType, skipped.getErrorMessage());
+            return skipped;
         }
 
         AiPostTopic topic = topicRepository.findNextEnabledTopic()
                 .orElse(null);
         if (topic == null) {
-            return runRepository.save(AiPostRun.skipped("No enabled AI posting topics", now));
+            AiPostRun skipped = runRepository.save(AiPostRun.skipped("No enabled AI posting topics", now));
+            log.warn("ai-autopost run skipped runType={} reason=\"{}\"", runType, skipped.getErrorMessage());
+            return skipped;
         }
 
+        long startedAt = System.nanoTime();
         AiPostRun run = runRepository.save(new AiPostRun(topic, now));
+        log.info(
+                "ai-autopost run started runType={} runId={} topicId={} topic=\"{}\"",
+                runType,
+                run.getId(),
+                topic.getId(),
+                topic.getName()
+        );
         try {
             List<String> recentTitles = runRepository.findRecentGeneratedTitles(
                     topic,
@@ -108,10 +129,30 @@ public class AiAutoPostingService {
             run.succeed(post.id(), generated.title(), completedAt);
             topic.markSucceeded(completedAt);
             topicRepository.save(topic);
-            return runRepository.save(run);
+            AiPostRun saved = runRepository.save(run);
+            log.info(
+                    "ai-autopost run succeeded runType={} runId={} topicId={} postId={} title=\"{}\" durationMs={}",
+                    runType,
+                    saved.getId(),
+                    topic.getId(),
+                    post.id(),
+                    generated.title(),
+                    elapsedMillis(startedAt)
+            );
+            return saved;
         } catch (RuntimeException exception) {
             run.fail(safeMessage(exception), now(zone));
-            return runRepository.save(run);
+            AiPostRun saved = runRepository.save(run);
+            log.error(
+                    "ai-autopost run failed runType={} runId={} topicId={} errorType={} message=\"{}\" durationMs={}",
+                    runType,
+                    saved.getId(),
+                    topic.getId(),
+                    exception.getClass().getSimpleName(),
+                    safeMessage(exception),
+                    elapsedMillis(startedAt)
+            );
+            return saved;
         }
     }
 
@@ -158,5 +199,9 @@ public class AiAutoPostingService {
 
     private boolean isBlank(String value) {
         return value == null || value.isBlank();
+    }
+
+    private long elapsedMillis(long startedAt) {
+        return (System.nanoTime() - startedAt) / 1_000_000L;
     }
 }

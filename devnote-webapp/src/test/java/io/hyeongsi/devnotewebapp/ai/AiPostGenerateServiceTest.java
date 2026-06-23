@@ -8,6 +8,9 @@ import io.hyeongsi.devnotewebapp.ai.draft.AiPostDraftStatus;
 import io.hyeongsi.devnotewebapp.ai.dto.AiPostGenerateResponse;
 import io.hyeongsi.devnotewebapp.ai.service.AiPostGenerateService;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.springframework.boot.test.system.CapturedOutput;
+import org.springframework.boot.test.system.OutputCaptureExtension;
 import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.web.server.ResponseStatusException;
 
@@ -24,6 +27,7 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+@ExtendWith(OutputCaptureExtension.class)
 class AiPostGenerateServiceTest {
 
     @Test
@@ -88,6 +92,57 @@ class AiPostGenerateServiceTest {
         assertThatThrownBy(() -> service.generate("Spring Security"))
                 .isInstanceOf(IllegalStateException.class)
                 .hasMessage("generation failed");
+        verify(draftRepository, never()).save(any());
+    }
+
+    @Test
+    void generateLogsStartAndSuccessWithoutContent(CapturedOutput output) {
+        AiPostDraftRepository draftRepository = mock(AiPostDraftRepository.class);
+        when(draftRepository.save(any(AiPostDraft.class))).thenAnswer(invocation -> {
+            AiPostDraft draft = invocation.getArgument(0);
+            ReflectionTestUtils.setField(draft, "id", 41L);
+            return draft;
+        });
+        AiPostGenerateService service = new AiPostGenerateService(
+                topic -> new AiPostGenerateResponse(
+                        "Spring Security guide",
+                        "summary",
+                        "## private generated content",
+                        List.of("Security"),
+                        "8遺??쎄린",
+                        List.of("OAuth2"),
+                        "spring",
+                        "laptop"
+                ),
+                draftRepository,
+                Clock.fixed(Instant.parse("2026-06-23T03:00:00Z"), ZoneId.of("Asia/Seoul"))
+        );
+
+        service.generate("Spring Security");
+
+        assertThat(output).contains("ai-generate request started");
+        assertThat(output).contains("source=MANUAL");
+        assertThat(output).contains("topic=\"Spring Security\"");
+        assertThat(output).contains("ai-generate request completed");
+        assertThat(output).contains("draftId=41");
+        assertThat(output).doesNotContain("private generated content");
+    }
+
+    @Test
+    void generateLogsFailureWithoutSavingDraft(CapturedOutput output) {
+        AiPostDraftRepository draftRepository = mock(AiPostDraftRepository.class);
+        AiPostGenerateService service = new AiPostGenerateService(
+                topic -> { throw new IllegalStateException("generation failed"); },
+                draftRepository,
+                Clock.systemUTC()
+        );
+
+        assertThatThrownBy(() -> service.generate("Spring Security"))
+                .isInstanceOf(IllegalStateException.class);
+
+        assertThat(output).contains("ai-generate request failed");
+        assertThat(output).contains("topic=\"Spring Security\"");
+        assertThat(output).contains("errorType=IllegalStateException");
         verify(draftRepository, never()).save(any());
     }
 }
