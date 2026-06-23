@@ -322,7 +322,7 @@ export function PostDetailPage() {
         data-testid="post-reading-grid"
         className="grid gap-10 lg:grid-cols-[minmax(0,800px)_260px] lg:items-start lg:justify-center lg:gap-x-16"
       >
-      <article data-testid="post-article" className="min-w-0">
+      <article data-testid="post-article" className="min-w-0 max-w-full overflow-hidden">
         <div className="mb-5 flex flex-wrap items-center gap-2 text-sm text-gray-400">
           <Link to="/" className="font-medium transition hover:text-primary">
             홈
