@@ -27,14 +27,17 @@ globalThis.fetch = async (url, options) => {
     ok: true,
     status: 200,
     json: async () => ({
-      title: 'Spring Security를 실무 관점에서 이해하기',
-      summary: 'Spring Security의 핵심 개념과 실무 활용 방식을 정리합니다.',
-      content: '## Spring Security란?\n\n본문입니다.',
-      tags: ['Spring Security', 'Spring Boot'],
-      readTime: '8분 읽기',
-      recommendedTopics: ['JWT 인증 방식'],
-      recommendedCategorySlug: 'spring-boot',
-      thumbnailStyle: 'laptop',
+      draftId: 41,
+      result: {
+        title: 'Spring Security guide',
+        summary: 'Spring Security summary',
+        content: '## Spring Security',
+        tags: ['Spring Security', 'Spring Boot'],
+        readTime: '8 min',
+        recommendedTopics: ['JWT'],
+        recommendedCategorySlug: 'spring-boot',
+        thumbnailStyle: 'laptop',
+      },
     }),
   };
 };
@@ -43,7 +46,8 @@ const { generateAiPost } = await import(pathToFileURL(outputPath).href);
 
 const response = await generateAiPost({ topic: 'Spring Security' });
 
-assert.equal(response.recommendedCategorySlug, 'spring-boot');
+assert.equal(response.draftId, 41);
+assert.equal(response.result.recommendedCategorySlug, 'spring-boot');
 assert.deepEqual(calls, [
   {
     url: '/api/ai/posts/generate',

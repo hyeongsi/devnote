@@ -2,28 +2,41 @@ package io.hyeongsi.devnotewebapp.ai.service;
 
 import io.hyeongsi.devnotewebapp.ai.client.AiPostClient;
 import io.hyeongsi.devnotewebapp.ai.client.AiPostGenerationContext;
+import io.hyeongsi.devnotewebapp.ai.draft.AiPostDraft;
+import io.hyeongsi.devnotewebapp.ai.draft.AiPostDraftDtos;
+import io.hyeongsi.devnotewebapp.ai.draft.AiPostDraftRepository;
 import io.hyeongsi.devnotewebapp.ai.dto.AiPostGenerateRequest;
 import io.hyeongsi.devnotewebapp.ai.dto.AiPostGenerateResponse;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.time.Clock;
+import java.time.LocalDateTime;
 import java.util.List;
 
 @Service
 public class AiPostGenerateService {
 
     private final AiPostClient aiPostClient;
+    private final AiPostDraftRepository draftRepository;
+    private final Clock clock;
 
-    public AiPostGenerateService(AiPostClient aiPostClient) {
+    public AiPostGenerateService(
+            AiPostClient aiPostClient,
+            AiPostDraftRepository draftRepository,
+            Clock clock
+    ) {
         this.aiPostClient = aiPostClient;
+        this.draftRepository = draftRepository;
+        this.clock = clock;
     }
 
-    public AiPostGenerateResponse generate(String topic) {
+    public AiPostDraftDtos.GeneratedDraft generate(String topic) {
         return generate(new AiPostGenerateRequest(topic, "", List.of(), List.of(), "초급도 이해할 수 있게", "보통"));
     }
 
-    public AiPostGenerateResponse generate(AiPostGenerateRequest request) {
+    public AiPostDraftDtos.GeneratedDraft generate(AiPostGenerateRequest request) {
         String topic = request == null ? null : request.topic();
         if (topic == null || topic.isBlank()) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Topic is required");
@@ -45,7 +58,12 @@ public class AiPostGenerateService {
             throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "AI post generation returned empty response");
         }
 
-        return response;
+        AiPostDraft draft = draftRepository.save(new AiPostDraft(
+                topic.trim(),
+                response,
+                LocalDateTime.now(clock)
+        ));
+        return new AiPostDraftDtos.GeneratedDraft(draft.getId(), response);
     }
 
     private List<String> safeList(List<String> values) {

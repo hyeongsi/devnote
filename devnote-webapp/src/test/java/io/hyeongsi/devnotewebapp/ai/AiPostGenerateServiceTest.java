@@ -1,15 +1,28 @@
 package io.hyeongsi.devnotewebapp.ai;
 
 import io.hyeongsi.devnotewebapp.ai.client.AiPostClient;
+import io.hyeongsi.devnotewebapp.ai.draft.AiPostDraft;
+import io.hyeongsi.devnotewebapp.ai.draft.AiPostDraftDtos;
+import io.hyeongsi.devnotewebapp.ai.draft.AiPostDraftRepository;
+import io.hyeongsi.devnotewebapp.ai.draft.AiPostDraftStatus;
 import io.hyeongsi.devnotewebapp.ai.dto.AiPostGenerateResponse;
 import io.hyeongsi.devnotewebapp.ai.service.AiPostGenerateService;
 import org.junit.jupiter.api.Test;
+import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.time.Clock;
+import java.time.Instant;
+import java.time.ZoneId;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 class AiPostGenerateServiceTest {
 
@@ -25,22 +38,56 @@ class AiPostGenerateServiceTest {
                 "spring-boot",
                 "laptop"
         );
-        AiPostGenerateService service = new AiPostGenerateService(aiPostClient);
+        AiPostDraftRepository draftRepository = mock(AiPostDraftRepository.class);
+        when(draftRepository.save(any(AiPostDraft.class))).thenAnswer(invocation -> {
+            AiPostDraft draft = invocation.getArgument(0);
+            ReflectionTestUtils.setField(draft, "id", 41L);
+            return draft;
+        });
+        AiPostGenerateService service = new AiPostGenerateService(
+                aiPostClient,
+                draftRepository,
+                Clock.fixed(Instant.parse("2026-06-23T03:00:00Z"), ZoneId.of("Asia/Seoul"))
+        );
 
-        AiPostGenerateResponse response = service.generate(" Spring Security ");
+        AiPostDraftDtos.GeneratedDraft response = service.generate(" Spring Security ");
 
-        assertThat(response.title()).contains("Spring Security");
-        assertThat(response.content()).contains("## Spring Security");
-        assertThat(response.tags()).containsExactly("Spring Security", "Spring Boot");
-        assertThat(response.recommendedCategorySlug()).isEqualTo("spring-boot");
+        assertThat(response.draftId()).isEqualTo(41L);
+        assertThat(response.result().title()).contains("Spring Security");
+        assertThat(response.result().content()).contains("## Spring Security");
+        assertThat(response.result().tags()).containsExactly("Spring Security", "Spring Boot");
+        assertThat(response.result().recommendedCategorySlug()).isEqualTo("spring-boot");
+        verify(draftRepository).save(org.mockito.ArgumentMatchers.argThat(draft ->
+                draft.getTopic().equals("Spring Security")
+                        && draft.getStatus() == AiPostDraftStatus.DRAFT
+        ));
     }
 
     @Test
     void generateRejectsBlankTopic() {
-        AiPostGenerateService service = new AiPostGenerateService(topic -> null);
+        AiPostGenerateService service = new AiPostGenerateService(
+                topic -> null,
+                mock(AiPostDraftRepository.class),
+                Clock.systemUTC()
+        );
 
         assertThatThrownBy(() -> service.generate("   "))
                 .isInstanceOf(ResponseStatusException.class)
                 .hasMessageContaining("Topic is required");
+    }
+
+    @Test
+    void generateDoesNotSaveDraftWhenClientFails() {
+        AiPostDraftRepository draftRepository = mock(AiPostDraftRepository.class);
+        AiPostGenerateService service = new AiPostGenerateService(
+                topic -> { throw new IllegalStateException("generation failed"); },
+                draftRepository,
+                Clock.systemUTC()
+        );
+
+        assertThatThrownBy(() -> service.generate("Spring Security"))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessage("generation failed");
+        verify(draftRepository, never()).save(any());
     }
 }
