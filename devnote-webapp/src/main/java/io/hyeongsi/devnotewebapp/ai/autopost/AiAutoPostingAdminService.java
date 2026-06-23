@@ -8,6 +8,8 @@ import io.hyeongsi.devnotewebapp.category.Category;
 import io.hyeongsi.devnotewebapp.category.CategoryRepository;
 import io.hyeongsi.devnotewebapp.post.PostDetailResponse;
 import io.hyeongsi.devnotewebapp.post.PostService;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -30,6 +32,8 @@ import static org.springframework.http.HttpStatus.NOT_FOUND;
 @Service
 @Transactional(readOnly = true)
 public class AiAutoPostingAdminService {
+
+    private static final Logger log = LoggerFactory.getLogger(AiAutoPostingAdminService.class);
 
     private final AiPostTopicRepository topicRepository;
     private final AiPostRunRepository runRepository;
@@ -145,7 +149,9 @@ public class AiAutoPostingAdminService {
     }
 
     public AiPostDraftDtos.DraftDetail draft(Long id) {
-        return toDraftDetail(loadableDraft(id));
+        AiPostDraft draft = loadableDraft(id);
+        log.info("ai-draft load succeeded draftId={} topic=\"{}\"", draft.getId(), draft.getTopic());
+        return toDraftDetail(draft);
     }
 
     @Transactional
@@ -156,6 +162,12 @@ public class AiAutoPostingAdminService {
         AiPostDraft draft = loadableDraft(id);
         PostDetailResponse post = postService.createPost(request.post());
         draft.publish(post.id(), LocalDateTime.now(clock));
+        log.info(
+                "ai-draft publish succeeded draftId={} postId={} topic=\"{}\"",
+                draft.getId(),
+                post.id(),
+                draft.getTopic()
+        );
         return post;
     }
 

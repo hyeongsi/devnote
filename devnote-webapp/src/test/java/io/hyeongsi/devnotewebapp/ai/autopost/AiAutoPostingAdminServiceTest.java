@@ -11,6 +11,9 @@ import io.hyeongsi.devnotewebapp.post.PostCreateRequest;
 import io.hyeongsi.devnotewebapp.post.PostDetailResponse;
 import io.hyeongsi.devnotewebapp.post.PostService;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.springframework.boot.test.system.CapturedOutput;
+import org.springframework.boot.test.system.OutputCaptureExtension;
 import org.springframework.data.domain.Pageable;
 import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.web.server.ResponseStatusException;
@@ -29,6 +32,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+@ExtendWith(OutputCaptureExtension.class)
 class AiAutoPostingAdminServiceTest {
 
     private static final Clock CLOCK = Clock.fixed(
@@ -109,6 +113,36 @@ class AiAutoPostingAdminServiceTest {
         assertThat(draft.getStatus()).isEqualTo(AiPostDraftStatus.PUBLISHED);
         assertThat(draft.getPostId()).isEqualTo(99L);
         verify(postService).createPost(request);
+    }
+
+    @Test
+    void logsDraftLoadAndPublish(CapturedOutput output) {
+        AiPostDraftRepository draftRepository = mock(AiPostDraftRepository.class);
+        PostService postService = mock(PostService.class);
+        AiPostDraft draft = draft("Spring Security", LocalDateTime.parse("2026-06-23T11:00:00"));
+        ReflectionTestUtils.setField(draft, "id", 41L);
+        PostCreateRequest request = new PostCreateRequest(
+                "spring-security", 1L, "Spring Security", "summary", "8遺??쎄린",
+                "laptop", "## content", List.of("Security")
+        );
+        PostDetailResponse saved = new PostDetailResponse(
+                99L, "spring-security", "Spring", "spring", "Spring Security", "summary",
+                "2026.06.23", "8遺??쎄린", 0, List.of("Security"), "laptop", "## content"
+        );
+        when(draftRepository.findById(41L)).thenReturn(Optional.of(draft));
+        when(postService.createPost(request)).thenReturn(saved);
+        AiAutoPostingAdminService service = service(
+                mock(AiPostRunRepository.class), draftRepository, postService
+        );
+
+        service.draft(41L);
+        service.publishDraft(41L, new AiPostDraftDtos.PublishDraftRequest(request));
+
+        assertThat(output).contains("ai-draft load succeeded");
+        assertThat(output).contains("draftId=41");
+        assertThat(output).contains("ai-draft publish succeeded");
+        assertThat(output).contains("postId=99");
+        assertThat(output).doesNotContain("## content");
     }
 
     private AiAutoPostingAdminService service(

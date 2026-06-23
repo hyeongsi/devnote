@@ -7,6 +7,8 @@ import io.hyeongsi.devnotewebapp.ai.draft.AiPostDraftDtos;
 import io.hyeongsi.devnotewebapp.ai.draft.AiPostDraftRepository;
 import io.hyeongsi.devnotewebapp.ai.dto.AiPostGenerateRequest;
 import io.hyeongsi.devnotewebapp.ai.dto.AiPostGenerateResponse;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
@@ -17,6 +19,8 @@ import java.util.List;
 
 @Service
 public class AiPostGenerateService {
+
+    private static final Logger log = LoggerFactory.getLogger(AiPostGenerateService.class);
 
     private final AiPostClient aiPostClient;
     private final AiPostDraftRepository draftRepository;
@@ -41,29 +45,50 @@ public class AiPostGenerateService {
         if (topic == null || topic.isBlank()) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Topic is required");
         }
+        String normalizedTopic = topic.trim();
+        long startedAt = System.nanoTime();
+        log.info("ai-generate request started source=MANUAL topic=\"{}\"", normalizedTopic);
 
-        AiPostGenerateResponse response = aiPostClient.generate(new AiPostGenerationContext(
-                topic.trim(),
-                normalize(request.direction()),
-                safeList(request.keywords()),
-                safeList(request.excludedKeywords()),
-                defaultValue(request.level(), "초급도 이해할 수 있게"),
-                defaultValue(request.lengthHint(), "보통"),
-                "",
-                List.of()
-        ));
+        try {
+            AiPostGenerateResponse response = aiPostClient.generate(new AiPostGenerationContext(
+                    normalizedTopic,
+                    normalize(request.direction()),
+                    safeList(request.keywords()),
+                    safeList(request.excludedKeywords()),
+                    defaultValue(request.level(), "초급도 이해할 수 있게"),
+                    defaultValue(request.lengthHint(), "보통"),
+                    "",
+                    List.of()
+            ));
 
-        if (response == null || response.title() == null || response.title().isBlank()
-                || response.content() == null || response.content().isBlank()) {
-            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "AI post generation returned empty response");
+            if (response == null || response.title() == null || response.title().isBlank()
+                    || response.content() == null || response.content().isBlank()) {
+                throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "AI post generation returned empty response");
+            }
+
+            AiPostDraft draft = draftRepository.save(new AiPostDraft(
+                    normalizedTopic,
+                    response,
+                    LocalDateTime.now(clock)
+            ));
+            log.info(
+                    "ai-generate request completed source=MANUAL topic=\"{}\" draftId={} title=\"{}\" durationMs={}",
+                    normalizedTopic,
+                    draft.getId(),
+                    response.title(),
+                    elapsedMillis(startedAt)
+            );
+            return new AiPostDraftDtos.GeneratedDraft(draft.getId(), response);
+        } catch (RuntimeException exception) {
+            log.error(
+                    "ai-generate request failed source=MANUAL topic=\"{}\" errorType={} message=\"{}\" durationMs={}",
+                    normalizedTopic,
+                    exception.getClass().getSimpleName(),
+                    safeMessage(exception),
+                    elapsedMillis(startedAt)
+            );
+            throw exception;
         }
-
-        AiPostDraft draft = draftRepository.save(new AiPostDraft(
-                topic.trim(),
-                response,
-                LocalDateTime.now(clock)
-        ));
-        return new AiPostDraftDtos.GeneratedDraft(draft.getId(), response);
     }
 
     private List<String> safeList(List<String> values) {
@@ -77,6 +102,15 @@ public class AiPostGenerateService {
     private String defaultValue(String value, String fallback) {
         String normalized = normalize(value);
         return normalized.isBlank() ? fallback : normalized;
+    }
+
+    private long elapsedMillis(long startedAt) {
+        return (System.nanoTime() - startedAt) / 1_000_000L;
+    }
+
+    private String safeMessage(RuntimeException exception) {
+        String message = exception.getMessage();
+        return message == null || message.isBlank() ? exception.getClass().getSimpleName() : message;
     }
 
     String buildPrompt(String topic) {
