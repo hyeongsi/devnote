@@ -5,11 +5,11 @@ import rehypeHighlight from 'rehype-highlight';
 import rehypeSlug from 'rehype-slug';
 import remarkGfm from 'remark-gfm';
 import 'highlight.js/styles/github-dark.css';
-import { normalizePostMarkdown, toAnchorId } from './postMarkdown';
+import { normalizeCodeFenceLanguage, normalizePostMarkdown, toAnchorId } from './postMarkdown';
 
 export function PostMarkdownRenderer({ markdown }: { markdown: string }) {
   return (
-    <div className="post-markdown text-gray-700">
+    <div className="post-markdown min-w-0 max-w-full overflow-hidden text-gray-700">
       <ReactMarkdown
         remarkPlugins={[remarkGfm]}
         rehypePlugins={[rehypeSlug, [rehypeHighlight, { detect: true }]]}
@@ -74,8 +74,9 @@ export function PostMarkdownRenderer({ markdown }: { markdown: string }) {
             const isBlock = className?.includes('language-') || String(children).includes('\n');
 
             if (isBlock) {
+              const language = normalizeCodeFenceLanguage(className?.match(/language-([^\s]+)/)?.[1]);
               return (
-                <code className={className} {...props}>
+                <code className={mergeClassNames('block min-w-max', `language-${language}`, className)} {...props}>
                   {children}
                 </code>
               );
@@ -128,7 +129,7 @@ function CodeBlock({ children }: { children?: ReactNode }) {
   }
 
   return (
-    <div className="mt-8 overflow-hidden rounded-lg border border-slate-700 bg-[#0d1117] shadow-[0_16px_36px_rgba(15,23,42,0.16)]">
+    <div className="mt-8 max-w-full min-w-0 overflow-hidden rounded-lg border border-slate-700 bg-[#0d1117] shadow-[0_16px_36px_rgba(15,23,42,0.16)]">
       <div className="flex h-11 items-center justify-between border-b border-white/10 bg-[#161b22] px-4">
         <div className="flex items-center gap-3">
           <div className="flex gap-1.5" aria-hidden="true">
@@ -150,7 +151,7 @@ function CodeBlock({ children }: { children?: ReactNode }) {
           {copied ? <Check className="h-4 w-4 text-emerald-400" /> : <Copy className="h-4 w-4" />}
         </button>
       </div>
-      <pre className="overflow-x-auto p-5 font-mono text-[14px] leading-7 md:p-6">{children}</pre>
+      <pre className="max-w-full overflow-x-auto p-5 font-mono text-[14px] leading-7 md:p-6">{children}</pre>
     </div>
   );
 }
@@ -176,4 +177,8 @@ function toPlainText(node: ReactNode): string {
     return toPlainText(node.props.children);
   }
   return '';
+}
+
+function mergeClassNames(...classNames: Array<string | undefined>): string {
+  return classNames.filter(Boolean).join(' ');
 }

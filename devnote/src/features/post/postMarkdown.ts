@@ -11,6 +11,63 @@ export type MarkdownBlock =
   | { type: 'list'; items: string[] }
   | { type: 'code'; language: string | null; code: string };
 
+const CODE_LANGUAGE_ALIASES: Array<[RegExp, string]> = [
+  [/\b(nginx)\b|\.conf$|\bconf(?:ig)?\b/, 'nginx'],
+  [/\b(bash|shell|sh|zsh|terminal|console|powershell|ps1)\b/, 'bash'],
+  [/\b(yaml|yml)\b/, 'yaml'],
+  [/\b(json|jsonc)\b/, 'json'],
+  [/\b(env|dotenv)\b|\.env$/, 'properties'],
+  [/\b(properties|props)\b|\.properties$/, 'properties'],
+  [/\b(xml|html|css|sql|java|kotlin|dockerfile)\b/, '$&'],
+  [/\b(tsx|typescript-jsx|typescript jsx)\b/, 'tsx'],
+  [/\b(javascript|js|jsx)\b/, 'javascript'],
+  [/\b(typescript|ts)\b/, 'typescript'],
+];
+
+const KNOWN_CODE_LANGUAGES = new Set([
+  'bash',
+  'css',
+  'dockerfile',
+  'html',
+  'java',
+  'javascript',
+  'json',
+  'kotlin',
+  'nginx',
+  'plaintext',
+  'properties',
+  'sql',
+  'tsx',
+  'typescript',
+  'xml',
+  'yaml',
+]);
+
+export function normalizeCodeFenceLanguage(language: string | null | undefined): string {
+  const normalized = (language ?? '')
+    .trim()
+    .toLowerCase()
+    .replace(/^language-/, '')
+    .replace(/[{}()[\],]/g, ' ')
+    .replace(/\s+/g, ' ');
+
+  if (!normalized) {
+    return 'plaintext';
+  }
+
+  for (const [pattern, replacement] of CODE_LANGUAGE_ALIASES) {
+    if (pattern.test(normalized)) {
+      if (replacement === '$&') {
+        const match = normalized.match(pattern)?.[1] ?? normalized.match(pattern)?.[0];
+        return match ?? 'plaintext';
+      }
+      return replacement;
+    }
+  }
+
+  return KNOWN_CODE_LANGUAGES.has(normalized) ? normalized : 'plaintext';
+}
+
 export function normalizePostMarkdown(markdown: string): string {
   const lines = markdown.replace(/\r\n/g, '\n').split('\n');
   const normalized: string[] = [];
@@ -18,6 +75,15 @@ export function normalizePostMarkdown(markdown: string): string {
 
   for (const line of lines) {
     if (line.trimStart().startsWith('```')) {
+      if (!inCodeBlock) {
+        const indent = line.match(/^\s*/)?.[0] ?? '';
+        const fence = line.trimStart();
+        const language = fence.slice(3).trim();
+        normalized.push(`${indent}\`\`\`${normalizeCodeFenceLanguage(language)}`);
+        inCodeBlock = true;
+        continue;
+      }
+
       inCodeBlock = !inCodeBlock;
       normalized.push(line);
       continue;

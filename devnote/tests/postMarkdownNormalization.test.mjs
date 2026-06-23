@@ -1,24 +1,43 @@
 import assert from 'node:assert/strict';
-import { normalizePostMarkdown } from '../src/features/post/postMarkdown.ts';
+import { normalizeCodeFenceLanguage, normalizePostMarkdown } from '../src/features/post/postMarkdown.ts';
 
 const malformedList =
-  '* **보안 문제**: 민감한 정보가 노출됩니다. * **유연성 부족**: 환경별 설정을 바꾸기 어렵습니다. * **배포의 어려움**: 다시 빌드해야 합니다.';
+  '* **蹂댁븞 臾몄젣**: 誘쇨컧???뺣낫媛 ?몄텧?⑸땲?? * **?좎뿰??遺議?*: ?섍꼍蹂??ㅼ젙??諛붽씀湲??대졄?듬땲?? * **諛고룷???대젮?**: ?ㅼ떆 鍮뚮뱶?댁빞 ?⑸땲??';
 
 assert.equal(
   normalizePostMarkdown(malformedList),
   [
-    '* **보안 문제**: 민감한 정보가 노출됩니다.',
-    '* **유연성 부족**: 환경별 설정을 바꾸기 어렵습니다.',
-    '* **배포의 어려움**: 다시 빌드해야 합니다.',
+    '* **蹂댁븞 臾몄젣**: 誘쇨컧???뺣낫媛 ?몄텧?⑸땲??',
+    '* **?좎뿰??遺議?*: ?섍꼍蹂??ㅼ젙??諛붽씀湲??대졄?듬땲??',
+    '* **諛고룷???대젮?**: ?ㅼ떆 鍮뚮뱶?댁빞 ?⑸땲??',
   ].join('\n'),
 );
 
 assert.equal(
-  normalizePostMarkdown('본문입니다. ### 3.1. 환경변수란? 다음 설명입니다.'),
-  ['본문입니다.', '', '### 3.1. 환경변수란?', '다음 설명입니다.'].join('\n'),
+  normalizePostMarkdown('蹂몃Ц?낅땲?? ### 3.1. ?섍꼍蹂?섎?? ?ㅼ쓬 ?ㅻ챸?낅땲??'),
+  ['蹂몃Ц?낅땲??', '', '### 3.1. ?섍꼍蹂?섎??', '?ㅼ쓬 ?ㅻ챸?낅땲??'].join('\n'),
 );
 
 assert.equal(
-  normalizePostMarkdown('```java\nString value = \"* **그대로**\";\n```'),
-  '```java\nString value = \"* **그대로**\";\n```',
+  normalizePostMarkdown('```java\nString value = "* **洹몃?濡?*";\n```'),
+  '```java\nString value = "* **洹몃?濡?*";\n```',
+);
+
+assert.equal(normalizeCodeFenceLanguage('NGINX'), 'nginx');
+assert.equal(normalizeCodeFenceLanguage('nginx conf'), 'nginx');
+assert.equal(normalizeCodeFenceLanguage('your-app.conf'), 'nginx');
+assert.equal(normalizeCodeFenceLanguage('shell'), 'bash');
+assert.equal(normalizeCodeFenceLanguage('terminal'), 'bash');
+assert.equal(normalizeCodeFenceLanguage('yml'), 'yaml');
+assert.equal(normalizeCodeFenceLanguage('typescript jsx'), 'tsx');
+assert.equal(normalizeCodeFenceLanguage('unknown-language'), 'plaintext');
+
+assert.equal(
+  normalizePostMarkdown('```NGINX\nserver { listen 80; }\n```'),
+  '```nginx\nserver { listen 80; }\n```',
+);
+
+assert.equal(
+  normalizePostMarkdown('```terminal\nsudo systemctl status nginx\n```'),
+  '```bash\nsudo systemctl status nginx\n```',
 );
