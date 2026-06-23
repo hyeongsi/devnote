@@ -229,12 +229,12 @@ export function AdminAiPostingPage() {
     };
 
     if (!request.slug || !request.categoryId || !request.title || !request.excerpt || !request.contentMarkdown) {
-      setErrorMessage('제목, 요약, 본문, slug, 카테고리는 반드시 입력해야 합니다.');
+      showSaveValidationError('제목, 요약, 본문, slug, 카테고리는 반드시 입력해야 합니다.');
       return;
     }
 
     if (tags.length === 0) {
-      setErrorMessage('태그를 하나 이상 입력해 주세요.');
+      showSaveValidationError('태그를 하나 이상 입력해 주세요.');
       return;
     }
 
@@ -271,6 +271,15 @@ export function AdminAiPostingPage() {
     } finally {
       setIsSaving(false);
     }
+  }
+
+  function showSaveValidationError(description: string) {
+    setErrorMessage(description);
+    showMessage({
+      tone: 'warning',
+      title: '게시글 저장 정보를 확인해 주세요.',
+      description,
+    });
   }
 
   function updateDraft<K extends keyof PostCreateRequest>(key: K, value: PostCreateRequest[K]) {
