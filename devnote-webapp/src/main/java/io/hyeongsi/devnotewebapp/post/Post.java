@@ -53,7 +53,7 @@ public class Post {
     private String thumbnailStyle;
 
     @Lob
-    @Column(nullable = false)
+    @Column(nullable = false, columnDefinition = "MEDIUMTEXT")
     private String contentMarkdown;
 
     @ElementCollection(fetch = FetchType.EAGER)
