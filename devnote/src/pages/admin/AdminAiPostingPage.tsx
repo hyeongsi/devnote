@@ -495,21 +495,25 @@ export function AdminAiPostingPage() {
                 <span className="text-sm font-black text-gray-400">{String(index + 1).padStart(2, '0')}</span>
                 <Input
                   value={item.name}
+                  onBlur={() => void handleSaveTopic(item)}
                   onChange={(event) => setAutoTopics((current) => current.map((topicItem) =>
                     topicItem.id === item.id ? { ...topicItem, name: event.target.value } : topicItem
                   ))}
                 />
                 <Select
                   value={item.categoryId}
-                  onChange={(event) => setAutoTopics((current) => current.map((topicItem) =>
-                    topicItem.id === item.id
-                      ? {
-                          ...topicItem,
-                          categoryId: Number(event.target.value),
-                          categoryName: categories.find((category) => category.id === Number(event.target.value))?.name ?? '',
-                        }
-                      : topicItem
-                  ))}
+                  onChange={(event) => {
+                    const nextCategoryId = Number(event.target.value);
+                    const nextTopic = {
+                      ...item,
+                      categoryId: nextCategoryId,
+                      categoryName: categories.find((category) => category.id === nextCategoryId)?.name ?? '',
+                    };
+                    setAutoTopics((current) => current.map((topicItem) =>
+                      topicItem.id === item.id ? nextTopic : topicItem
+                    ));
+                    void handleSaveTopic(nextTopic);
+                  }}
                 >
                   {categories.map((category) => (
                     <option key={category.id} value={category.id}>{category.name}</option>
@@ -520,13 +524,16 @@ export function AdminAiPostingPage() {
                     <input
                       type="checkbox"
                       checked={item.enabled}
-                      onChange={(event) => setAutoTopics((current) => current.map((topicItem) =>
-                        topicItem.id === item.id ? { ...topicItem, enabled: event.target.checked } : topicItem
-                      ))}
+                      onChange={(event) => {
+                        const nextTopic = { ...item, enabled: event.target.checked };
+                        setAutoTopics((current) => current.map((topicItem) =>
+                          topicItem.id === item.id ? nextTopic : topicItem
+                        ));
+                        void handleSaveTopic(nextTopic);
+                      }}
                     />
                     사용
                   </label>
-                  <Button type="button" size="sm" variant="outline" onClick={() => void handleSaveTopic(item)}>저장</Button>
                   <Button
                     type="button"
                     size="sm"

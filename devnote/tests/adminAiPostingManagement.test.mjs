@@ -24,6 +24,12 @@ assert.match(pageSource, /function showSaveValidationError\(description: string\
 assert.match(pageSource, /title: '게시글 저장 정보를 확인해 주세요\.'/);
 assert.match(pageSource, /showSaveValidationError\('제목, 요약, 본문, slug, 카테고리는 반드시 입력해야 합니다\.'\)/);
 assert.match(pageSource, /showSaveValidationError\('태그를 하나 이상 입력해 주세요\.'\)/);
+assert.doesNotMatch(pageSource, /onClick=\{\(\) => void handleSaveTopic\(item\)\}/);
+assert.match(pageSource, /onBlur=\{\(\) => void handleSaveTopic\(item\)\}/);
+assert.match(pageSource, /const nextCategoryId = Number\(event\.target\.value\);/);
+assert.match(pageSource, /categoryId: nextCategoryId/);
+assert.match(pageSource, /const nextTopic = \{ \.\.\.item, enabled: event\.target\.checked \};/);
+assert.match(pageSource, /void handleSaveTopic\(nextTopic\);/);
 assert.match(apiSource, /\/status/);
 assert.match(apiSource, /\/topics/);
 assert.match(apiSource, /\/runs/);
