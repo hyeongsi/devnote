@@ -6,6 +6,7 @@ import {
   ListTree,
   MessageCircle,
   Settings,
+  TriangleAlert,
   UserRound,
 } from 'lucide-react';
 import { useCallback, useEffect, useState } from 'react';
@@ -21,10 +22,12 @@ const fallbackAdminNavItems = [
   { label: '댓글 관리', to: '/posts/spring-boot', icon: MessageCircle, end: false },
   { label: '사용자 관리', to: '/login', icon: UserRound, end: false },
   { label: 'AI 자동 포스팅', to: '/admin/ai-posting', icon: Bot, end: false },
+  { label: '에러 로그', to: '/admin/error-logs', icon: TriangleAlert, end: false },
   { label: '설정', to: '/login', icon: Settings, end: false },
 ];
 
 const adminIconByPath = [
+  { match: '/admin/error-logs', icon: TriangleAlert },
   { match: '/admin/ai-posting', icon: Bot },
   { match: '/admin/posts', icon: FileText },
   { match: '/admin/categories', icon: FolderKanban },

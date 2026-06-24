@@ -237,6 +237,24 @@ export interface DashboardActivity {
   occurredAt: string;
 }
 
+export interface ErrorLogSummary {
+  id: number;
+  occurredAt: string;
+  method: string;
+  path: string;
+  status: number;
+  exceptionType: string | null;
+  message: string | null;
+  durationMs: number;
+}
+
+export interface ErrorLogDetail extends ErrorLogSummary {
+  queryString: string | null;
+  stackTrace: string | null;
+  clientIp: string | null;
+  userAgent: string | null;
+}
+
 export interface AdminMenuRow {
   id?: number;
   name: string;
