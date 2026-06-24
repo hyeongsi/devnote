@@ -121,6 +121,7 @@ INSERT INTO menus (
 )
 VALUES
     (8, 'AI 자동 포스팅', '/admin/ai-posting', '', TRUE, 5, 'ADMIN', 2),
+    (14, '에러 로그', '/admin/error-logs', '', TRUE, 6, 'ADMIN', 2),
     (9, '홈', '/', '', TRUE, 1, 'HEADER', 3),
     (10, '블로그', '/posts', '', TRUE, 2, 'HEADER', 3),
     (11, '프로젝트', '/projects', '', FALSE, 3, 'HEADER', 3),

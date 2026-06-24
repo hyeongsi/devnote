@@ -4,6 +4,7 @@ import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import io.hyeongsi.devnotewebapp.errorlog.ErrorLogRecorder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
@@ -16,6 +17,12 @@ public class RequestErrorLoggingFilter extends OncePerRequestFilter {
 
     private static final Logger log = LoggerFactory.getLogger(RequestErrorLoggingFilter.class);
 
+    private final ErrorLogRecorder errorLogRecorder;
+
+    public RequestErrorLoggingFilter(ErrorLogRecorder errorLogRecorder) {
+        this.errorLogRecorder = errorLogRecorder;
+    }
+
     @Override
     protected void doFilterInternal(
             HttpServletRequest request,
@@ -26,24 +33,33 @@ public class RequestErrorLoggingFilter extends OncePerRequestFilter {
         try {
             filterChain.doFilter(request, response);
         } catch (ServletException | IOException | RuntimeException exception) {
+            long durationMs = elapsedMillis(startedAt);
+            int status = response.getStatus() >= 500 ? response.getStatus() : 500;
             log.error(
                     "request failed method={} path={} status={} errorType={} durationMs={}",
                     request.getMethod(),
                     request.getRequestURI(),
-                    response.getStatus(),
+                    status,
                     exception.getClass().getSimpleName(),
-                    elapsedMillis(startedAt)
+                    durationMs
             );
+            if (!errorLogRecorder.isRecorded(request)) {
+                errorLogRecorder.recordException(request, status, exception, durationMs);
+            }
             throw exception;
         }
         if (response.getStatus() >= 500) {
+            long durationMs = elapsedMillis(startedAt);
             log.error(
-                    "request failed method={} path={} status={} durationMs={}",
-                    request.getMethod(),
-                    request.getRequestURI(),
-                    response.getStatus(),
-                    elapsedMillis(startedAt)
+                "request failed method={} path={} status={} durationMs={}",
+                request.getMethod(),
+                request.getRequestURI(),
+                response.getStatus(),
+                durationMs
             );
+            if (!errorLogRecorder.isRecorded(request)) {
+                errorLogRecorder.recordResponse(request, response, durationMs);
+            }
         }
     }
 
