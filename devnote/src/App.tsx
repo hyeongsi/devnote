@@ -12,6 +12,7 @@ import { PostListPage } from './pages/PostListPage';
 import { AdminAiPostingPage } from './pages/admin/AdminAiPostingPage';
 import { AdminCategoriesPage } from './pages/admin/AdminCategoriesPage';
 import { AdminDashboardPage } from './pages/admin/AdminDashboardPage';
+import { AdminErrorLogDetailPage } from './pages/admin/AdminErrorLogDetailPage';
 import { AdminErrorLogsPage } from './pages/admin/AdminErrorLogsPage';
 import { AdminMenusPage } from './pages/admin/AdminMenusPage';
 import { AdminPostsPage } from './pages/admin/AdminPostsPage';
@@ -36,6 +37,7 @@ export default function App() {
           <Route path="posts" element={<AdminPostsPage />} />
           <Route path="ai-posting" element={<AdminAiPostingPage />} />
           <Route path="error-logs" element={<AdminErrorLogsPage />} />
+          <Route path="error-logs/:id" element={<AdminErrorLogDetailPage />} />
           <Route path="menus" element={<AdminMenusPage />} />
           <Route path="categories" element={<AdminCategoriesPage />} />
         </Route>

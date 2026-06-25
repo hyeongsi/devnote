@@ -248,6 +248,14 @@ export interface ErrorLogSummary {
   durationMs: number;
 }
 
+export interface ErrorLogSearchParams {
+  keyword?: string;
+  status?: string;
+  method?: string;
+  from?: string;
+  to?: string;
+}
+
 export interface ErrorLogDetail extends ErrorLogSummary {
   queryString: string | null;
   stackTrace: string | null;

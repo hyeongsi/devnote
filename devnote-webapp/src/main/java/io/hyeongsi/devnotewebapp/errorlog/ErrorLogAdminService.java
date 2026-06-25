@@ -2,11 +2,15 @@ package io.hyeongsi.devnotewebapp.errorlog;
 
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
+import jakarta.persistence.criteria.Predicate;
 
+import java.time.LocalDate;
+import java.util.ArrayList;
 import java.util.List;
 
 @Service
@@ -21,8 +25,14 @@ public class ErrorLogAdminService {
         this.repository = repository;
     }
 
-    public List<ErrorLogDtos.SummaryResponse> summaries() {
-        return repository.findAll(PageRequest.of(
+    public List<ErrorLogDtos.SummaryResponse> summaries(
+            String keyword,
+            Integer status,
+            String method,
+            LocalDate from,
+            LocalDate to
+    ) {
+        return repository.findAll(specification(keyword, status, method, from, to), PageRequest.of(
                         0,
                         DEFAULT_LIMIT,
                         Sort.by(Sort.Direction.DESC, "occurredAt")
@@ -36,6 +46,45 @@ public class ErrorLogAdminService {
         return repository.findById(id)
                 .map(this::toDetail)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Error log not found"));
+    }
+
+    private Specification<ErrorLog> specification(
+            String keyword,
+            Integer status,
+            String method,
+            LocalDate from,
+            LocalDate to
+    ) {
+        return (root, query, criteriaBuilder) -> {
+            List<Predicate> predicates = new ArrayList<>();
+
+            if (keyword != null && !keyword.isBlank()) {
+                String normalizedKeyword = "%" + keyword.trim().toLowerCase() + "%";
+                predicates.add(criteriaBuilder.or(
+                        criteriaBuilder.like(criteriaBuilder.lower(root.get("path")), normalizedKeyword),
+                        criteriaBuilder.like(criteriaBuilder.lower(criteriaBuilder.coalesce(root.get("message"), "")), normalizedKeyword),
+                        criteriaBuilder.like(criteriaBuilder.lower(criteriaBuilder.coalesce(root.get("exceptionType"), "")), normalizedKeyword)
+                ));
+            }
+
+            if (status != null) {
+                predicates.add(criteriaBuilder.equal(root.get("status"), status));
+            }
+
+            if (method != null && !method.isBlank()) {
+                predicates.add(criteriaBuilder.equal(root.get("method"), method.trim().toUpperCase()));
+            }
+
+            if (from != null) {
+                predicates.add(criteriaBuilder.greaterThanOrEqualTo(root.get("occurredAt"), from.atStartOfDay()));
+            }
+
+            if (to != null) {
+                predicates.add(criteriaBuilder.lessThan(root.get("occurredAt"), to.plusDays(1).atStartOfDay()));
+            }
+
+            return criteriaBuilder.and(predicates.toArray(Predicate[]::new));
+        };
     }
 
     private ErrorLogDtos.SummaryResponse toSummary(ErrorLog errorLog) {

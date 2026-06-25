@@ -3,17 +3,18 @@ import { Outlet, useLocation } from 'react-router-dom';
 import { AdminSidebar } from '../../features/admin/AdminSidebar';
 
 const pageTitles = [
-  { prefix: '/admin/ai-posting', title: 'AI 자동 포스팅' },
-  { prefix: '/admin/posts', title: '게시글 관리' },
-  { prefix: '/admin/categories', title: '카테고리 관리' },
-  { prefix: '/admin/menus', title: '메뉴 관리' },
-  { prefix: '/admin', title: '대시보드' },
+  { prefix: '/admin/ai-posting', title: 'AI Posting' },
+  { prefix: '/admin/error-logs', title: 'Error Logs' },
+  { prefix: '/admin/posts', title: 'Posts' },
+  { prefix: '/admin/categories', title: 'Categories' },
+  { prefix: '/admin/menus', title: 'Menus' },
+  { prefix: '/admin', title: 'Dashboard' },
 ];
 
 export function AdminShell() {
   const location = useLocation();
   const currentTitle =
-    pageTitles.find((item) => location.pathname.startsWith(item.prefix))?.title ?? '관리';
+    pageTitles.find((item) => location.pathname.startsWith(item.prefix))?.title ?? 'Admin';
 
   return (
     <div className="app-shell flex">
@@ -28,7 +29,7 @@ export function AdminShell() {
             <button
               type="button"
               className="relative rounded-full p-2.5 text-gray-700 transition hover:bg-primary-soft hover:text-primary"
-              aria-label="알림"
+              aria-label="Notifications"
             >
               <Bell className="h-5 w-5" />
               <span className="absolute right-1 top-1 inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-primary px-1 text-[10px] font-bold text-white">

@@ -1,38 +1,74 @@
-import { AlertTriangle, Clock3, Loader2, SearchX, ServerCrash } from 'lucide-react';
-import { useEffect, useMemo, useState, type ReactNode } from 'react';
-import { getErrorLogDetail, getErrorLogs } from '../../api/errorLogs';
-import { Badge } from '../../components/ui/Badge';
-import { Card } from '../../components/ui/Card';
-import type { ErrorLogDetail, ErrorLogSummary } from '../../types';
+import {
+  AlertTriangle,
+  CalendarDays,
+  Clock3,
+  Filter,
+  RefreshCcw,
+  Search,
+  ServerCrash,
+} from 'lucide-react';
+import { useEffect, useMemo, useState, type FormEvent } from 'react';
+import { Link, useSearchParams } from 'react-router-dom';
+import { getErrorLogs } from '../../api/errorLogs';
+import { Button } from '../../components/ui/Button';
+import { Input } from '../../components/ui/Input';
+import { Pagination } from '../../components/ui/Pagination';
+import { Select } from '../../components/ui/Select';
+import { usePagination } from '../../hooks/usePagination';
+import type { ErrorLogSearchParams, ErrorLogSummary } from '../../types';
+
+const LOGS_PER_PAGE = 9;
+const STATUS_OPTIONS = ['500', '501', '502', '503', '504'];
+const METHOD_OPTIONS = ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'];
+
+const EMPTY_FILTERS: ErrorLogSearchParams = {
+  keyword: '',
+  status: '',
+  method: '',
+  from: '',
+  to: '',
+};
 
 export function AdminErrorLogsPage() {
+  const [searchParams, setSearchParams] = useSearchParams();
+  const [draftFilters, setDraftFilters] = useState<ErrorLogSearchParams>(() =>
+    filtersFromSearchParams(searchParams),
+  );
   const [logs, setLogs] = useState<ErrorLogSummary[]>([]);
-  const [selectedId, setSelectedId] = useState<number | null>(null);
-  const [detail, setDetail] = useState<ErrorLogDetail | null>(null);
-  const [isLoadingList, setIsLoadingList] = useState(true);
-  const [isLoadingDetail, setIsLoadingDetail] = useState(false);
-  const [listError, setListError] = useState<string | null>(null);
-  const [detailError, setDetailError] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [validationError, setValidationError] = useState<string | null>(null);
+
+  const filters = useMemo(() => filtersFromSearchParams(searchParams), [searchParams]);
+
+  useEffect(() => {
+    setDraftFilters(filters);
+  }, [filters]);
 
   useEffect(() => {
     let cancelled = false;
 
     async function loadLogs() {
-      setIsLoadingList(true);
-      setListError(null);
+      setIsLoading(true);
+      setError(null);
+
       try {
-        const nextLogs = await getErrorLogs();
+        const nextLogs = await getErrorLogs(filters);
+
         if (!cancelled) {
           setLogs(nextLogs);
-          setSelectedId((current) => current ?? nextLogs[0]?.id ?? null);
         }
-      } catch (error) {
+      } catch (loadError) {
         if (!cancelled) {
-          setListError(error instanceof Error ? error.message : '에러 로그 목록을 불러오지 못했습니다.');
+          setError(
+            loadError instanceof Error
+              ? loadError.message
+              : '에러 로그 목록을 불러오는 중 문제가 발생했습니다.',
+          );
         }
       } finally {
         if (!cancelled) {
-          setIsLoadingList(false);
+          setIsLoading(false);
         }
       }
     }
@@ -42,172 +78,242 @@ export function AdminErrorLogsPage() {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [filters]);
 
-  useEffect(() => {
-    if (selectedId === null) {
+  const {
+    currentPage,
+    setCurrentPage,
+    totalItems,
+    totalPages,
+    paginatedItems,
+    paginationItems,
+  } = usePagination({
+    items: logs,
+    itemsPerPage: LOGS_PER_PAGE,
+    resetKey: JSON.stringify(filters),
+  });
+
+  function updateDraft(field: keyof ErrorLogSearchParams, value: string) {
+    setDraftFilters((current) => ({
+      ...current,
+      [field]: value,
+    }));
+  }
+
+  function handleSearchSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+
+    if (draftFilters.from && draftFilters.to && draftFilters.from > draftFilters.to) {
+      setValidationError('기간 시작일은 종료일보다 늦을 수 없습니다.');
       return;
     }
 
-    let cancelled = false;
-    const detailId = selectedId;
+    setValidationError(null);
+    setSearchParams(buildSearchParams(draftFilters));
+  }
 
-    async function loadDetail() {
-      setIsLoadingDetail(true);
-      setDetailError(null);
-      try {
-        const nextDetail = await getErrorLogDetail(detailId);
-        if (!cancelled) {
-          setDetail(nextDetail);
-        }
-      } catch (error) {
-        if (!cancelled) {
-          setDetail(null);
-          setDetailError(error instanceof Error ? error.message : '에러 로그 상세를 불러오지 못했습니다.');
-        }
-      } finally {
-        if (!cancelled) {
-          setIsLoadingDetail(false);
-        }
-      }
-    }
-
-    void loadDetail();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [selectedId]);
-
-  const selectedSummary = useMemo(
-    () => logs.find((log) => log.id === selectedId) ?? null,
-    [logs, selectedId],
-  );
+  function handleReset() {
+    setValidationError(null);
+    setDraftFilters(EMPTY_FILTERS);
+    setSearchParams(new URLSearchParams());
+  }
 
   return (
-    <div className="space-y-6">
-      <section className="rounded-[24px] border border-line bg-white p-6 shadow-[0_18px_50px_rgba(17,24,39,0.05)] md:p-8">
-        <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-          <div className="flex items-center gap-4">
-            <div className="grid h-12 w-12 place-items-center rounded-2xl bg-red-50 text-red-500">
-              <ServerCrash className="h-6 w-6" />
-            </div>
-            <div>
-              <p className="text-sm font-bold text-red-500">Error Logs</p>
-              <h2 className="mt-1 text-3xl font-black tracking-tight text-gray-950">에러 로그</h2>
-            </div>
+    <div className="space-y-5">
+      <section className="border-b border-line pb-5">
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+          <div>
+            <p className="text-sm font-semibold text-muted">
+              총 {logs.length.toLocaleString('ko-KR')}개의 에러 로그
+            </p>
+            <h2 className="mt-1 flex items-center gap-3 text-3xl font-black tracking-tight text-gray-950">
+              <span className="grid h-12 w-12 place-items-center rounded-2xl bg-red-50 text-red-500">
+                <ServerCrash className="h-6 w-6" />
+              </span>
+              에러 로그 관리
+            </h2>
           </div>
-          <div className="flex items-center gap-2 rounded-xl border border-line bg-gray-50 px-4 py-3 text-sm font-bold text-gray-600">
+          <div className="inline-flex items-center gap-2 rounded-xl border border-line bg-white px-4 py-3 text-sm font-bold text-gray-600">
             <Clock3 className="h-4 w-4 text-primary" />
-            최근 {logs.length}건
+            최근 조회 {logs.length}건
           </div>
         </div>
       </section>
 
-      <section className="grid gap-6 xl:grid-cols-[minmax(0,440px)_1fr]">
-        <Card className="overflow-hidden rounded-[24px]">
-          <div className="border-b border-line p-5">
-            <p className="text-sm font-bold text-gray-500">5xx Failures</p>
-            <h3 className="mt-1 text-xl font-black text-gray-950">에러 목록</h3>
+      <form className="space-y-3 border-b border-line pb-5" onSubmit={handleSearchSubmit}>
+        <div className="grid gap-3 lg:grid-cols-[minmax(260px,1.2fr)_180px_180px_180px_180px]">
+          <div className="relative">
+            <Input
+              value={draftFilters.keyword ?? ''}
+              onChange={(event) => updateDraft('keyword', event.target.value)}
+              placeholder="path, 메시지, 예외 타입 검색"
+              className="pr-11"
+            />
+            <Search className="pointer-events-none absolute right-4 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
           </div>
+          <Select
+            value={draftFilters.status ?? ''}
+            onChange={(event) => updateDraft('status', event.target.value)}
+            aria-label="상태 코드 필터"
+          >
+            <option value="">전체 상태코드</option>
+            {STATUS_OPTIONS.map((status) => (
+              <option key={status} value={status}>
+                {status}
+              </option>
+            ))}
+          </Select>
+          <Select
+            value={draftFilters.method ?? ''}
+            onChange={(event) => updateDraft('method', event.target.value)}
+            aria-label="HTTP 메서드 필터"
+          >
+            <option value="">전체 메서드</option>
+            {METHOD_OPTIONS.map((method) => (
+              <option key={method} value={method}>
+                {method}
+              </option>
+            ))}
+          </Select>
+          <Input
+            type="date"
+            value={draftFilters.from ?? ''}
+            onChange={(event) => updateDraft('from', event.target.value)}
+            aria-label="기간 시작일"
+          />
+          <Input
+            type="date"
+            value={draftFilters.to ?? ''}
+            onChange={(event) => updateDraft('to', event.target.value)}
+            aria-label="기간 종료일"
+          />
+        </div>
 
-          {isLoadingList ? (
-            <StateBlock icon={<Loader2 className="h-5 w-5 animate-spin" />} text="에러 로그를 불러오는 중입니다." />
-          ) : listError ? (
-            <StateBlock icon={<AlertTriangle className="h-5 w-5" />} text={listError} tone="error" />
-          ) : logs.length === 0 ? (
-            <StateBlock icon={<SearchX className="h-5 w-5" />} text="기록된 서버 에러가 없습니다." />
-          ) : (
-            <div className="max-h-[720px] divide-y divide-line overflow-y-auto">
-              {logs.map((log) => (
-                <button
-                  key={log.id}
-                  type="button"
-                  className={`block w-full px-5 py-4 text-left transition hover:bg-gray-50 ${
-                    selectedId === log.id ? 'bg-red-50/70' : 'bg-white'
-                  }`}
-                  onClick={() => setSelectedId(log.id)}
-                >
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="min-w-0">
-                      <div className="flex items-center gap-2">
-                        <Badge tone="red">{log.status}</Badge>
-                        <span className="text-xs font-bold text-gray-400">{formatDateTime(log.occurredAt)}</span>
-                      </div>
-                      <p className="mt-3 truncate text-sm font-black text-gray-950">
-                        {log.method} {log.path}
-                      </p>
-                      <p className="mt-1 truncate text-xs font-semibold text-muted">
-                        {log.exceptionType ?? '응답 상태 기반 기록'}
-                      </p>
-                    </div>
-                    <span className="shrink-0 text-xs font-bold text-gray-400">{log.durationMs}ms</span>
+        <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+          <div className="flex items-center gap-2 text-sm font-semibold text-gray-500">
+            <Filter className="h-4 w-4" />
+            검색 결과 {totalItems.toLocaleString('ko-KR')}건
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <Button type="submit">
+              <Search className="mr-2 h-4 w-4" />
+              검색
+            </Button>
+            <Button type="button" variant="outline" onClick={handleReset}>
+              <RefreshCcw className="mr-2 h-4 w-4" />
+              초기화
+            </Button>
+          </div>
+        </div>
+
+        {validationError ? (
+          <p className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm font-semibold text-red-600">
+            {validationError}
+          </p>
+        ) : null}
+      </form>
+
+      {isLoading ? (
+        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+          {Array.from({ length: 6 }, (_, index) => (
+            <div
+              key={index}
+              className="h-[260px] animate-pulse rounded-lg border border-line bg-white"
+            />
+          ))}
+        </div>
+      ) : error ? (
+        <p className="rounded-lg border border-red-200 bg-red-50 px-6 py-12 text-center text-sm font-semibold text-red-600">
+          {error}
+        </p>
+      ) : paginatedItems.length > 0 ? (
+        <>
+          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+            {paginatedItems.map((log) => (
+              <Link
+                key={log.id}
+                to={{
+                  pathname: `/admin/error-logs/${log.id}`,
+                  search: searchParams.size > 0 ? `?${searchParams.toString()}` : '',
+                }}
+                className="group flex min-h-[260px] flex-col rounded-lg border border-line bg-white p-5 shadow-[0_12px_36px_rgba(17,24,39,0.04)] transition hover:-translate-y-0.5 hover:border-red-200 hover:shadow-[0_16px_40px_rgba(239,68,68,0.08)]"
+              >
+                <div className="flex items-start justify-between gap-3">
+                  <div className="inline-flex items-center gap-2 rounded-full bg-red-50 px-3 py-1 text-xs font-bold text-red-600">
+                    <AlertTriangle className="h-3.5 w-3.5" />
+                    {log.status}
                   </div>
-                  {log.message ? <p className="mt-2 line-clamp-2 text-xs leading-5 text-red-700">{log.message}</p> : null}
-                </button>
-              ))}
-            </div>
-          )}
-        </Card>
+                  <span className="rounded-full bg-gray-100 px-3 py-1 text-xs font-bold text-gray-600">
+                    {log.method}
+                  </span>
+                </div>
 
-        <Card className="rounded-[24px] p-6">
-          <div className="flex flex-col gap-3 border-b border-line pb-5 md:flex-row md:items-start md:justify-between">
-            <div>
-              <p className="text-sm font-bold text-gray-500">Detail</p>
-              <h3 className="mt-1 text-xl font-black text-gray-950">상세 내역</h3>
-            </div>
-            {selectedSummary ? <Badge tone="red">{selectedSummary.status}</Badge> : null}
+                <h3 className="mt-4 line-clamp-2 text-lg font-black leading-7 text-gray-950">
+                  {log.path}
+                </h3>
+                <p className="mt-2 text-sm font-semibold text-gray-500">
+                  {log.exceptionType ?? '응답 상태 기반 기록'}
+                </p>
+                <p className="mt-3 line-clamp-3 text-sm leading-6 text-muted">
+                  {log.message ?? '메시지 없이 기록된 서버 에러입니다.'}
+                </p>
+
+                <dl className="mt-auto grid grid-cols-2 gap-3 border-t border-line pt-4 text-xs text-gray-500">
+                  <div>
+                    <dt className="flex items-center gap-1 font-semibold">
+                      <CalendarDays className="h-3.5 w-3.5" />
+                      발생 시각
+                    </dt>
+                    <dd className="mt-1 font-bold text-gray-700">{formatDateTime(log.occurredAt)}</dd>
+                  </div>
+                  <div>
+                    <dt className="flex items-center gap-1 font-semibold">
+                      <Clock3 className="h-3.5 w-3.5" />
+                      처리 시간
+                    </dt>
+                    <dd className="mt-1 font-bold text-gray-700">{log.durationMs}ms</dd>
+                  </div>
+                </dl>
+              </Link>
+            ))}
           </div>
 
-          {isLoadingDetail ? (
-            <StateBlock icon={<Loader2 className="h-5 w-5 animate-spin" />} text="상세 내역을 불러오는 중입니다." />
-          ) : detailError ? (
-            <StateBlock icon={<AlertTriangle className="h-5 w-5" />} text={detailError} tone="error" />
-          ) : selectedId !== null && detail ? (
-            <div className="mt-5 space-y-5">
-              <div className="grid gap-3 md:grid-cols-2">
-                <DetailField label="발생 시각" value={formatDateTime(detail.occurredAt)} />
-                <DetailField label="처리 시간" value={`${detail.durationMs}ms`} />
-                <DetailField label="요청" value={`${detail.method} ${detail.path}`} />
-                <DetailField label="쿼리" value={detail.queryString ?? '-'} />
-                <DetailField label="예외 타입" value={detail.exceptionType ?? '응답 상태 기반 기록'} />
-                <DetailField label="클라이언트 IP" value={detail.clientIp ?? '-'} />
-                <DetailField label="User Agent" value={detail.userAgent ?? '-'} wide />
-                <DetailField label="메시지" value={detail.message ?? '-'} wide />
-              </div>
-
-              <div>
-                <p className="text-sm font-black text-gray-950">실제 에러 로그</p>
-                <pre className="mt-3 max-h-[520px] overflow-auto rounded-2xl border border-line bg-gray-950 p-4 text-xs leading-6 text-gray-100">
-                  {detail.stackTrace ?? '스택 트레이스가 없는 5xx 응답 기록입니다.'}
-                </pre>
-              </div>
-            </div>
-          ) : (
-            <StateBlock icon={<SearchX className="h-5 w-5" />} text="왼쪽 목록에서 에러를 선택해 주세요." />
-          )}
-        </Card>
-      </section>
+          <Pagination
+            currentPage={currentPage}
+            totalPages={totalPages}
+            items={paginationItems}
+            onPageChange={setCurrentPage}
+          />
+        </>
+      ) : (
+        <p className="rounded-lg border border-dashed border-line bg-white px-6 py-14 text-center text-sm font-semibold text-muted">
+          조건에 맞는 에러 로그가 없습니다.
+        </p>
+      )}
     </div>
   );
 }
 
-function DetailField({ label, value, wide = false }: { label: string; value: string; wide?: boolean }) {
-  return (
-    <div className={`rounded-xl border border-line bg-gray-50 p-4 ${wide ? 'md:col-span-2' : ''}`}>
-      <p className="text-xs font-bold text-gray-400">{label}</p>
-      <p className="mt-2 break-words text-sm font-bold text-gray-900">{value}</p>
-    </div>
-  );
+function filtersFromSearchParams(searchParams: URLSearchParams): ErrorLogSearchParams {
+  return {
+    keyword: searchParams.get('keyword') ?? '',
+    status: searchParams.get('status') ?? '',
+    method: searchParams.get('method') ?? '',
+    from: searchParams.get('from') ?? '',
+    to: searchParams.get('to') ?? '',
+  };
 }
 
-function StateBlock({ icon, text, tone = 'default' }: { icon: ReactNode; text: string; tone?: 'default' | 'error' }) {
-  return (
-    <div className={`flex items-center gap-3 p-6 text-sm font-bold ${tone === 'error' ? 'text-red-600' : 'text-muted'}`}>
-      {icon}
-      {text}
-    </div>
-  );
+function buildSearchParams(filters: ErrorLogSearchParams) {
+  const nextParams = new URLSearchParams();
+
+  for (const [key, value] of Object.entries(filters)) {
+    if (value) {
+      nextParams.set(key, value);
+    }
+  }
+
+  return nextParams;
 }
 
 function formatDateTime(value: string) {
