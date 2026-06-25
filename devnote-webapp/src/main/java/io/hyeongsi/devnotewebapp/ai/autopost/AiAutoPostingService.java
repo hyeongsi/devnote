@@ -105,11 +105,11 @@ public class AiAutoPostingService {
             );
             AiPostGenerateResponse generated = aiPostClient.generate(new AiPostGenerationContext(
                     topic.getName(),
-                    "실무에서 바로 활용할 수 있는 학습형 글",
+                    "실무에서 바로 사용할 수 있는 학습형 글",
                     List.of(),
                     List.of(),
                     "초급도 이해할 수 있게",
-                    "자세히",
+                    "보통",
                     topic.getCategory().getSlug(),
                     recentTitles
             ));

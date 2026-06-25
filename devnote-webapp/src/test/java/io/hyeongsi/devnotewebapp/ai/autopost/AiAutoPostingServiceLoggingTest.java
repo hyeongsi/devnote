@@ -15,6 +15,7 @@ import java.time.Clock;
 import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.List;
 import java.util.Optional;
 
@@ -30,6 +31,47 @@ class AiAutoPostingServiceLoggingTest {
             Instant.parse("2026-06-23T03:00:00Z"),
             ZoneId.of("Asia/Seoul")
     );
+
+    @Test
+    void usesNormalLengthHintForAutomaticGeneration() {
+        AiPostTopicRepository topicRepository = mock(AiPostTopicRepository.class);
+        AiPostRunRepository runRepository = mock(AiPostRunRepository.class);
+        PostService postService = mock(PostService.class);
+        PostRepository postRepository = mock(PostRepository.class);
+        AiAutoPostingProperties properties = mock(AiAutoPostingProperties.class);
+        AiPostTopic topic = topic();
+        AtomicReference<io.hyeongsi.devnotewebapp.ai.client.AiPostGenerationContext> capturedContext = new AtomicReference<>();
+
+        when(properties.zone()).thenReturn("Asia/Seoul");
+        when(runRepository.existsRunning()).thenReturn(false);
+        when(topicRepository.findNextEnabledTopic()).thenReturn(Optional.of(topic));
+        when(runRepository.findRecentGeneratedTitles(topic, AiPostRunStatus.SUCCEEDED, 5)).thenReturn(List.of());
+        when(runRepository.save(any(AiPostRun.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        when(postRepository.existsBySlug(any())).thenReturn(false);
+        when(postService.createPost(any())).thenReturn(new PostDetailResponse(
+                44L, "spring-observability-2026-06-23", "Spring", "spring",
+                "Spring observability", "summary", "2026.06.23", "8분 읽기", 0,
+                List.of("Spring"), "monitor", "## private generated content"
+        ));
+
+        AiAutoPostingService service = new AiAutoPostingService(
+                topicRepository,
+                runRepository,
+                context -> {
+                    capturedContext.set(context);
+                    return generated();
+                },
+                postService,
+                postRepository,
+                properties,
+                CLOCK
+        );
+
+        service.executeManual();
+
+        assertThat(capturedContext.get()).isNotNull();
+        assertThat(capturedContext.get().lengthHint()).isEqualTo("보통");
+    }
 
     @Test
     void logsManualRunSuccessWithoutGeneratedContent(CapturedOutput output) {
