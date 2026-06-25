@@ -5,13 +5,16 @@ import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
 import org.springframework.web.server.ResponseStatusException;
+import org.springframework.data.jpa.domain.Specification;
 
 import java.time.LocalDateTime;
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -23,10 +26,16 @@ class ErrorLogAdminServiceTest {
     @Test
     void summariesReturnNewestErrorsFirst() {
         ErrorLog error = errorLog("GET", "/api/posts", 503, "IllegalStateException", "database down");
-        when(repository.findAll(PageRequest.of(0, 50, Sort.by(Sort.Direction.DESC, "occurredAt"))))
+        when(repository.findAll(any(Specification.class), any(PageRequest.class)))
                 .thenReturn(new PageImpl<>(List.of(error)));
 
-        List<ErrorLogDtos.SummaryResponse> summaries = service.summaries();
+        List<ErrorLogDtos.SummaryResponse> summaries = service.summaries(
+                "posts",
+                503,
+                "GET",
+                LocalDate.parse("2026-06-01"),
+                LocalDate.parse("2026-06-30")
+        );
 
         assertThat(summaries).hasSize(1);
         assertThat(summaries.getFirst().method()).isEqualTo("GET");

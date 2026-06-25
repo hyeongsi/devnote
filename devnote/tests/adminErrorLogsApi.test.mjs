@@ -32,12 +32,18 @@ globalThis.fetch = async (url, options) => {
 
 const { getErrorLogs, getErrorLogDetail } = await import(pathToFileURL(outputPath).href);
 
-await getErrorLogs();
+await getErrorLogs({
+  keyword: 'posts',
+  status: '503',
+  method: 'GET',
+  from: '2026-06-01',
+  to: '2026-06-30',
+});
 await getErrorLogDetail(1);
 
 assert.deepEqual(calls, [
   {
-    url: '/api/admin/error-logs',
+    url: '/api/admin/error-logs?keyword=posts&status=503&method=GET&from=2026-06-01&to=2026-06-30',
     options: {
       credentials: 'include',
     },

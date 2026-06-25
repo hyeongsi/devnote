@@ -6,9 +6,11 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 
 import java.time.LocalDateTime;
+import java.time.LocalDate;
 import java.util.List;
 
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -21,7 +23,7 @@ class ErrorLogAdminControllerTest {
 
     @Test
     void listsErrorLogSummaries() throws Exception {
-        when(service.summaries()).thenReturn(List.of(new ErrorLogDtos.SummaryResponse(
+        when(service.summaries("posts", 503, "GET", LocalDate.parse("2026-06-01"), LocalDate.parse("2026-06-30"))).thenReturn(List.of(new ErrorLogDtos.SummaryResponse(
                 1L,
                 LocalDateTime.parse("2026-06-24T10:15:30"),
                 "GET",
@@ -32,12 +34,20 @@ class ErrorLogAdminControllerTest {
                 31L
         )));
 
-        mockMvc.perform(get("/api/admin/error-logs").accept(MediaType.APPLICATION_JSON))
+        mockMvc.perform(get("/api/admin/error-logs")
+                        .param("keyword", "posts")
+                        .param("status", "503")
+                        .param("method", "GET")
+                        .param("from", "2026-06-01")
+                        .param("to", "2026-06-30")
+                        .accept(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$[0].id").value(1))
                 .andExpect(jsonPath("$[0].method").value("GET"))
                 .andExpect(jsonPath("$[0].path").value("/api/posts"))
                 .andExpect(jsonPath("$[0].status").value(503));
+
+        verify(service).summaries("posts", 503, "GET", LocalDate.parse("2026-06-01"), LocalDate.parse("2026-06-30"));
     }
 
     @Test
