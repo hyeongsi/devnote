@@ -66,6 +66,26 @@ public class ErrorLogRecorder {
         markRecorded(request);
     }
 
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public void recordSystemError(String method, String path, int status, Throwable exception, long durationMs) {
+        if (status < 500) {
+            return;
+        }
+        repository.save(new ErrorLog(
+                LocalDateTime.now(clock),
+                method,
+                path,
+                null,
+                status,
+                exception.getClass().getName(),
+                exception.getMessage(),
+                stackTrace(exception),
+                durationMs,
+                null,
+                null
+        ));
+    }
+
     public boolean isRecorded(HttpServletRequest request) {
         return Boolean.TRUE.equals(request.getAttribute(ERROR_LOG_RECORDED_ATTRIBUTE));
     }
