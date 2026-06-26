@@ -3,6 +3,7 @@ package io.hyeongsi.devnotewebapp.ai.autopost;
 import io.hyeongsi.devnotewebapp.ai.client.AiPostClient;
 import io.hyeongsi.devnotewebapp.ai.client.AiPostGenerationContext;
 import io.hyeongsi.devnotewebapp.ai.dto.AiPostGenerateResponse;
+import io.hyeongsi.devnotewebapp.errorlog.ErrorLogRecorder;
 import io.hyeongsi.devnotewebapp.post.PostCreateRequest;
 import io.hyeongsi.devnotewebapp.post.PostDetailResponse;
 import io.hyeongsi.devnotewebapp.post.PostRepository;
@@ -29,6 +30,7 @@ public class AiAutoPostingService {
     private final AiPostClient aiPostClient;
     private final PostService postService;
     private final PostRepository postRepository;
+    private final ErrorLogRecorder errorLogRecorder;
     private final AiAutoPostingProperties properties;
     private final Clock clock;
 
@@ -38,6 +40,7 @@ public class AiAutoPostingService {
             AiPostClient aiPostClient,
             PostService postService,
             PostRepository postRepository,
+            ErrorLogRecorder errorLogRecorder,
             AiAutoPostingProperties properties,
             Clock clock
     ) {
@@ -46,6 +49,7 @@ public class AiAutoPostingService {
         this.aiPostClient = aiPostClient;
         this.postService = postService;
         this.postRepository = postRepository;
+        this.errorLogRecorder = errorLogRecorder;
         this.properties = properties;
         this.clock = clock;
     }
@@ -141,8 +145,10 @@ public class AiAutoPostingService {
             );
             return saved;
         } catch (RuntimeException exception) {
+            long durationMs = elapsedMillis(startedAt);
             run.fail(safeMessage(exception), now(zone));
             AiPostRun saved = runRepository.save(run);
+            recordFailure(runType, exception, durationMs);
             log.error(
                     "ai-autopost run failed runType={} runId={} topicId={} errorType={} message=\"{}\" durationMs={}",
                     runType,
@@ -150,7 +156,7 @@ public class AiAutoPostingService {
                     topic.getId(),
                     exception.getClass().getSimpleName(),
                     safeMessage(exception),
-                    elapsedMillis(startedAt)
+                    durationMs
             );
             return saved;
         }
@@ -203,5 +209,30 @@ public class AiAutoPostingService {
 
     private long elapsedMillis(long startedAt) {
         return (System.nanoTime() - startedAt) / 1_000_000L;
+    }
+
+    private void recordFailure(String runType, RuntimeException exception, long durationMs) {
+        try {
+            errorLogRecorder.recordSystemError(
+                    runType,
+                    runPath(runType),
+                    500,
+                    exception,
+                    durationMs
+            );
+        } catch (RuntimeException recordException) {
+            log.warn(
+                    "ai-autopost error log recording failed runType={} errorType={} message=\"{}\"",
+                    runType,
+                    recordException.getClass().getSimpleName(),
+                    safeMessage(recordException)
+            );
+        }
+    }
+
+    private String runPath(String runType) {
+        return "MANUAL".equals(runType)
+                ? "/internal/ai-auto-posting/manual"
+                : "/internal/ai-auto-posting/scheduled";
     }
 }
