@@ -187,6 +187,7 @@ public class GeminiAiPostClient implements AiPostClient {
                 context,
                 plan,
                 section,
+                unit,
                 section.key() + "/" + unit.key(),
                 unit.heading(),
                 unit.brief(),
@@ -200,6 +201,7 @@ public class GeminiAiPostClient implements AiPostClient {
             AiPostGenerationContext context,
             GeminiPostPlan plan,
             GeminiPostPlan.Section section,
+            GeminiPostPlan.Unit unit,
             String contentKey,
             String heading,
             String brief,
@@ -221,6 +223,34 @@ public class GeminiAiPostClient implements AiPostClient {
         }
         if (!"MAX_TOKENS".equals(result.finishReason())) {
             requireStop(result);
+        }
+        GeminiModelResult retryResult = invoke(() -> gateway.generate(
+                buildMaxTokensRetryPrompt(context, plan, section, unit, contentKey), config
+        ));
+        if ("STOP".equals(retryResult.finishReason())) {
+            if (looksLikeSplitPlanJson(retryResult.text())) {
+                GeminiUnitSplitPlan retrySplitPlan = parse(
+                        retryResult.text(),
+                        GeminiUnitSplitPlan.class,
+                        "unit split plan"
+                );
+                return splitUnitWithPlan(
+                        context,
+                        plan,
+                        section,
+                        contentKey,
+                        heading,
+                        brief,
+                        headingDepth,
+                        splitDepth,
+                        budget,
+                        retrySplitPlan
+                );
+            }
+            return GeminiGeneratedUnit.completed(contentKey, heading, brief, headingDepth, retryResult.text());
+        }
+        if (!"MAX_TOKENS".equals(retryResult.finishReason())) {
+            requireStop(retryResult);
         }
         return splitUnit(
                 context, plan, section, contentKey, heading, brief, headingDepth, splitDepth, budget
@@ -276,12 +306,39 @@ public class GeminiAiPostClient implements AiPostClient {
         }
 
         GeminiUnitSplitPlan splitPlan = requestSplitPlan(section, contentKey, heading, brief);
+        return splitUnitWithPlan(
+                context,
+                plan,
+                section,
+                contentKey,
+                heading,
+                brief,
+                headingDepth,
+                splitDepth,
+                budget,
+                splitPlan
+        );
+    }
+
+    private GeminiGeneratedUnit splitUnitWithPlan(
+            AiPostGenerationContext context,
+            GeminiPostPlan plan,
+            GeminiPostPlan.Section section,
+            String contentKey,
+            String heading,
+            String brief,
+            int headingDepth,
+            int splitDepth,
+            GeminiGenerationBudget budget,
+            GeminiUnitSplitPlan splitPlan
+    ) {
         validateSplitPlan(contentKey, splitPlan);
         List<GeminiGeneratedUnit> children = splitPlan.units().stream()
                 .map(unit -> generateUnit(
                         context,
                         plan,
                         section,
+                        new GeminiPostPlan.Unit(unit.key(), unit.heading(), unit.brief()),
                         contentKey + "/" + unit.key(),
                         unit.heading(),
                         unit.brief(),
@@ -291,6 +348,14 @@ public class GeminiAiPostClient implements AiPostClient {
                 ))
                 .toList();
         return GeminiGeneratedUnit.branch(contentKey, heading, brief, headingDepth, children);
+    }
+
+    private boolean looksLikeSplitPlanJson(String text) {
+        if (text == null) {
+            return false;
+        }
+        String trimmed = text.trim();
+        return trimmed.startsWith("{") && trimmed.contains("\"units\"");
     }
 
     private GeminiGeneratedUnit generateRepair(
@@ -501,24 +566,33 @@ public class GeminiAiPostClient implements AiPostClient {
     String buildPlanPrompt(AiPostGenerationContext context) {
         return """
                 POST_PLAN
-                한국어 개발 블로그 포스팅의 메타데이터와 상세 목차를 설계해라.
-                각 섹션에는 영문 소문자와 하이픈으로 된 고유한 key를 부여해라.
-                각 섹션에는 1-5개의 작성 단위를 두고 key, heading, brief를 작성해라.
-                단위 key도 영문 소문자와 하이픈을 사용해 sectionKey/unitKey 형태의 안정적인 식별자로 쓸 수 있게 해라.
-                글의 깊이에 필요한 만큼 섹션을 구성하고, 코드 예제가 필요한 위치를 brief에 명시해라.
+                Design metadata and a detailed outline for a Korean developer blog post.
+                Use a unique lowercase key with only letters, numbers, and hyphens for each section.
+                Each section must contain 1-5 writing units with key, heading, and brief.
+                Unit keys must also be stable lowercase identifiers so they can be used as sectionKey/unitKey.
+                Prefer a narrower, practical outline over a broad one.
+                Do not split the topic into too many subtopics.
+                Focus on one topic and explain it at a normal depth rather than trying to cover everything.
+                Keep the overall scope compact enough to avoid MAX_TOKENS.
+                Mention where a code example is truly needed in the brief.
 
-                주제: %s
-                글 방향: %s
-                포함할 키워드: %s
-                제외할 키워드: %s
-                독자 난이도: %s
-                예상 분량: %s
-                기본 카테고리 slug: %s
-                최근 같은 주제의 게시글 제목: %s
+                Topic: %s
+                Direction: %s
+                Include keywords: %s
+                Exclude keywords: %s
+                Reader level: %s
+                Desired length: %s
+                Default category slug: %s
+                Recent titles on similar topics: %s
                 """.formatted(
-                context.topic(), context.direction(), String.join(", ", context.keywords()),
-                String.join(", ", context.excludedKeywords()), context.level(), context.lengthHint(),
-                context.categorySlug(), context.recentTitles().isEmpty() ? "없음" : String.join(" | ", context.recentTitles())
+                context.topic()
+                , context.direction()
+                , String.join(", ", context.keywords())
+                , String.join(", ", context.excludedKeywords())
+                , context.level()
+                , context.lengthHint()
+                , context.categorySlug()
+                , context.recentTitles().isEmpty() ? "none" : String.join(" | ", context.recentTitles())
         );
     }
 
@@ -532,21 +606,24 @@ public class GeminiAiPostClient implements AiPostClient {
     ) {
         return """
                 SECTION_GENERATION
-                전체 주제: %s
-                글 제목: %s
-                독자 난이도: %s
+                Main topic: %s
+                Post title: %s
+                Reader level: %s
                 sectionKey: %s
                 contentKey: %s
-                단위 제목: %s
-                작성 목표: %s
+                Unit heading: %s
+                Writing goal: %s
 
-                이 작성 단위의 본문만 한국어 Markdown으로 작성해라.
-                섹션과 작성 단위 제목은 서버가 조립하므로 포함하지 마라.
-                설명의 깊이와 코드 예제 수를 임의로 축소하지 말고 주제를 충분히 이해시키는 데 필요한 내용을 작성해라.
-                코드 블록과 문장을 반드시 완결해라.
+                Write only the body for this unit in Korean Markdown.
+                Do not include the section title or unit heading because the server assembles them.
+                Keep the content practical, normal in length, and tightly focused on this one unit.
+                Do not make it verbose. Do not add filler, repeated explanations, or extra subtopics.
+                If an example is needed, include only the minimum useful example.
+                Finish every paragraph and code block cleanly.
                 """.formatted(
                 context.topic(), plan.title(), context.level(), section.key(), contentKey, heading, brief
-        );
+        ) + "\nWrite in a practical normal length and avoid unnecessary verbosity."
+                + "\nDo not exceed MAX_TOKENS; remove repetitive filler and excessive extra detail.";
     }
 
     private String buildMaxTokensRetryPrompt(
@@ -558,20 +635,25 @@ public class GeminiAiPostClient implements AiPostClient {
     ) {
         return """
                 SECTION_RETRY_AFTER_MAX_TOKENS
-                전체 주제: %s
-                글 제목: %s
-                독자 난이도: %s
+                Main topic: %s
+                Post title: %s
+                Reader level: %s
                 sectionKey: %s
                 contentKey: %s
-                단위 제목: %s
-                작성 목표: %s
+                Unit heading: %s
+                Writing goal: %s
 
-                이전 응답이 출력 한도에 도달했다. 핵심 설명과 필요한 예제의 품질은 유지하되
-                반복되는 설명을 제거하고 이 작성 단위의 본문을 처음부터 완결된 한국어 Markdown으로 다시 작성해라.
-                섹션과 작성 단위 제목은 포함하지 말고 코드 블록과 문장을 반드시 닫아라.
+                The previous answer hit the output limit.
+                Rewrite this unit from scratch in Korean Markdown.
+                Keep the core explanation and only the minimum necessary example.
+                Make it shorter, tighter, and more focused than before.
+                Remove filler, repetition, and non-essential details.
+                Do not include the section title or unit heading.
+                Finish every sentence and code block cleanly.
                 """.formatted(
                 context.topic(), plan.title(), context.level(), section.key(), contentKey, unit.heading(), unit.brief()
-        );
+        ) + "\nRewrite in a practical normal length and avoid unnecessary verbosity."
+                + "\nDo not exceed MAX_TOKENS; keep only the core explanation and the minimum necessary examples.";
     }
 
     private String buildSplitPlanPrompt(
@@ -605,23 +687,25 @@ public class GeminiAiPostClient implements AiPostClient {
                 .collect(Collectors.joining("\n"));
         return """
                 SECTION_REPAIR
-                전체 주제: %s
-                글 제목: %s
-                독자 난이도: %s
-                전체 목차: %s
+                Main topic: %s
+                Post title: %s
+                Reader level: %s
+                Full outline: %s
                 sectionKey: %s
                 contentKey: %s
-                작성 단위 제목: %s
-                작성 목표: %s
+                Unit heading: %s
+                Writing goal: %s
 
-                검수 실패 사유:
+                Review failure reasons:
                 %s
 
-                현재 섹션 본문:
+                Current unit content:
                 %s
 
-                검수 실패 사유를 해결한 이 섹션의 전체 본문만 한국어 Markdown으로 다시 작성해라.
-                다른 섹션의 내용을 만들거나 섹션 제목을 포함하지 마라.
+                Rewrite only this unit in Korean Markdown so the issues are fixed.
+                Do not create content for other sections.
+                Do not include the section title or unit heading.
+                Keep it practical and concise.
                 """.formatted(
                 context.topic(),
                 plan.title(),
@@ -643,12 +727,13 @@ public class GeminiAiPostClient implements AiPostClient {
     ) {
         return """
                 POST_REVIEW
-                다음 게시글을 검수해라. 누락, 중복, 깨진 코드 블록, 제목과 본문의 불일치,
-                위험한 기술적 단정을 찾아라. 수정이 필요한 문제는 반드시 해당 contentKey와 함께 ERROR로 반환해라.
+                Review the following post for missing content, duplication, broken code blocks,
+                mismatch between heading and body, and risky technical claims.
+                Any issue that must be fixed must be returned as ERROR with its contentKey.
 
-                섹션 목록: %s
+                Section list: %s
 
-                본문:
+                Content:
                 %s
                 """.formatted(
                 plan.sections().stream()
