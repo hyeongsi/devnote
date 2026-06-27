@@ -2,6 +2,7 @@ package io.hyeongsi.devnotewebapp.ai.autopost;
 
 import io.hyeongsi.devnotewebapp.ai.dto.AiPostGenerateResponse;
 import io.hyeongsi.devnotewebapp.category.Category;
+import io.hyeongsi.devnotewebapp.errorlog.ErrorLogRecorder;
 import io.hyeongsi.devnotewebapp.post.PostDetailResponse;
 import io.hyeongsi.devnotewebapp.post.PostRepository;
 import io.hyeongsi.devnotewebapp.post.PostService;
@@ -21,7 +22,11 @@ import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.ArgumentMatchers.argThat;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(OutputCaptureExtension.class)
@@ -63,6 +68,7 @@ class AiAutoPostingServiceLoggingTest {
                 },
                 postService,
                 postRepository,
+                mock(ErrorLogRecorder.class),
                 properties,
                 CLOCK
         );
@@ -106,6 +112,7 @@ class AiAutoPostingServiceLoggingTest {
                 context -> generated(),
                 postService,
                 postRepository,
+                mock(ErrorLogRecorder.class),
                 properties,
                 CLOCK
         );
@@ -128,6 +135,7 @@ class AiAutoPostingServiceLoggingTest {
         PostService postService = mock(PostService.class);
         PostRepository postRepository = mock(PostRepository.class);
         AiAutoPostingProperties properties = mock(AiAutoPostingProperties.class);
+        ErrorLogRecorder errorLogRecorder = mock(ErrorLogRecorder.class);
         AiPostTopic topic = topic();
         ReflectionTestUtils.setField(topic, "id", 3L);
         when(properties.zone()).thenReturn("Asia/Seoul");
@@ -148,6 +156,7 @@ class AiAutoPostingServiceLoggingTest {
                 context -> { throw new IllegalStateException("Gemini returned an incomplete post"); },
                 postService,
                 postRepository,
+                errorLogRecorder,
                 properties,
                 CLOCK
         );
@@ -158,6 +167,54 @@ class AiAutoPostingServiceLoggingTest {
         assertThat(output).contains("runId=13");
         assertThat(output).contains("topicId=3");
         assertThat(output).contains("errorType=IllegalStateException");
+        verify(errorLogRecorder).recordSystemError(
+                eq("MANUAL"),
+                eq("/internal/ai-auto-posting/manual"),
+                eq(500),
+                argThat(exception -> exception instanceof IllegalStateException
+                        && "Gemini returned an incomplete post".equals(exception.getMessage())),
+                anyLong()
+        );
+    }
+
+    @Test
+    void recordsScheduledRunFailureToErrorLogs() {
+        AiPostTopicRepository topicRepository = mock(AiPostTopicRepository.class);
+        AiPostRunRepository runRepository = mock(AiPostRunRepository.class);
+        PostService postService = mock(PostService.class);
+        PostRepository postRepository = mock(PostRepository.class);
+        AiAutoPostingProperties properties = mock(AiAutoPostingProperties.class);
+        ErrorLogRecorder errorLogRecorder = mock(ErrorLogRecorder.class);
+        AiPostTopic topic = topic();
+
+        when(properties.zone()).thenReturn("Asia/Seoul");
+        when(runRepository.existsSucceededBetween(any(LocalDateTime.class), any(LocalDateTime.class))).thenReturn(false);
+        when(runRepository.existsRunning()).thenReturn(false);
+        when(topicRepository.findNextEnabledTopic()).thenReturn(Optional.of(topic));
+        when(runRepository.findRecentGeneratedTitles(topic, AiPostRunStatus.SUCCEEDED, 5)).thenReturn(List.of());
+        when(runRepository.save(any(AiPostRun.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        AiAutoPostingService service = new AiAutoPostingService(
+                topicRepository,
+                runRepository,
+                context -> { throw new IllegalStateException("Gemini generation stopped because finishReason=MAX_TOKENS"); },
+                postService,
+                postRepository,
+                errorLogRecorder,
+                properties,
+                CLOCK
+        );
+
+        service.executeScheduled();
+
+        verify(errorLogRecorder).recordSystemError(
+                eq("SCHEDULED"),
+                eq("/internal/ai-auto-posting/scheduled"),
+                eq(500),
+                argThat(exception -> exception instanceof IllegalStateException
+                        && "Gemini generation stopped because finishReason=MAX_TOKENS".equals(exception.getMessage())),
+                anyLong()
+        );
     }
 
     @Test
@@ -174,6 +231,7 @@ class AiAutoPostingServiceLoggingTest {
                 context -> generated(),
                 mock(PostService.class),
                 mock(PostRepository.class),
+                mock(ErrorLogRecorder.class),
                 properties,
                 CLOCK
         );
