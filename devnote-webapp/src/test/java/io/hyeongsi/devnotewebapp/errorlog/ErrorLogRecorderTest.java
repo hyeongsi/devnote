@@ -2,6 +2,8 @@ package io.hyeongsi.devnotewebapp.errorlog;
 
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
+import org.springframework.mock.web.MockHttpServletRequest;
+import org.springframework.mock.web.MockHttpServletResponse;
 
 import java.time.Clock;
 import java.time.Instant;
@@ -51,5 +53,38 @@ class ErrorLogRecorderTest {
         assertThat(saved.getDurationMs()).isEqualTo(742L);
         assertThat(saved.getClientIp()).isNull();
         assertThat(saved.getUserAgent()).isNull();
+    }
+
+    @Test
+    void recordsClientExceptions() {
+        ErrorLogRepository repository = mock(ErrorLogRepository.class);
+        when(repository.save(any(ErrorLog.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        ErrorLogRecorder recorder = new ErrorLogRecorder(repository, CLOCK);
+        MockHttpServletRequest request = new MockHttpServletRequest("POST", "/api/admin/error-logs");
+        IllegalArgumentException exception = new IllegalArgumentException("bad request");
+
+        recorder.recordException(request, 400, exception, 18L);
+
+        ArgumentCaptor<ErrorLog> errorLogCaptor = ArgumentCaptor.forClass(ErrorLog.class);
+        verify(repository).save(errorLogCaptor.capture());
+        assertThat(errorLogCaptor.getValue().getStatus()).isEqualTo(400);
+        assertThat(errorLogCaptor.getValue().getExceptionType()).isEqualTo(IllegalArgumentException.class.getName());
+    }
+
+    @Test
+    void recordsClientErrorResponses() {
+        ErrorLogRepository repository = mock(ErrorLogRepository.class);
+        when(repository.save(any(ErrorLog.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        ErrorLogRecorder recorder = new ErrorLogRecorder(repository, CLOCK);
+        MockHttpServletRequest request = new MockHttpServletRequest("GET", "/api/admin/error-logs/404");
+        MockHttpServletResponse response = new MockHttpServletResponse();
+        response.setStatus(404);
+
+        recorder.recordResponse(request, response, 9L);
+
+        ArgumentCaptor<ErrorLog> errorLogCaptor = ArgumentCaptor.forClass(ErrorLog.class);
+        verify(repository).save(errorLogCaptor.capture());
+        assertThat(errorLogCaptor.getValue().getStatus()).isEqualTo(404);
+        assertThat(errorLogCaptor.getValue().getExceptionType()).isNull();
     }
 }
