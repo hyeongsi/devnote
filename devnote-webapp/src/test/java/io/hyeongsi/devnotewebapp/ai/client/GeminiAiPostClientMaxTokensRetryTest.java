@@ -69,6 +69,9 @@ class GeminiAiPostClientMaxTokensRetryTest {
                 16_384,
                 2,
                 40,
+                3,
+                2,
+                false,
                 duration -> { },
                 new GeminiRequestRateLimiter(new AdvancingClock())
         );

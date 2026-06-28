@@ -12,9 +12,12 @@ public class AiPostClientConfig {
     AiPostClient aiPostClient(
             @Value("${devnote.ai.gemini.api-key:}") String apiKey,
             @Value("${devnote.ai.gemini.model:gemini-2.5-flash}") String model,
-            @Value("${devnote.ai.gemini.max-output-tokens:16384}") int maxOutputTokens,
+            @Value("${devnote.ai.gemini.max-output-tokens:8192}") int maxOutputTokens,
             @Value("${devnote.ai.gemini.max-split-depth:2}") int maxSplitDepth,
-            @Value("${devnote.ai.gemini.max-generation-calls:40}") int maxGenerationCalls
+            @Value("${devnote.ai.gemini.max-generation-calls:20}") int maxGenerationCalls,
+            @Value("${devnote.ai.gemini.max-plan-sections:3}") int maxPlanSections,
+            @Value("${devnote.ai.gemini.max-units-per-section:2}") int maxUnitsPerSection,
+            @Value("${devnote.ai.gemini.second-review-enabled:false}") boolean secondReviewEnabled
     ) {
         if (apiKey == null || apiKey.isBlank()) {
             return new MockAiPostClient();
@@ -25,7 +28,10 @@ public class AiPostClientConfig {
                 new ObjectMapper(),
                 maxOutputTokens,
                 maxSplitDepth,
-                maxGenerationCalls
+                maxGenerationCalls,
+                maxPlanSections,
+                maxUnitsPerSection,
+                secondReviewEnabled
         );
     }
 }
