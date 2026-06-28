@@ -46,6 +46,23 @@ class RequestErrorLoggingFilterTest {
     }
 
     @Test
+    void logsClientErrorResponses(CapturedOutput output) throws Exception {
+        ErrorLogRecorder recorder = mock(ErrorLogRecorder.class);
+        RequestErrorLoggingFilter filter = new RequestErrorLoggingFilter(recorder);
+        MockHttpServletRequest request = new MockHttpServletRequest("GET", "/api/admin");
+        MockHttpServletResponse response = new MockHttpServletResponse();
+        TestFilterChain chain = (servletRequest, servletResponse) ->
+                ((MockHttpServletResponse) servletResponse).setStatus(404)
+        ;
+
+        filter.doFilter(request, response, chain);
+
+        assertThat(output).contains("request failed");
+        assertThat(output).contains("status=404");
+        verify(recorder).recordResponse(eq(request), eq(response), anyLong());
+    }
+
+    @Test
     void logsUnhandledExceptionsWithoutSwallowingThem(CapturedOutput output) {
         ErrorLogRecorder recorder = mock(ErrorLogRecorder.class);
         RequestErrorLoggingFilter filter = new RequestErrorLoggingFilter(recorder);
@@ -68,19 +85,25 @@ class RequestErrorLoggingFilterTest {
     }
 
     @Test
-    void doesNotLogClientErrorResponses(CapturedOutput output) throws Exception {
+    void logsClientErrorExceptionsWithTheirActualStatus(CapturedOutput output) {
         ErrorLogRecorder recorder = mock(ErrorLogRecorder.class);
         RequestErrorLoggingFilter filter = new RequestErrorLoggingFilter(recorder);
-        MockHttpServletRequest request = new MockHttpServletRequest("GET", "/api/admin");
+        MockHttpServletRequest request = new MockHttpServletRequest("POST", "/api/admin/error-logs");
         MockHttpServletResponse response = new MockHttpServletResponse();
-        TestFilterChain chain = (servletRequest, servletResponse) ->
-                ((MockHttpServletResponse) servletResponse).setStatus(404)
-        ;
+        RuntimeException exception = new IllegalArgumentException("bad request");
+        response.setStatus(400);
+        TestFilterChain chain = (servletRequest, servletResponse) -> {
+            ((MockHttpServletResponse) servletResponse).setStatus(400);
+            throw exception;
+        };
 
-        filter.doFilter(request, response, chain);
+        assertThatThrownBy(() -> filter.doFilter(request, response, chain))
+                .isInstanceOf(RuntimeException.class)
+                .hasMessage("bad request");
 
-        assertThat(output).doesNotContain("request failed");
-        verify(recorder, never()).recordResponse(request, response, 0L);
+        assertThat(output).contains("request failed");
+        assertThat(output).contains("status=400");
+        verify(recorder).recordException(eq(request), eq(400), eq(exception), anyLong());
     }
 
     @Test

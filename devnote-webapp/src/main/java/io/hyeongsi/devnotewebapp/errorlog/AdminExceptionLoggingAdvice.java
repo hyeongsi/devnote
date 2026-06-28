@@ -26,7 +26,7 @@ public class AdminExceptionLoggingAdvice {
             HttpServletRequest request
     ) {
         HttpStatusCode statusCode = exception.getStatusCode();
-        if (statusCode.is5xxServerError()) {
+        if (statusCode.isError()) {
             recorder.recordException(request, statusCode.value(), exception, 0L);
         }
         return ResponseEntity
