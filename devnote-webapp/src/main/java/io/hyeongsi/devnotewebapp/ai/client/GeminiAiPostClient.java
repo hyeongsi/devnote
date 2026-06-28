@@ -29,15 +29,18 @@ public class GeminiAiPostClient implements AiPostClient {
     private final int maxOutputTokens;
     private final int maxSplitDepth;
     private final int maxGenerationCalls;
+    private final int maxPlanSections;
+    private final int maxUnitsPerSection;
+    private final boolean secondReviewEnabled;
     private final Consumer<Duration> sleeper;
     private final GeminiRequestRateLimiter requestRateLimiter;
 
     public GeminiAiPostClient(String apiKey, String model, ObjectMapper objectMapper) {
-        this(apiKey, model, objectMapper, 16_384);
+        this(apiKey, model, objectMapper, 8_192);
     }
 
     public GeminiAiPostClient(String apiKey, String model, ObjectMapper objectMapper, int maxOutputTokens) {
-        this(apiKey, model, objectMapper, maxOutputTokens, 2, 40);
+        this(apiKey, model, objectMapper, maxOutputTokens, 2, 20, 3, 2, false);
     }
 
     public GeminiAiPostClient(
@@ -46,7 +49,10 @@ public class GeminiAiPostClient implements AiPostClient {
             ObjectMapper objectMapper,
             int maxOutputTokens,
             int maxSplitDepth,
-            int maxGenerationCalls
+            int maxGenerationCalls,
+            int maxPlanSections,
+            int maxUnitsPerSection,
+            boolean secondReviewEnabled
     ) {
         Client client = Client.builder().apiKey(apiKey).build();
         this.gateway = (prompt, config) -> toResult(client.models.generateContent(model, prompt, config));
@@ -54,6 +60,9 @@ public class GeminiAiPostClient implements AiPostClient {
         this.maxOutputTokens = requirePositive(maxOutputTokens, "maxOutputTokens");
         this.maxSplitDepth = requirePositive(maxSplitDepth, "maxSplitDepth");
         this.maxGenerationCalls = requirePositive(maxGenerationCalls, "maxGenerationCalls");
+        this.maxPlanSections = requirePositive(maxPlanSections, "maxPlanSections");
+        this.maxUnitsPerSection = requirePositive(maxUnitsPerSection, "maxUnitsPerSection");
+        this.secondReviewEnabled = secondReviewEnabled;
         this.sleeper = GeminiAiPostClient::sleep;
         this.requestRateLimiter = new GeminiRequestRateLimiter(Clock.systemUTC());
     }
@@ -64,7 +73,43 @@ public class GeminiAiPostClient implements AiPostClient {
             int maxOutputTokens,
             Consumer<Duration> sleeper
     ) {
-        this(gateway, objectMapper, maxOutputTokens, 2, 40, sleeper, new GeminiRequestRateLimiter(Clock.systemUTC()));
+        this(
+                gateway,
+                objectMapper,
+                maxOutputTokens,
+                2,
+                20,
+                3,
+                2,
+                false,
+                sleeper,
+                new GeminiRequestRateLimiter(Clock.systemUTC())
+        );
+    }
+
+    GeminiAiPostClient(
+            GeminiModelGateway gateway,
+            ObjectMapper objectMapper,
+            int maxOutputTokens,
+            int maxSplitDepth,
+            int maxGenerationCalls,
+            int maxPlanSections,
+            int maxUnitsPerSection,
+            boolean secondReviewEnabled,
+            Consumer<Duration> sleeper
+    ) {
+        this(
+                gateway,
+                objectMapper,
+                maxOutputTokens,
+                maxSplitDepth,
+                maxGenerationCalls,
+                maxPlanSections,
+                maxUnitsPerSection,
+                secondReviewEnabled,
+                sleeper,
+                new GeminiRequestRateLimiter(Clock.systemUTC())
+        );
     }
 
     GeminiAiPostClient(
@@ -81,6 +126,9 @@ public class GeminiAiPostClient implements AiPostClient {
                 maxOutputTokens,
                 maxSplitDepth,
                 maxGenerationCalls,
+                3,
+                2,
+                false,
                 sleeper,
                 new GeminiRequestRateLimiter(Clock.systemUTC())
         );
@@ -92,6 +140,9 @@ public class GeminiAiPostClient implements AiPostClient {
             int maxOutputTokens,
             int maxSplitDepth,
             int maxGenerationCalls,
+            int maxPlanSections,
+            int maxUnitsPerSection,
+            boolean secondReviewEnabled,
             Consumer<Duration> sleeper,
             GeminiRequestRateLimiter requestRateLimiter
     ) {
@@ -100,6 +151,9 @@ public class GeminiAiPostClient implements AiPostClient {
         this.maxOutputTokens = requirePositive(maxOutputTokens, "maxOutputTokens");
         this.maxSplitDepth = requirePositive(maxSplitDepth, "maxSplitDepth");
         this.maxGenerationCalls = requirePositive(maxGenerationCalls, "maxGenerationCalls");
+        this.maxPlanSections = requirePositive(maxPlanSections, "maxPlanSections");
+        this.maxUnitsPerSection = requirePositive(maxUnitsPerSection, "maxUnitsPerSection");
+        this.secondReviewEnabled = secondReviewEnabled;
         this.sleeper = sleeper;
         this.requestRateLimiter = requestRateLimiter;
     }
@@ -142,15 +196,17 @@ public class GeminiAiPostClient implements AiPostClient {
         if (!review.passed()) {
             repairRejectedSections(context, plan, sections, review, generationBudget);
             content = assemble(plan, sections);
-            GeminiPostReview secondReview = parse(
-                    generateJson(buildReviewPrompt(plan, sections, content), reviewSchema()),
-                    GeminiPostReview.class,
-                    "review"
-            );
-            if (!secondReview.passed()) {
-                throw new IllegalStateException(
-                        "Gemini post review failed after repair: " + describeIssues(secondReview)
+            if (secondReviewEnabled) {
+                GeminiPostReview secondReview = parse(
+                        generateJson(buildReviewPrompt(plan, sections, content), reviewSchema()),
+                        GeminiPostReview.class,
+                        "review"
                 );
+                if (!secondReview.passed()) {
+                    throw new IllegalStateException(
+                            "Gemini post review failed after repair: " + describeIssues(secondReview)
+                    );
+                }
             }
         }
 
@@ -434,6 +490,9 @@ public class GeminiAiPostClient implements AiPostClient {
                 || plan.sections() == null || plan.sections().isEmpty()) {
             throw new IllegalStateException("Gemini returned an incomplete post plan");
         }
+        if (plan.sections().size() > maxPlanSections) {
+            throw new IllegalStateException("Gemini plan exceeded max sections: " + maxPlanSections);
+        }
         Set<String> sectionKeys = new HashSet<>();
         Set<String> contentKeys = new HashSet<>();
         for (GeminiPostPlan.Section section : plan.sections()) {
@@ -444,8 +503,10 @@ public class GeminiAiPostClient implements AiPostClient {
             if (!sectionKeys.add(section.key())) {
                 throw new IllegalStateException("Gemini returned duplicate section keys");
             }
-            if (section.units() == null || section.units().isEmpty() || section.units().size() > 5) {
-                throw new IllegalStateException("Gemini plan sections must contain 1-5 units");
+            if (section.units() == null || section.units().isEmpty() || section.units().size() > maxUnitsPerSection) {
+                throw new IllegalStateException(
+                        "Gemini plan sections must contain 1-" + maxUnitsPerSection + " units"
+                );
             }
             for (GeminiPostPlan.Unit unit : section.units()) {
                 requirePlanText(unit.key());
@@ -568,7 +629,8 @@ public class GeminiAiPostClient implements AiPostClient {
                 POST_PLAN
                 Design metadata and a detailed outline for a Korean developer blog post.
                 Use a unique lowercase key with only letters, numbers, and hyphens for each section.
-                Each section must contain 1-5 writing units with key, heading, and brief.
+                Use at most %d sections.
+                Each section must contain 1-%d writing units with key, heading, and brief.
                 Unit keys must also be stable lowercase identifiers so they can be used as sectionKey/unitKey.
                 Prefer a narrower, practical outline over a broad one.
                 Do not split the topic into too many subtopics.
@@ -585,6 +647,8 @@ public class GeminiAiPostClient implements AiPostClient {
                 Default category slug: %s
                 Recent titles on similar topics: %s
                 """.formatted(
+                maxPlanSections,
+                maxUnitsPerSection,
                 context.topic()
                 , context.direction()
                 , String.join(", ", context.keywords())
@@ -767,7 +831,7 @@ public class GeminiAiPostClient implements AiPostClient {
                                 "type", "array",
                                 "items", unit,
                                 "minItems", 1,
-                                "maxItems", 5
+                                "maxItems", maxUnitsPerSection
                         )
                 ),
                 "required", List.of("key", "heading", "brief", "units")
@@ -785,7 +849,12 @@ public class GeminiAiPostClient implements AiPostClient {
                                 "type", "string",
                                 "enum", List.of("ai", "laptop", "docker", "code", "chart", "security", "data", "monitor")
                         ),
-                        "sections", Map.of("type", "array", "items", section)
+                        "sections", Map.of(
+                                "type", "array",
+                                "items", section,
+                                "minItems", 1,
+                                "maxItems", maxPlanSections
+                        )
                 ),
                 "required", List.of(
                         "title", "summary", "tags", "readTime", "recommendedTopics",
