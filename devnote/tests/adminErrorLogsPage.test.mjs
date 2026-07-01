@@ -25,3 +25,7 @@ assert.match(listPageSource, /Link/);
 assert.match(detailPageSource, /getErrorLogDetail/);
 assert.match(detailPageSource, /stackTrace/);
 assert.match(detailPageSource, /실제 에러 로그/);
+assert.match(detailPageSource, /navigator\.clipboard\.writeText/);
+assert.match(detailPageSource, /코드 복사|로그 복사/);
+assert.match(detailPageSource, /Copy/);
+assert.match(detailPageSource, /Check/);
