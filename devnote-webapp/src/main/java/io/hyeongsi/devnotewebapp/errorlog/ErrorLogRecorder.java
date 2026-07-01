@@ -68,7 +68,7 @@ public class ErrorLogRecorder {
 
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void recordSystemError(String method, String path, int status, Throwable exception, long durationMs) {
-        if (status < 400) {
+        if (status < 500) {
             return;
         }
         repository.save(new ErrorLog(
