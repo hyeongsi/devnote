@@ -220,7 +220,7 @@ class GeminiAiPostClientTest {
                 .filter(prompt -> prompt.contains("contentKey: ops/env")))
                 .hasSize(1);
         assertThat(gateway.prompts.stream()
-                .filter(prompt -> prompt.startsWith("UNIT_SPLIT_PLAN"))
+                .filter(prompt -> prompt.startsWith("SECTION_RETRY_AFTER_MAX_TOKENS"))
                 .filter(prompt -> prompt.contains("contentKey: ops/systemd")))
                 .hasSize(1);
         assertThat(gateway.prompts.stream()
@@ -237,6 +237,7 @@ class GeminiAiPostClientTest {
                 result("환경변수 본문", "STOP"),
                 result("잘린 systemd", "MAX_TOKENS"),
                 result(splitPlanJson(), "STOP"),
+                result("still too long", "MAX_TOKENS"),
                 result("잘린 서비스 파일", "MAX_TOKENS")
         );
         GeminiAiPostClient client = client(gateway, 1, 40);
@@ -318,6 +319,9 @@ class GeminiAiPostClientTest {
                 16_384,
                 2,
                 40,
+                3,
+                2,
+                false,
                 duration -> { },
                 limiter
         );
@@ -347,17 +351,66 @@ class GeminiAiPostClientTest {
                 .hasMessageContaining("ops-deployment");
     }
 
+    @Test
+    void skipsTheSecondReviewWhenDisabled() {
+        FakeGateway gateway = new FakeGateway(
+                result(planJson(), "STOP"),
+                result("?뚭컻", "STOP"),
+                result("源⑥쭊 ?댁쁺", "STOP"),
+                result(failedReviewJson("ops-deployment/configuration"), "STOP"),
+                result("?섏젙???댁쁺", "STOP")
+        );
+        GeminiAiPostClient client = client(gateway, 2, 20, 3, 2, false);
+
+        AiPostGenerateResponse response = client.generate(context());
+
+        assertThat(response.content()).contains("?섏젙???댁쁺");
+        assertThat(gateway.prompts.stream()
+                .filter(prompt -> prompt.startsWith("POST_REVIEW")))
+                .hasSize(1);
+    }
+
+    @Test
+    void planPromptIncludesConfiguredSectionAndUnitLimits() {
+        FakeGateway gateway = new FakeGateway(
+                result(planJson(), "STOP"),
+                result("?뚭컻", "STOP"),
+                result("?댁쁺", "STOP"),
+                result(successfulReviewJson(), "STOP")
+        );
+
+        client(gateway, 2, 20, 3, 2, false).generate(context());
+
+        assertThat(gateway.prompts.getFirst())
+                .contains("Use at most 3 sections.")
+                .contains("Each section must contain 1-2 writing units");
+    }
+
     private GeminiAiPostClient client(FakeGateway gateway) {
-        return client(gateway, 2, 40);
+        return client(gateway, 2, 20, 3, 2, true);
     }
 
     private GeminiAiPostClient client(FakeGateway gateway, int maxSplitDepth, int maxGenerationCalls) {
+        return client(gateway, maxSplitDepth, maxGenerationCalls, 3, 2, true);
+    }
+
+    private GeminiAiPostClient client(
+            FakeGateway gateway,
+            int maxSplitDepth,
+            int maxGenerationCalls,
+            int maxPlanSections,
+            int maxUnitsPerSection,
+            boolean secondReviewEnabled
+    ) {
         return new GeminiAiPostClient(
                 gateway,
                 new ObjectMapper(),
                 16_384,
                 maxSplitDepth,
                 maxGenerationCalls,
+                maxPlanSections,
+                maxUnitsPerSection,
+                secondReviewEnabled,
                 duration -> { },
                 new GeminiRequestRateLimiter(new AdvancingClock())
         );

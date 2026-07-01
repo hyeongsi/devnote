@@ -34,7 +34,7 @@ public class RequestErrorLoggingFilter extends OncePerRequestFilter {
             filterChain.doFilter(request, response);
         } catch (ServletException | IOException | RuntimeException exception) {
             long durationMs = elapsedMillis(startedAt);
-            int status = response.getStatus() >= 500 ? response.getStatus() : 500;
+            int status = response.getStatus() >= 400 ? response.getStatus() : 500;
             log.error(
                     "request failed method={} path={} status={} errorType={} durationMs={}",
                     request.getMethod(),
@@ -48,7 +48,7 @@ public class RequestErrorLoggingFilter extends OncePerRequestFilter {
             }
             throw exception;
         }
-        if (response.getStatus() >= 500) {
+        if (response.getStatus() >= 400) {
             long durationMs = elapsedMillis(startedAt);
             log.error(
                 "request failed method={} path={} status={} durationMs={}",

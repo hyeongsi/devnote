@@ -30,14 +30,14 @@ class AdminExceptionLoggingAdviceTest {
     }
 
     @Test
-    void doesNotRecordClientErrors() {
+    void recordsClientErrors() {
         MockHttpServletRequest request = new MockHttpServletRequest("GET", "/api/admin/error-logs/404");
         ResponseStatusException exception = new ResponseStatusException(HttpStatus.NOT_FOUND, "Error log not found");
 
         ResponseEntity<ErrorLogDtos.ErrorResponse> response = advice.handleResponseStatusException(exception, request);
 
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
-        verify(recorder, never()).recordException(request, 404, exception, 0L);
+        verify(recorder).recordException(request, 404, exception, 0L);
     }
 
     @Test

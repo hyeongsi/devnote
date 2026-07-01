@@ -26,7 +26,7 @@ public class ErrorLogRecorder {
 
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void recordException(HttpServletRequest request, int status, Throwable exception, long durationMs) {
-        if (status < 500 || isRecorded(request)) {
+        if (status < 400 || isRecorded(request)) {
             return;
         }
         repository.save(new ErrorLog(
@@ -47,7 +47,7 @@ public class ErrorLogRecorder {
 
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void recordResponse(HttpServletRequest request, HttpServletResponse response, long durationMs) {
-        if (response.getStatus() < 500 || isRecorded(request)) {
+        if (response.getStatus() < 400 || isRecorded(request)) {
             return;
         }
         repository.save(new ErrorLog(

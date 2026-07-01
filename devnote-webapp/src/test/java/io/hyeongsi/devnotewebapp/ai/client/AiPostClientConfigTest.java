@@ -13,15 +13,25 @@ class AiPostClientConfigTest {
         AiPostClient client = new AiPostClientConfig().aiPostClient(
                 "api-key",
                 "gemini-2.5-flash",
-                24_576,
+                8_192,
                 3,
-                55
+                20,
+                3,
+                2,
+                false
         );
 
         assertThat(client)
                 .isInstanceOf(GeminiAiPostClient.class)
-                .extracting("maxOutputTokens", "maxSplitDepth", "maxGenerationCalls")
-                .containsExactly(24_576, 3, 55);
+                .extracting(
+                        "maxOutputTokens",
+                        "maxSplitDepth",
+                        "maxGenerationCalls",
+                        "maxPlanSections",
+                        "maxUnitsPerSection",
+                        "secondReviewEnabled"
+                )
+                .containsExactly(8_192, 3, 20, 3, 2, false);
     }
 
     @Test
@@ -29,10 +39,14 @@ class AiPostClientConfigTest {
         GeminiModelGateway gateway = (prompt, config) -> new GeminiModelResult("", "STOP");
 
         assertThatIllegalArgumentException().isThrownBy(() ->
-                new GeminiAiPostClient(gateway, new ObjectMapper(), 0, 2, 40, duration -> { }));
+                new GeminiAiPostClient(gateway, new ObjectMapper(), 0, 2, 40, 3, 2, false, duration -> { }));
         assertThatIllegalArgumentException().isThrownBy(() ->
-                new GeminiAiPostClient(gateway, new ObjectMapper(), 16_384, 0, 40, duration -> { }));
+                new GeminiAiPostClient(gateway, new ObjectMapper(), 16_384, 0, 40, 3, 2, false, duration -> { }));
         assertThatIllegalArgumentException().isThrownBy(() ->
-                new GeminiAiPostClient(gateway, new ObjectMapper(), 16_384, 2, 0, duration -> { }));
+                new GeminiAiPostClient(gateway, new ObjectMapper(), 16_384, 2, 0, 3, 2, false, duration -> { }));
+        assertThatIllegalArgumentException().isThrownBy(() ->
+                new GeminiAiPostClient(gateway, new ObjectMapper(), 16_384, 2, 40, 0, 2, false, duration -> { }));
+        assertThatIllegalArgumentException().isThrownBy(() ->
+                new GeminiAiPostClient(gateway, new ObjectMapper(), 16_384, 2, 40, 3, 0, false, duration -> { }));
     }
 }
