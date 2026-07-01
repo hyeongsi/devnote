@@ -1,4 +1,4 @@
-import { ArrowLeft, Clock3, Loader2, ServerCrash } from 'lucide-react';
+import { ArrowLeft, Check, Clock3, Copy, Loader2, ServerCrash } from 'lucide-react';
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import { Link, useLocation, useParams } from 'react-router-dom';
 import { getErrorLogDetail } from '../../api/errorLogs';
@@ -109,9 +109,9 @@ export function AdminErrorLogDetailPage() {
           <section className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_360px]">
             <div className="rounded-lg border border-line bg-white p-6 shadow-[0_12px_36px_rgba(17,24,39,0.04)]">
               <h3 className="text-xl font-black text-gray-950">실제 에러 로그</h3>
-              <pre className="mt-4 max-h-[720px] overflow-auto rounded-2xl border border-line bg-gray-950 p-4 text-xs leading-6 text-gray-100">
-                {detail.stackTrace ?? '스택 트레이스가 없는 5xx 응답 기록입니다.'}
-              </pre>
+              <LogCodeBlock
+                code={detail.stackTrace ?? '스택 트레이스가 없는 5xx 응답 기록입니다.'}
+              />
             </div>
 
             <div className="space-y-4">
@@ -175,6 +175,50 @@ function DetailRow({ label, value }: { label: string; value: string }) {
     <div className="rounded-xl border border-line bg-gray-50 p-4">
       <p className="text-xs font-bold text-gray-400">{label}</p>
       <p className="mt-2 break-words text-sm font-bold text-gray-900">{value}</p>
+    </div>
+  );
+}
+
+function LogCodeBlock({ code }: { code: string }) {
+  const [copied, setCopied] = useState(false);
+
+  async function handleCopy() {
+    try {
+      await navigator.clipboard.writeText(code);
+      setCopied(true);
+      window.setTimeout(() => setCopied(false), 1600);
+    } catch {
+      setCopied(false);
+    }
+  }
+
+  return (
+    <div className="mt-4 overflow-hidden rounded-2xl border border-slate-700 bg-[#0d1117] shadow-[0_16px_36px_rgba(15,23,42,0.16)]">
+      <div className="flex h-11 items-center justify-between border-b border-white/10 bg-[#161b22] px-4">
+        <div className="flex items-center gap-3">
+          <div className="flex gap-1.5" aria-hidden="true">
+            <span className="h-2.5 w-2.5 rounded-full bg-[#ff5f56]" />
+            <span className="h-2.5 w-2.5 rounded-full bg-[#ffbd2e]" />
+            <span className="h-2.5 w-2.5 rounded-full bg-[#27c93f]" />
+          </div>
+          <span className="font-mono text-[11px] font-bold uppercase text-slate-400">
+            error log
+          </span>
+        </div>
+        <button
+          type="button"
+          title="로그 복사"
+          aria-label="로그 복사"
+          className="inline-flex h-8 items-center gap-1.5 rounded-md px-2.5 text-xs font-bold text-slate-300 transition hover:bg-white/10 hover:text-white"
+          onClick={() => void handleCopy()}
+        >
+          {copied ? <Check className="h-4 w-4 text-emerald-400" /> : <Copy className="h-4 w-4" />}
+          <span>{copied ? '복사됨' : '복사'}</span>
+        </button>
+      </div>
+      <pre className="max-h-[720px] overflow-auto p-4 font-mono text-xs leading-6 text-gray-100">
+        {code}
+      </pre>
     </div>
   );
 }
