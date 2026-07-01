@@ -29,3 +29,4 @@ assert.match(detailPageSource, /navigator\.clipboard\.writeText/);
 assert.match(detailPageSource, /코드 복사|로그 복사/);
 assert.match(detailPageSource, /Copy/);
 assert.match(detailPageSource, /Check/);
+assert.match(detailPageSource, /copied \? '복사됨' : '복사'/);
