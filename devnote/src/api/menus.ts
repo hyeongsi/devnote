@@ -1,4 +1,5 @@
 import type { AdminMenuApiResponse, AdminMenuRow } from '../types';
+import { fetchAdmin } from './adminAuth';
 import {
   mapMenuResponseToAdminRow,
   mapMenusToAdminNavItems,
@@ -22,13 +23,7 @@ export async function getPublicMenus() {
 }
 
 export async function getAdminMenus(): Promise<AdminMenuRow[]> {
-  const response = await fetch(`${MENUS_API_URL}/admin`, {
-    credentials: 'include',
-  });
-
-  if (response.status === 401) {
-    throw new Error('UNAUTHORIZED');
-  }
+  const response = await fetchAdmin(`${MENUS_API_URL}/admin`);
 
   if (!response.ok) {
     throw new Error(`메뉴 목록을 불러오지 못했습니다. (${response.status})`);
@@ -40,9 +35,7 @@ export async function getAdminMenus(): Promise<AdminMenuRow[]> {
 }
 
 export async function getAdminSidebarMenus() {
-  const response = await fetch(`${MENUS_API_URL}/admin/sidebar`, {
-    credentials: 'include',
-  });
+  const response = await fetchAdmin(`${MENUS_API_URL}/admin/sidebar`);
 
   if (!response.ok) {
     throw new Error(`운영자 메뉴 목록을 불러오지 못했습니다. (${response.status})`);
@@ -54,18 +47,13 @@ export async function getAdminSidebarMenus() {
 }
 
 export async function saveAdminMenus(items: AdminMenuRow[]): Promise<void> {
-  const response = await fetch(`${MENUS_API_URL}/admin`, {
+  const response = await fetchAdmin(`${MENUS_API_URL}/admin`, {
     method: 'PUT',
     headers: {
       'Content-Type': 'application/json',
     },
-    credentials: 'include',
     body: JSON.stringify(mapMenusToSavePayload(items)),
   });
-
-  if (response.status === 401) {
-    throw new Error('UNAUTHORIZED');
-  }
 
   if (!response.ok) {
     throw new Error(`메뉴 변경 사항을 저장하지 못했습니다. (${response.status})`);

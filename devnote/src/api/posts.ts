@@ -7,6 +7,7 @@ import type {
   BlogPostSearchResult,
   PostCreateRequest,
 } from '../types';
+import { fetchAdmin } from './adminAuth';
 
 const POSTS_API_URL = '/api/posts';
 
@@ -51,18 +52,13 @@ export async function searchPosts(query: string): Promise<BlogPostSearchResult[]
 }
 
 export async function createPost(request: PostCreateRequest): Promise<BlogPostDetail> {
-  const response = await fetch(POSTS_API_URL, {
+  const response = await fetchAdmin(POSTS_API_URL, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
     },
-    credentials: 'include',
     body: JSON.stringify(request),
   });
-
-  if (response.status === 401 || response.status === 403) {
-    throw new Error('FORBIDDEN');
-  }
 
   if (response.status === 409) {
     throw new Error('SLUG_CONFLICT');
@@ -80,14 +76,9 @@ export async function createPost(request: PostCreateRequest): Promise<BlogPostDe
 }
 
 export async function deletePost(categorySlug: string, postSlug: string): Promise<void> {
-  const response = await fetch(`${POSTS_API_URL}/${categorySlug}/${postSlug}`, {
+  const response = await fetchAdmin(`${POSTS_API_URL}/${categorySlug}/${postSlug}`, {
     method: 'DELETE',
-    credentials: 'include',
   });
-
-  if (response.status === 401 || response.status === 403) {
-    throw new Error('FORBIDDEN');
-  }
 
   if (response.status === 404) {
     throw new Error('POST_NOT_FOUND');
