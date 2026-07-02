@@ -76,7 +76,14 @@ export function PostMarkdownRenderer({ markdown }: { markdown: string }) {
             if (isBlock) {
               const language = normalizeCodeFenceLanguage(className?.match(/language-([^\s]+)/)?.[1]);
               return (
-                <code className={mergeClassNames('block min-w-max', `language-${language}`, className)} {...props}>
+                <code
+                  className={mergeClassNames(
+                    'block min-w-0 max-w-full whitespace-pre-wrap break-words',
+                    `language-${language}`,
+                    className,
+                  )}
+                  {...props}
+                >
                   {children}
                 </code>
               );
@@ -151,7 +158,9 @@ function CodeBlock({ children }: { children?: ReactNode }) {
           {copied ? <Check className="h-4 w-4 text-emerald-400" /> : <Copy className="h-4 w-4" />}
         </button>
       </div>
-      <pre className="max-w-full overflow-x-auto p-5 font-mono text-[14px] leading-7 md:p-6">{children}</pre>
+      <pre className="max-w-full overflow-x-hidden whitespace-pre-wrap break-words p-5 font-mono text-[14px] leading-7 md:p-6">
+        {children}
+      </pre>
     </div>
   );
 }
