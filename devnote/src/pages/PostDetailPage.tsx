@@ -241,7 +241,7 @@ export function PostDetailPage() {
       navigate('/posts', { replace: true });
     } catch (error) {
       const description =
-        error instanceof Error && error.message === 'FORBIDDEN'
+        error instanceof Error && (error.message === 'FORBIDDEN' || error.message === 'AUTH_REQUIRED')
           ? '관리자 권한이 있는 사용자만 게시글을 삭제할 수 있습니다.'
           : error instanceof Error
             ? error.message

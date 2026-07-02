@@ -6,7 +6,15 @@ import { pathToFileURL } from 'node:url';
 import ts from 'typescript';
 
 const source = await readFile(new URL('../src/api/errorLogs.ts', import.meta.url), 'utf8');
+const adminAuthSource = await readFile(new URL('../src/api/adminAuth.ts', import.meta.url), 'utf8');
 const transpiled = ts.transpileModule(source, {
+  compilerOptions: {
+    module: ts.ModuleKind.ES2022,
+    target: ts.ScriptTarget.ES2022,
+    verbatimModuleSyntax: true,
+  },
+});
+const adminAuthTranspiled = ts.transpileModule(adminAuthSource, {
   compilerOptions: {
     module: ts.ModuleKind.ES2022,
     target: ts.ScriptTarget.ES2022,
@@ -16,6 +24,7 @@ const transpiled = ts.transpileModule(source, {
 const outputDir = join(tmpdir(), 'devnote-error-log-api-tests');
 const outputPath = join(outputDir, `errorLogs-${Date.now()}.mjs`);
 await mkdir(outputDir, { recursive: true });
+await writeFile(join(outputDir, 'adminAuth'), adminAuthTranspiled.outputText, 'utf8');
 await writeFile(outputPath, transpiled.outputText, 'utf8');
 
 const calls = [];

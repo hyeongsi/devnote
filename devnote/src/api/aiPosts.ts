@@ -1,22 +1,18 @@
 import type { AiPostGenerateRequest, AiPostGenerateResponse } from '../types';
+import { fetchAdmin } from './adminAuth';
 
 const AI_POSTS_API_URL = '/api/ai/posts';
 
 export async function generateAiPost(
   request: AiPostGenerateRequest,
 ): Promise<AiPostGenerateResponse> {
-  const response = await fetch(`${AI_POSTS_API_URL}/generate`, {
+  const response = await fetchAdmin(`${AI_POSTS_API_URL}/generate`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
     },
-    credentials: 'include',
     body: JSON.stringify(request),
   });
-
-  if (response.status === 401 || response.status === 403) {
-    throw new Error('FORBIDDEN');
-  }
 
   if (!response.ok) {
     throw new Error(`AI 글 초안을 생성하지 못했습니다. (${response.status})`);

@@ -7,22 +7,18 @@ import type {
   BlogPostDetailApiResponse,
   PostCreateRequest,
 } from '../types';
+import { fetchAdmin } from './adminAuth';
 
 const AI_AUTO_POSTING_API_URL = '/api/admin/ai-posting';
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
-  const response = await fetch(`${AI_AUTO_POSTING_API_URL}${path}`, {
-    credentials: 'include',
+  const response = await fetchAdmin(`${AI_AUTO_POSTING_API_URL}${path}`, {
     ...init,
     headers: {
       'Content-Type': 'application/json',
       ...init?.headers,
     },
   });
-
-  if (response.status === 401 || response.status === 403) {
-    throw new Error('FORBIDDEN');
-  }
   if (!response.ok) {
     throw new Error(`AI 자동 포스팅 요청에 실패했습니다. (${response.status})`);
   }
