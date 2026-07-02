@@ -31,8 +31,11 @@ assert.match(detailSource, /lg:overflow-y-auto/);
 assert.match(detailSource, /py-1\.5/);
 assert.match(rendererSource, /post-markdown min-w-0 max-w-full overflow-hidden/);
 assert.match(rendererSource, /mt-8 max-w-full min-w-0 overflow-hidden/);
-assert.match(rendererSource, /<pre className="max-w-full overflow-x-auto/);
-assert.match(rendererSource, /className=\{mergeClassNames\('block min-w-max'/);
+assert.match(rendererSource, /<pre className="max-w-full overflow-x-hidden whitespace-pre-wrap break-words/);
+assert.match(
+  rendererSource,
+  /className=\{mergeClassNames\([\s\S]*block min-w-0 max-w-full whitespace-pre-wrap break-words/,
+);
 assert.match(rendererSource, /normalizeCodeFenceLanguage/);
 assert.match(rendererSource, /코드 복사/);
 assert.match(rendererSource, /navigator\.clipboard\.writeText/);
