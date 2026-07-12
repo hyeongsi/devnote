@@ -31,8 +31,8 @@ export default function App() {
         <Route path="/posts/:categorySlug/:postSlug" element={<PostDetailPage />} />
       </Route>
 
-      <Route element={<RequireAdmin />}>
-        <Route path="/admin" element={<AdminShell />}>
+      <Route path="/admin" element={<RequireAdmin />}>
+        <Route element={<AdminShell />}>
           <Route index element={<AdminDashboardPage />} />
           <Route path="posts" element={<AdminPostsPage />} />
           <Route path="ai-posting" element={<AdminAiPostingPage />} />

@@ -4,6 +4,7 @@ import type {
   BlogCategory,
   BlogCategoryApiResponse,
 } from '../types';
+import { fetchAdmin } from './adminAuth';
 
 const CATEGORIES_API_URL = '/api/categories';
 
@@ -30,13 +31,7 @@ export async function getBlogCategories(): Promise<BlogCategory[]> {
 }
 
 export async function getAdminCategories(): Promise<AdminCategoryRow[]> {
-  const response = await fetch(`${CATEGORIES_API_URL}/admin`, {
-    credentials: 'include',
-  });
-
-  if (response.status === 401) {
-    throw new Error('UNAUTHORIZED');
-  }
+  const response = await fetchAdmin(`${CATEGORIES_API_URL}/admin`);
 
   if (!response.ok) {
     throw new Error(`관리자 카테고리 목록을 불러오지 못했습니다. (${response.status})`);
@@ -58,12 +53,11 @@ export async function getAdminCategories(): Promise<AdminCategoryRow[]> {
 }
 
 export async function saveAdminCategories(items: AdminCategoryRow[]): Promise<void> {
-  const response = await fetch(`${CATEGORIES_API_URL}/admin`, {
+  const response = await fetchAdmin(`${CATEGORIES_API_URL}/admin`, {
     method: 'PUT',
     headers: {
       'Content-Type': 'application/json',
     },
-    credentials: 'include',
     body: JSON.stringify(
       items.map((item, index) => ({
         id: item.id,
@@ -75,10 +69,6 @@ export async function saveAdminCategories(items: AdminCategoryRow[]): Promise<vo
       })),
     ),
   });
-
-  if (response.status === 401) {
-    throw new Error('UNAUTHORIZED');
-  }
 
   if (!response.ok) {
     throw new Error(`카테고리 변경 사항을 저장하지 못했습니다. (${response.status})`);
