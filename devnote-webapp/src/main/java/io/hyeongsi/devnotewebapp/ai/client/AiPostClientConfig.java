@@ -15,8 +15,8 @@ public class AiPostClientConfig {
             @Value("${devnote.ai.gemini.max-output-tokens:8192}") int maxOutputTokens,
             @Value("${devnote.ai.gemini.max-split-depth:2}") int maxSplitDepth,
             @Value("${devnote.ai.gemini.max-generation-calls:20}") int maxGenerationCalls,
-            @Value("${devnote.ai.gemini.max-plan-sections:3}") int maxPlanSections,
-            @Value("${devnote.ai.gemini.max-units-per-section:2}") int maxUnitsPerSection,
+            @Value("${devnote.ai.gemini.max-plan-sections:2}") int maxPlanSections,
+            @Value("${devnote.ai.gemini.max-units-per-section:1}") int maxUnitsPerSection,
             @Value("${devnote.ai.gemini.second-review-enabled:false}") boolean secondReviewEnabled
     ) {
         if (apiKey == null || apiKey.isBlank()) {
