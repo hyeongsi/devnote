@@ -19,6 +19,8 @@ Keep every Gemini API request within five requests per rolling minute and twenty
 
 The minute limit is a rolling window rather than a clock-minute bucket. The daily limit resets at midnight in `Asia/Seoul`. Rejection is immediate; the synchronous request does not wait for a future window.
 
+Scheduled auto posting keeps its default request footprint below the minute limit by using a compact generation context: at most two recent titles, the `간결하게` length hint, two planned sections, and one generation unit per section. Manual generation uses the same conservative Gemini client defaults unless environment variables raise the section or unit limits.
+
 ## Error Handling
 
 Limit failures identify `minute` or `daily` exhaustion and current usage. They do not include prompts, generated content, or the API key. A rejected attempt never reaches Gemini and is not retried by the existing HTTP 429 policy.
