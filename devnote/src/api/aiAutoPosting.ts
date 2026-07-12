@@ -7,21 +7,21 @@ import type {
   BlogPostDetailApiResponse,
   PostCreateRequest,
 } from '../types';
+import { fetchAdmin } from './adminAuth';
 import { apiRequest } from './http';
 
 const AI_AUTO_POSTING_API_URL = '/api/admin/ai-posting';
 
 function request<TResponse, TBody = unknown>(
   path: string,
-  options: Omit<Parameters<typeof apiRequest<TResponse, TBody>>[1], 'withCredentials' | 'statusMessages' | 'errorMessage'> = {},
+  options: Omit<
+    Parameters<typeof apiRequest<TResponse, TBody>>[1],
+    'request' | 'withCredentials' | 'errorMessage'
+  > = {},
 ) {
   return apiRequest<TResponse, TBody>(`${AI_AUTO_POSTING_API_URL}${path}`, {
     ...options,
-    withCredentials: true,
-    statusMessages: {
-      401: 'FORBIDDEN',
-      403: 'FORBIDDEN',
-    },
+    request: fetchAdmin,
     errorMessage: 'AI 자동 포스팅 요청에 실패했습니다.',
   });
 }

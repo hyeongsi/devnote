@@ -1,4 +1,5 @@
 import type { DashboardActivity, DashboardStats, DashboardTrafficPoint } from '../types';
+import { fetchAdmin } from './adminAuth';
 import { apiRequest } from './http';
 
 const DASHBOARD_API_URL = '/api/admin/dashboard';
@@ -17,7 +18,7 @@ export async function getDashboardActivities(): Promise<DashboardActivity[]> {
 
 async function getDashboardResource<T>(resource: string): Promise<T> {
   return apiRequest<T>(`${DASHBOARD_API_URL}/${resource}`, {
-    withCredentials: true,
+    request: fetchAdmin,
     errorMessage: '대시보드 데이터를 불러오지 못했습니다.',
   });
 }

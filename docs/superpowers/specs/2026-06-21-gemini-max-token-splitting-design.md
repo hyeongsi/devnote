@@ -94,14 +94,15 @@ ContentNode
 
 ## 안전 상한
 
-- 초기 하위 단위는 상위 섹션당 1~5개 범위에서 계획 모델이 결정한다.
+- 기본 계획은 상위 섹션을 최대 2개로 제한하며 `devnote.ai.gemini.max-plan-sections=${GEMINI_MAX_PLAN_SECTIONS:2}`로 설정한다.
+- 초기 하위 단위는 상위 섹션당 최대 1개를 기본값으로 하며 `devnote.ai.gemini.max-units-per-section=${GEMINI_MAX_UNITS_PER_SECTION:1}`로 설정한다.
 - 재분할 최대 깊이는 2로 제한하며 `devnote.ai.gemini.max-split-depth=${GEMINI_MAX_SPLIT_DEPTH:2}`로 설정한다.
 - 한 번의 재분할은 최소 2개의 자식 단위를 반환해야 한다.
-- 전체 생성 단위 호출 수는 `devnote.ai.gemini.max-generation-calls=${GEMINI_MAX_GENERATION_CALLS:40}`으로 제한한다.
+- 전체 생성 단위 호출 수는 `devnote.ai.gemini.max-generation-calls=${GEMINI_MAX_GENERATION_CALLS:20}`으로 제한한다.
 - 분할 계획이 비어 있거나 키가 중복되거나 부모와 같은 범위를 반복하면 즉시 실패한다.
 - `SAFETY`, `RECITATION` 등 `MAX_TOKENS`가 아닌 종료 사유는 분할하지 않고 기존처럼 실패 처리한다.
 
-상한은 글의 최종 길이를 제한하지 않는다. 모델이 끝없이 같은 범위를 재분할하는 상황만 차단한다.
+상한은 글의 최종 길이를 직접 제한하지 않지만, 기본값은 5회/분 요청 제한 안에서 자동 포스팅이 실패하지 않도록 보수적으로 둔다. 더 긴 수동 생성이 필요하면 환경변수로 상한을 조정한다.
 
 ## Markdown 조립
 

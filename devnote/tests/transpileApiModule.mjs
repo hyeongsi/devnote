@@ -16,6 +16,7 @@ export async function transpileApiModule(sourceUrl, outputPrefix) {
   await mkdir(outputDir, { recursive: true });
   await Promise.all([
     writeTranspiledModule(sourceUrl, outputPath),
+    writeApiDependency('../src/api/adminAuth.ts', join(outputDir, 'adminAuth')),
     writeApiDependency('../src/api/http.ts', join(outputDir, 'http')),
     writeApiDependency('../src/api/menuMapping.ts', join(outputDir, 'menuMapping')),
   ]);

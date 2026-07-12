@@ -105,7 +105,7 @@ public class AiAutoPostingService {
             List<String> recentTitles = runRepository.findRecentGeneratedTitles(
                     topic,
                     AiPostRunStatus.SUCCEEDED,
-                    5
+                    2
             );
             AiPostGenerateResponse generated = aiPostClient.generate(new AiPostGenerationContext(
                     topic.getName(),
@@ -113,7 +113,7 @@ public class AiAutoPostingService {
                     List.of(),
                     List.of(),
                     "초급도 이해할 수 있게",
-                    "보통",
+                    "간결하게",
                     topic.getCategory().getSlug(),
                     recentTitles
             ));

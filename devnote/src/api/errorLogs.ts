@@ -1,4 +1,5 @@
 import type { ErrorLogDetail, ErrorLogSearchParams, ErrorLogSummary } from '../types';
+import { fetchAdmin } from './adminAuth';
 import { apiRequest } from './http';
 
 const ERROR_LOGS_API_URL = '/api/admin/error-logs';
@@ -25,10 +26,7 @@ export async function getErrorLogDetail(id: number): Promise<ErrorLogDetail> {
 
 async function request<T>(url: string): Promise<T> {
   return apiRequest<T>(url, {
-    withCredentials: true,
-    statusMessages: {
-      401: 'UNAUTHORIZED',
-    },
+    request: fetchAdmin,
     errorMessage: '에러 로그를 불러오지 못했습니다.',
   });
 }

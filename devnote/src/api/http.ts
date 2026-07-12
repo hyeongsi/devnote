@@ -15,6 +15,7 @@ interface ApiRequestOptions<TBody = unknown> {
   body?: TBody;
   withCredentials?: boolean;
   headers?: HeadersInit;
+  request?: (input: RequestInfo | URL, init?: RequestInit) => Promise<Response>;
   statusMessages?: StatusMessages;
   errorMessage: string;
 }
@@ -23,7 +24,8 @@ export async function apiRequest<TResponse, TBody = unknown>(
   url: string,
   options: ApiRequestOptions<TBody>,
 ): Promise<TResponse> {
-  const response = await fetch(url, buildRequestInit(options));
+  const request = options.request ?? fetch;
+  const response = await request(url, buildRequestInit(options));
   const statusMessage = options.statusMessages?.[response.status];
 
   if (statusMessage) {

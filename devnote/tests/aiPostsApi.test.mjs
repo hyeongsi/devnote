@@ -36,12 +36,12 @@ assert.deepEqual(calls, [
   {
     url: '/api/ai/posts/generate',
     options: {
+      credentials: 'include',
       method: 'POST',
+      body: JSON.stringify({ topic: 'Spring Security' }),
       headers: {
         'Content-Type': 'application/json',
       },
-      credentials: 'include',
-      body: JSON.stringify({ topic: 'Spring Security' }),
     },
   },
 ]);

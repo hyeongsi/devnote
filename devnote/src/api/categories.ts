@@ -4,6 +4,7 @@ import type {
   BlogCategory,
   BlogCategoryApiResponse,
 } from '../types';
+import { fetchAdmin } from './adminAuth';
 import { apiRequest } from './http';
 
 const CATEGORIES_API_URL = '/api/categories';
@@ -28,10 +29,7 @@ export async function getBlogCategories(): Promise<BlogCategory[]> {
 
 export async function getAdminCategories(): Promise<AdminCategoryRow[]> {
   const categories = await apiRequest<AdminCategoryApiResponse[]>(`${CATEGORIES_API_URL}/admin`, {
-    withCredentials: true,
-    statusMessages: {
-      401: 'UNAUTHORIZED',
-    },
+    request: fetchAdmin,
     errorMessage: '관리자 카테고리 목록을 불러오지 못했습니다.',
   });
 
@@ -51,11 +49,8 @@ export async function getAdminCategories(): Promise<AdminCategoryRow[]> {
 export async function saveAdminCategories(items: AdminCategoryRow[]): Promise<void> {
   await apiRequest<void, AdminCategorySaveRequest[]>(`${CATEGORIES_API_URL}/admin`, {
     method: 'PUT',
-    withCredentials: true,
+    request: fetchAdmin,
     body: mapCategoriesToSavePayload(items),
-    statusMessages: {
-      401: 'UNAUTHORIZED',
-    },
     errorMessage: '카테고리 변경 사항을 저장하지 못했습니다.',
   });
 }

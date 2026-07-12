@@ -185,7 +185,7 @@ export function AdminAiPostingPage() {
       });
     } catch (error) {
       const description =
-        error instanceof Error && error.message === 'FORBIDDEN'
+        error instanceof Error && (error.message === 'FORBIDDEN' || error.message === 'AUTH_REQUIRED')
           ? '관리자 권한이 필요합니다.'
           : error instanceof Error
             ? error.message
@@ -233,7 +233,7 @@ export function AdminAiPostingPage() {
       const description =
         error instanceof Error && error.message === 'SLUG_CONFLICT'
           ? '이미 사용 중인 slug입니다. slug를 수정한 뒤 다시 저장해 주세요.'
-          : error instanceof Error && error.message === 'FORBIDDEN'
+          : error instanceof Error && (error.message === 'FORBIDDEN' || error.message === 'AUTH_REQUIRED')
             ? '게시글 저장은 관리자 권한이 필요합니다.'
             : error instanceof Error
               ? error.message

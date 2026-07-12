@@ -38,7 +38,7 @@ class AiAutoPostingServiceLoggingTest {
     );
 
     @Test
-    void usesNormalLengthHintForAutomaticGeneration() {
+    void usesCompactLengthHintForAutomaticGeneration() {
         AiPostTopicRepository topicRepository = mock(AiPostTopicRepository.class);
         AiPostRunRepository runRepository = mock(AiPostRunRepository.class);
         PostService postService = mock(PostService.class);
@@ -50,7 +50,7 @@ class AiAutoPostingServiceLoggingTest {
         when(properties.zone()).thenReturn("Asia/Seoul");
         when(runRepository.existsRunning()).thenReturn(false);
         when(topicRepository.findNextEnabledTopic()).thenReturn(Optional.of(topic));
-        when(runRepository.findRecentGeneratedTitles(topic, AiPostRunStatus.SUCCEEDED, 5)).thenReturn(List.of());
+        when(runRepository.findRecentGeneratedTitles(topic, AiPostRunStatus.SUCCEEDED, 2)).thenReturn(List.of());
         when(runRepository.save(any(AiPostRun.class))).thenAnswer(invocation -> invocation.getArgument(0));
         when(postRepository.existsBySlug(any())).thenReturn(false);
         when(postService.createPost(any())).thenReturn(new PostDetailResponse(
@@ -76,7 +76,8 @@ class AiAutoPostingServiceLoggingTest {
         service.executeManual();
 
         assertThat(capturedContext.get()).isNotNull();
-        assertThat(capturedContext.get().lengthHint()).isEqualTo("보통");
+        assertThat(capturedContext.get().lengthHint()).isEqualTo("간결하게");
+        verify(runRepository).findRecentGeneratedTitles(topic, AiPostRunStatus.SUCCEEDED, 2);
     }
 
     @Test
@@ -91,7 +92,7 @@ class AiAutoPostingServiceLoggingTest {
         when(properties.zone()).thenReturn("Asia/Seoul");
         when(runRepository.existsRunning()).thenReturn(false);
         when(topicRepository.findNextEnabledTopic()).thenReturn(Optional.of(topic));
-        when(runRepository.findRecentGeneratedTitles(topic, AiPostRunStatus.SUCCEEDED, 5)).thenReturn(List.of());
+        when(runRepository.findRecentGeneratedTitles(topic, AiPostRunStatus.SUCCEEDED, 2)).thenReturn(List.of());
         when(runRepository.save(any(AiPostRun.class))).thenAnswer(invocation -> {
             AiPostRun run = invocation.getArgument(0);
             if (run.getId() == null) {
@@ -141,7 +142,7 @@ class AiAutoPostingServiceLoggingTest {
         when(properties.zone()).thenReturn("Asia/Seoul");
         when(runRepository.existsRunning()).thenReturn(false);
         when(topicRepository.findNextEnabledTopic()).thenReturn(Optional.of(topic));
-        when(runRepository.findRecentGeneratedTitles(topic, AiPostRunStatus.SUCCEEDED, 5)).thenReturn(List.of());
+        when(runRepository.findRecentGeneratedTitles(topic, AiPostRunStatus.SUCCEEDED, 2)).thenReturn(List.of());
         when(runRepository.save(any(AiPostRun.class))).thenAnswer(invocation -> {
             AiPostRun run = invocation.getArgument(0);
             if (run.getId() == null) {
@@ -191,7 +192,7 @@ class AiAutoPostingServiceLoggingTest {
         when(runRepository.existsSucceededBetween(any(LocalDateTime.class), any(LocalDateTime.class))).thenReturn(false);
         when(runRepository.existsRunning()).thenReturn(false);
         when(topicRepository.findNextEnabledTopic()).thenReturn(Optional.of(topic));
-        when(runRepository.findRecentGeneratedTitles(topic, AiPostRunStatus.SUCCEEDED, 5)).thenReturn(List.of());
+        when(runRepository.findRecentGeneratedTitles(topic, AiPostRunStatus.SUCCEEDED, 2)).thenReturn(List.of());
         when(runRepository.save(any(AiPostRun.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
         AiAutoPostingService service = new AiAutoPostingService(

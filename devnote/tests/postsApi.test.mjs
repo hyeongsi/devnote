@@ -56,11 +56,8 @@ assert.deepEqual(calls, [
   {
     url: '/api/posts',
     options: {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
       credentials: 'include',
+      method: 'POST',
       body: JSON.stringify({
         slug: 'spring-security-practical-guide',
         categoryId: 1,
@@ -71,13 +68,16 @@ assert.deepEqual(calls, [
         contentMarkdown: '## Spring Security\n\nSecuring requests.',
         tags: ['Spring Security', 'Auth'],
       }),
+      headers: {
+        'Content-Type': 'application/json',
+      },
     },
   },
   {
     url: '/api/posts/spring-boot/delete-me',
     options: {
-      method: 'DELETE',
       credentials: 'include',
+      method: 'DELETE',
     },
   },
   {

@@ -7,6 +7,7 @@ import type {
   BlogPostSearchResult,
   PostCreateRequest,
 } from '../types';
+import { fetchAdmin } from './adminAuth';
 import { apiRequest } from './http';
 
 const POSTS_API_URL = '/api/posts';
@@ -47,11 +48,9 @@ export async function searchPosts(query: string): Promise<BlogPostSearchResult[]
 export async function createPost(request: PostCreateRequest): Promise<BlogPostDetail> {
   const post = await apiRequest<BlogPostDetailApiResponse, PostCreateRequest>(POSTS_API_URL, {
     method: 'POST',
-    withCredentials: true,
+    request: fetchAdmin,
     body: request,
     statusMessages: {
-      401: 'FORBIDDEN',
-      403: 'FORBIDDEN',
       409: 'SLUG_CONFLICT',
     },
     errorMessage: '게시글을 저장하지 못했습니다.',
@@ -65,10 +64,8 @@ export async function createPost(request: PostCreateRequest): Promise<BlogPostDe
 export async function deletePost(categorySlug: string, postSlug: string): Promise<void> {
   await apiRequest<void>(`${POSTS_API_URL}/${categorySlug}/${postSlug}`, {
     method: 'DELETE',
-    withCredentials: true,
+    request: fetchAdmin,
     statusMessages: {
-      401: 'FORBIDDEN',
-      403: 'FORBIDDEN',
       404: 'POST_NOT_FOUND',
     },
     errorMessage: '게시글을 삭제하지 못했습니다.',
