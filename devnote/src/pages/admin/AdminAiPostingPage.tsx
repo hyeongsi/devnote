@@ -35,6 +35,14 @@ import { Card } from '../../components/ui/Card';
 import { Input } from '../../components/ui/Input';
 import { Select } from '../../components/ui/Select';
 import { Textarea } from '../../components/ui/Textarea';
+import {
+  createNormalizedPostRequest,
+  createSlug,
+  initialDraft,
+  isPostRequestComplete,
+  parseTags,
+  thumbnailOptions,
+} from '../../features/aiPosting/aiPostingDraft';
 import { useFeedback } from '../../features/feedback/FeedbackContext';
 import { PostMarkdownRenderer } from '../../features/post/PostMarkdownRenderer';
 import type {
@@ -46,28 +54,6 @@ import type {
   BlogPost,
   PostCreateRequest,
 } from '../../types';
-
-const thumbnailOptions: Array<{ value: BlogPost['imageStyle']; label: string }> = [
-  { value: 'ai', label: 'AI' },
-  { value: 'laptop', label: 'Laptop' },
-  { value: 'docker', label: 'Docker' },
-  { value: 'code', label: 'Code' },
-  { value: 'chart', label: 'Chart' },
-  { value: 'security', label: 'Security' },
-  { value: 'data', label: 'Data' },
-  { value: 'monitor', label: 'Monitor' },
-];
-
-const initialDraft: PostCreateRequest = {
-  slug: '',
-  categoryId: 0,
-  title: '',
-  excerpt: '',
-  readTime: '',
-  thumbnailStyle: 'laptop',
-  contentMarkdown: '',
-  tags: [],
-};
 
 export function AdminAiPostingPage() {
   const navigate = useNavigate();
@@ -217,23 +203,14 @@ export function AdminAiPostingPage() {
   }
 
   async function handleSave() {
-    const tags = parseTags(tagText);
-    const request = {
-      ...draft,
-      slug: draft.slug.trim(),
-      title: draft.title.trim(),
-      excerpt: draft.excerpt.trim(),
-      readTime: draft.readTime.trim(),
-      contentMarkdown: draft.contentMarkdown.trim(),
-      tags,
-    };
+    const request = createNormalizedPostRequest(draft, tagText);
 
-    if (!request.slug || !request.categoryId || !request.title || !request.excerpt || !request.contentMarkdown) {
+    if (!isPostRequestComplete(request)) {
       showSaveValidationError('제목, 요약, 본문, slug, 카테고리는 반드시 입력해야 합니다.');
       return;
     }
 
-    if (tags.length === 0) {
+    if (request.tags.length === 0) {
       showSaveValidationError('태그를 하나 이상 입력해 주세요.');
       return;
     }
@@ -897,25 +874,4 @@ function loadAutomationData() {
     getAiPostingTopics(),
     getAiPostingRuns(),
   ]);
-}
-
-function parseTags(value: string) {
-  return value
-    .split(',')
-    .map((tag) => tag.trim())
-    .filter(Boolean)
-    .slice(0, 10);
-}
-
-function createSlug(title: string, fallback: string) {
-  const source = `${title} ${fallback}`;
-  const slug = source
-    .toLowerCase()
-    .replace(/[^a-z0-9\s-]/g, ' ')
-    .trim()
-    .replace(/\s+/g, '-')
-    .replace(/-+/g, '-')
-    .replace(/^-|-$/g, '');
-
-  return slug || `ai-post-${Date.now()}`;
 }

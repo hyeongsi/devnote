@@ -1,4 +1,5 @@
 import type { ErrorLogDetail, ErrorLogSearchParams, ErrorLogSummary } from '../types';
+import { apiRequest } from './http';
 
 const ERROR_LOGS_API_URL = '/api/admin/error-logs';
 
@@ -23,17 +24,11 @@ export async function getErrorLogDetail(id: number): Promise<ErrorLogDetail> {
 }
 
 async function request<T>(url: string): Promise<T> {
-  const response = await fetch(url, {
-    credentials: 'include',
+  return apiRequest<T>(url, {
+    withCredentials: true,
+    statusMessages: {
+      401: 'UNAUTHORIZED',
+    },
+    errorMessage: '에러 로그를 불러오지 못했습니다.',
   });
-
-  if (response.status === 401) {
-    throw new Error('UNAUTHORIZED');
-  }
-
-  if (!response.ok) {
-    throw new Error(`에러 로그를 불러오지 못했습니다. (${response.status})`);
-  }
-
-  return (await response.json()) as T;
 }

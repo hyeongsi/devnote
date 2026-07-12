@@ -4,17 +4,14 @@ import type {
   BlogCategory,
   BlogCategoryApiResponse,
 } from '../types';
+import { apiRequest } from './http';
 
 const CATEGORIES_API_URL = '/api/categories';
 
 export async function getBlogCategories(): Promise<BlogCategory[]> {
-  const response = await fetch(CATEGORIES_API_URL);
-
-  if (!response.ok) {
-    throw new Error(`카테고리 목록을 불러오지 못했습니다. (${response.status})`);
-  }
-
-  const categories = (await response.json()) as BlogCategoryApiResponse[];
+  const categories = await apiRequest<BlogCategoryApiResponse[]>(CATEGORIES_API_URL, {
+    errorMessage: '카테고리 목록을 불러오지 못했습니다.',
+  });
 
   return categories
     .map((category) => ({
@@ -30,19 +27,13 @@ export async function getBlogCategories(): Promise<BlogCategory[]> {
 }
 
 export async function getAdminCategories(): Promise<AdminCategoryRow[]> {
-  const response = await fetch(`${CATEGORIES_API_URL}/admin`, {
-    credentials: 'include',
+  const categories = await apiRequest<AdminCategoryApiResponse[]>(`${CATEGORIES_API_URL}/admin`, {
+    withCredentials: true,
+    statusMessages: {
+      401: 'UNAUTHORIZED',
+    },
+    errorMessage: '관리자 카테고리 목록을 불러오지 못했습니다.',
   });
-
-  if (response.status === 401) {
-    throw new Error('UNAUTHORIZED');
-  }
-
-  if (!response.ok) {
-    throw new Error(`관리자 카테고리 목록을 불러오지 못했습니다. (${response.status})`);
-  }
-
-  const categories = (await response.json()) as AdminCategoryApiResponse[];
 
   return categories
     .map((category) => ({
@@ -58,29 +49,33 @@ export async function getAdminCategories(): Promise<AdminCategoryRow[]> {
 }
 
 export async function saveAdminCategories(items: AdminCategoryRow[]): Promise<void> {
-  const response = await fetch(`${CATEGORIES_API_URL}/admin`, {
+  await apiRequest<void, AdminCategorySaveRequest[]>(`${CATEGORIES_API_URL}/admin`, {
     method: 'PUT',
-    headers: {
-      'Content-Type': 'application/json',
+    withCredentials: true,
+    body: mapCategoriesToSavePayload(items),
+    statusMessages: {
+      401: 'UNAUTHORIZED',
     },
-    credentials: 'include',
-    body: JSON.stringify(
-      items.map((item, index) => ({
-        id: item.id,
-        slug: item.slug,
-        name: item.name,
-        description: item.description,
-        visible: item.visible,
-        displayOrder: index + 1,
-      })),
-    ),
+    errorMessage: '카테고리 변경 사항을 저장하지 못했습니다.',
   });
+}
 
-  if (response.status === 401) {
-    throw new Error('UNAUTHORIZED');
-  }
+interface AdminCategorySaveRequest {
+  id?: number;
+  slug?: string;
+  name: string;
+  description: string;
+  visible: boolean;
+  displayOrder: number;
+}
 
-  if (!response.ok) {
-    throw new Error(`카테고리 변경 사항을 저장하지 못했습니다. (${response.status})`);
-  }
+function mapCategoriesToSavePayload(items: AdminCategoryRow[]): AdminCategorySaveRequest[] {
+  return items.map((item, index) => ({
+    id: item.id,
+    slug: item.slug,
+    name: item.name,
+    description: item.description,
+    visible: item.visible,
+    displayOrder: index + 1,
+  }));
 }

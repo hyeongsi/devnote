@@ -1,24 +1,8 @@
 import assert from 'node:assert/strict';
-import { mkdir, readFile, writeFile } from 'node:fs/promises';
-import { tmpdir } from 'node:os';
-import { join } from 'node:path';
 import { pathToFileURL } from 'node:url';
-import ts from 'typescript';
+import { transpileApiModule } from './transpileApiModule.mjs';
 
-const sourcePath = new URL('../src/api/dashboard.ts', import.meta.url);
-const source = await readFile(sourcePath, 'utf8');
-const transpiled = ts.transpileModule(source, {
-  compilerOptions: {
-    module: ts.ModuleKind.ES2022,
-    target: ts.ScriptTarget.ES2022,
-    verbatimModuleSyntax: true,
-  },
-});
-
-const outputDir = join(tmpdir(), 'devnote-dashboard-api-tests');
-const outputPath = join(outputDir, `dashboard-${Date.now()}.mjs`);
-await mkdir(outputDir, { recursive: true });
-await writeFile(outputPath, transpiled.outputText, 'utf8');
+const outputPath = await transpileApiModule(new URL('../src/api/dashboard.ts', import.meta.url), 'dashboard');
 
 const calls = [];
 globalThis.fetch = async (url, options) => {

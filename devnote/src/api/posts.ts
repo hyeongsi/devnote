@@ -7,32 +7,27 @@ import type {
   BlogPostSearchResult,
   PostCreateRequest,
 } from '../types';
+import { apiRequest } from './http';
 
 const POSTS_API_URL = '/api/posts';
 
 export async function getPosts(): Promise<BlogPost[]> {
-  const response = await fetch(POSTS_API_URL);
-
-  if (!response.ok) {
-    throw new Error(`게시글 목록을 불러오지 못했습니다. (${response.status})`);
-  }
-
-  const posts = (await response.json()) as BlogPostApiResponse[];
+  const posts = await apiRequest<BlogPostApiResponse[]>(POSTS_API_URL, {
+    errorMessage: '게시글 목록을 불러오지 못했습니다.',
+  });
   return posts.map(mapPostResponse);
 }
 
 export async function getPost(categorySlug: string, postSlug: string): Promise<BlogPostDetail> {
-  const response = await fetch(`${POSTS_API_URL}/${categorySlug}/${postSlug}`);
-
-  if (response.status === 404) {
-    throw new Error('POST_NOT_FOUND');
-  }
-
-  if (!response.ok) {
-    throw new Error(`게시글 상세를 불러오지 못했습니다. (${response.status})`);
-  }
-
-  const post = (await response.json()) as BlogPostDetailApiResponse;
+  const post = await apiRequest<BlogPostDetailApiResponse>(
+    `${POSTS_API_URL}/${categorySlug}/${postSlug}`,
+    {
+      statusMessages: {
+        404: 'POST_NOT_FOUND',
+      },
+      errorMessage: '게시글 상세를 불러오지 못했습니다.',
+    },
+  );
   return {
     ...mapPostResponse(post),
     contentMarkdown: post.contentMarkdown,
@@ -40,39 +35,27 @@ export async function getPost(categorySlug: string, postSlug: string): Promise<B
 }
 
 export async function searchPosts(query: string): Promise<BlogPostSearchResult[]> {
-  const response = await fetch(`${POSTS_API_URL}/search?query=${encodeURIComponent(query)}`);
-
-  if (!response.ok) {
-    throw new Error(`게시글 검색 결과를 불러오지 못했습니다. (${response.status})`);
-  }
-
-  const posts = (await response.json()) as BlogPostSearchApiResponse[];
+  const posts = await apiRequest<BlogPostSearchApiResponse[]>(
+    `${POSTS_API_URL}/search?query=${encodeURIComponent(query)}`,
+    {
+      errorMessage: '게시글 검색 결과를 불러오지 못했습니다.',
+    },
+  );
   return posts.map(mapPostSearchResponse);
 }
 
 export async function createPost(request: PostCreateRequest): Promise<BlogPostDetail> {
-  const response = await fetch(POSTS_API_URL, {
+  const post = await apiRequest<BlogPostDetailApiResponse, PostCreateRequest>(POSTS_API_URL, {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
+    withCredentials: true,
+    body: request,
+    statusMessages: {
+      401: 'FORBIDDEN',
+      403: 'FORBIDDEN',
+      409: 'SLUG_CONFLICT',
     },
-    credentials: 'include',
-    body: JSON.stringify(request),
+    errorMessage: '게시글을 저장하지 못했습니다.',
   });
-
-  if (response.status === 401 || response.status === 403) {
-    throw new Error('FORBIDDEN');
-  }
-
-  if (response.status === 409) {
-    throw new Error('SLUG_CONFLICT');
-  }
-
-  if (!response.ok) {
-    throw new Error(`게시글을 저장하지 못했습니다. (${response.status})`);
-  }
-
-  const post = (await response.json()) as BlogPostDetailApiResponse;
   return {
     ...mapPostResponse(post),
     contentMarkdown: post.contentMarkdown,
@@ -80,22 +63,16 @@ export async function createPost(request: PostCreateRequest): Promise<BlogPostDe
 }
 
 export async function deletePost(categorySlug: string, postSlug: string): Promise<void> {
-  const response = await fetch(`${POSTS_API_URL}/${categorySlug}/${postSlug}`, {
+  await apiRequest<void>(`${POSTS_API_URL}/${categorySlug}/${postSlug}`, {
     method: 'DELETE',
-    credentials: 'include',
+    withCredentials: true,
+    statusMessages: {
+      401: 'FORBIDDEN',
+      403: 'FORBIDDEN',
+      404: 'POST_NOT_FOUND',
+    },
+    errorMessage: '게시글을 삭제하지 못했습니다.',
   });
-
-  if (response.status === 401 || response.status === 403) {
-    throw new Error('FORBIDDEN');
-  }
-
-  if (response.status === 404) {
-    throw new Error('POST_NOT_FOUND');
-  }
-
-  if (!response.ok) {
-    throw new Error(`게시글을 삭제하지 못했습니다. (${response.status})`);
-  }
 }
 
 function mapPostResponse(post: BlogPostApiResponse): BlogPost {

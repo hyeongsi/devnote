@@ -1,58 +1,44 @@
 import type { AuthLoginRequest, AuthUser } from '../types';
+import { apiRequest, isApiErrorWithStatus } from './http';
 
 const AUTH_API_URL = '/api/auth';
 export const AUTH_CHANGED_EVENT = 'devnote:auth-changed';
 
 export async function login(request: AuthLoginRequest): Promise<AuthUser> {
-  const response = await fetch(`${AUTH_API_URL}/login`, {
+  const user = await apiRequest<AuthUser, AuthLoginRequest>(`${AUTH_API_URL}/login`, {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
+    withCredentials: true,
+    body: request,
+    statusMessages: {
+      401: 'LOGIN_FAILED',
     },
-    credentials: 'include',
-    body: JSON.stringify(request),
+    errorMessage: '로그인에 실패했습니다.',
   });
-
-  if (response.status === 401) {
-    throw new Error('LOGIN_FAILED');
-  }
-
-  if (!response.ok) {
-    throw new Error(`로그인에 실패했습니다. (${response.status})`);
-  }
-
-  const user = (await response.json()) as AuthUser;
   notifyAuthChanged();
 
   return user;
 }
 
 export async function getCurrentUser(): Promise<AuthUser | null> {
-  const response = await fetch(`${AUTH_API_URL}/me`, {
-    credentials: 'include',
-  });
-
-  if (response.status === 401) {
-    return null;
+  try {
+    return await apiRequest<AuthUser>(`${AUTH_API_URL}/me`, {
+      withCredentials: true,
+      errorMessage: '인증 상태를 확인하지 못했습니다.',
+    });
+  } catch (error) {
+    if (isApiErrorWithStatus(error, 401)) {
+      return null;
+    }
+    throw error;
   }
-
-  if (!response.ok) {
-    throw new Error(`인증 상태를 확인하지 못했습니다. (${response.status})`);
-  }
-
-  return (await response.json()) as AuthUser;
 }
 
 export async function logout(): Promise<void> {
-  const response = await fetch(`${AUTH_API_URL}/logout`, {
+  await apiRequest<void>(`${AUTH_API_URL}/logout`, {
     method: 'POST',
-    credentials: 'include',
+    withCredentials: true,
+    errorMessage: '로그아웃에 실패했습니다.',
   });
-
-  if (!response.ok && response.status !== 204) {
-    throw new Error(`로그아웃에 실패했습니다. (${response.status})`);
-  }
-
   notifyAuthChanged();
 }
 

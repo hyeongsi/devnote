@@ -70,11 +70,11 @@ export function mapMenusToSavePayload(items: AdminMenuRow[]) {
     siblingIndexes.set(siblingKey, displayOrder);
 
     return {
-    id: item.id,
-    name: item.name,
-    path: item.path,
-    state: item.state,
-    visible: item.visible,
+      id: item.id,
+      name: item.name,
+      path: item.path,
+      state: item.state,
+      visible: item.visible,
       displayOrder,
       area,
       parentId: item.parentId ?? ROOT_PARENT_ID,
