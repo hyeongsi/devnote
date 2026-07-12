@@ -6,6 +6,7 @@ import com.querydsl.core.types.dsl.Expressions;
 import com.querydsl.jpa.impl.JPAQueryFactory;
 import org.springframework.stereotype.Repository;
 
+import java.sql.Date;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
@@ -44,8 +45,8 @@ public class DashboardQueryRepositoryImpl implements DashboardQueryRepository {
 
     @Override
     public List<DashboardTrafficResponse> fetchTraffic(LocalDateTime start, LocalDateTime end) {
-        DateExpression<LocalDate> viewedDate =
-                Expressions.dateTemplate(LocalDate.class, "date({0})", postView.viewedAt);
+        DateExpression<Date> viewedDate =
+                Expressions.dateTemplate(Date.class, "date({0})", postView.viewedAt);
 
         return queryFactory
                 .select(viewedDate, postView.count())
@@ -121,12 +122,22 @@ public class DashboardQueryRepositoryImpl implements DashboardQueryRepository {
 
     private DashboardTrafficResponse toTraffic(
             Tuple tuple,
-            DateExpression<LocalDate> viewedDate
+            DateExpression<Date> viewedDate
     ) {
         return new DashboardTrafficResponse(
-                tuple.get(viewedDate),
+                toLocalDate(tuple.get(0, Object.class)),
                 value(tuple.get(postView.count()))
         );
+    }
+
+    private LocalDate toLocalDate(Object value) {
+        if (value instanceof LocalDate date) {
+            return date;
+        }
+        if (value instanceof Date date) {
+            return date.toLocalDate();
+        }
+        throw new IllegalArgumentException("Unsupported dashboard traffic date type: " + value.getClass().getName());
     }
 
     private long value(Long value) {
