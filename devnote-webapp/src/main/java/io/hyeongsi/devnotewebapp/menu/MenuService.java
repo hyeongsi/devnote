@@ -44,62 +44,19 @@ public class MenuService {
     @Transactional
     public void saveAdminMenus(List<AdminMenuSaveRequest> requests) {
         List<Menu> existingMenus = menuRepository.findAll();
-        Map<Long, Menu> existingMenuMap = new HashMap<>();
+        Map<Long, Menu> menusById = mapById(existingMenus);
 
-        for (Menu menu : existingMenus) {
-            existingMenuMap.put(menu.getId(), menu);
-        }
-
-        validateParentAreas(requests, existingMenuMap);
+        validateParentAreas(requests, menusById);
 
         Set<Long> retainedIds = new HashSet<>();
         Long rootId = findRootId(existingMenus);
-
-        for (Menu menu : existingMenus) {
-            if (Objects.equals(menu.getId(), rootId) || Objects.equals(menu.getParentId(), rootId)) {
-                retainedIds.add(menu.getId());
-            }
-        }
+        retainSystemMenus(existingMenus, rootId, retainedIds);
 
         for (AdminMenuSaveRequest request : requests) {
-            if (request.id() == null) {
-                menuRepository.save(new Menu(
-                        request.name(),
-                        request.path(),
-                        request.state(),
-                        request.visible(),
-                        request.displayOrder(),
-                        normalizeAreaForSave(request.area()),
-                        request.parentId()
-                ));
-                continue;
-            }
-
-            Menu menu = existingMenuMap.get(request.id());
-
-            if (menu == null) {
-                continue;
-            }
-
-            menu.updateAdminDetails(
-                    request.name(),
-                    request.path(),
-                    request.state(),
-                    request.visible(),
-                    request.displayOrder(),
-                    normalizeAreaForSave(request.area()),
-                    request.parentId()
-            );
-            retainedIds.add(menu.getId());
+            applyAdminSaveRequest(request, menusById, retainedIds);
         }
 
-        List<Menu> menusToDelete = existingMenus.stream()
-                .filter(menu -> !retainedIds.contains(menu.getId()))
-                .toList();
-
-        if (!menusToDelete.isEmpty()) {
-            menuRepository.deleteAll(menusToDelete);
-        }
+        deleteRemovedMenus(existingMenus, retainedIds);
     }
 
     private List<AdminMenuResponse> getVisibleAreaChildren(String area) {
@@ -173,6 +130,77 @@ public class MenuService {
                 menu.getParentId(),
                 depth
         );
+    }
+
+    private Map<Long, Menu> mapById(List<Menu> menus) {
+        Map<Long, Menu> menusById = new HashMap<>();
+
+        for (Menu menu : menus) {
+            menusById.put(menu.getId(), menu);
+        }
+
+        return menusById;
+    }
+
+    private void retainSystemMenus(List<Menu> existingMenus, Long rootId, Set<Long> retainedIds) {
+        for (Menu menu : existingMenus) {
+            if (Objects.equals(menu.getId(), rootId) || Objects.equals(menu.getParentId(), rootId)) {
+                retainedIds.add(menu.getId());
+            }
+        }
+    }
+
+    private void applyAdminSaveRequest(
+            AdminMenuSaveRequest request,
+            Map<Long, Menu> menusById,
+            Set<Long> retainedIds
+    ) {
+        if (request.id() == null) {
+            createMenu(request);
+            return;
+        }
+
+        Menu menu = menusById.get(request.id());
+        if (menu == null) {
+            return;
+        }
+
+        updateMenu(menu, request);
+        retainedIds.add(menu.getId());
+    }
+
+    private void createMenu(AdminMenuSaveRequest request) {
+        menuRepository.save(new Menu(
+                request.name(),
+                request.path(),
+                request.state(),
+                request.visible(),
+                request.displayOrder(),
+                normalizeAreaForSave(request.area()),
+                request.parentId()
+        ));
+    }
+
+    private void updateMenu(Menu menu, AdminMenuSaveRequest request) {
+        menu.updateAdminDetails(
+                request.name(),
+                request.path(),
+                request.state(),
+                request.visible(),
+                request.displayOrder(),
+                normalizeAreaForSave(request.area()),
+                request.parentId()
+        );
+    }
+
+    private void deleteRemovedMenus(List<Menu> existingMenus, Set<Long> retainedIds) {
+        List<Menu> menusToDelete = existingMenus.stream()
+                .filter(menu -> !retainedIds.contains(menu.getId()))
+                .toList();
+
+        if (!menusToDelete.isEmpty()) {
+            menuRepository.deleteAll(menusToDelete);
+        }
     }
 
     private void validateParentAreas(List<AdminMenuSaveRequest> requests, Map<Long, Menu> existingMenuMap) {

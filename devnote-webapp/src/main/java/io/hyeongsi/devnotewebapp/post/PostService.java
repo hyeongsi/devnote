@@ -13,11 +13,9 @@ import org.springframework.web.server.ResponseStatusException;
 import java.time.LocalDate;
 import java.time.Clock;
 import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
 import java.util.Locale;
 import java.util.List;
 
-import static org.springframework.http.HttpStatus.BAD_REQUEST;
 import static org.springframework.http.HttpStatus.CONFLICT;
 import static org.springframework.http.HttpStatus.NOT_FOUND;
 
@@ -25,13 +23,13 @@ import static org.springframework.http.HttpStatus.NOT_FOUND;
 @Transactional(readOnly = true)
 public class PostService {
 
-    private static final DateTimeFormatter DISPLAY_DATE_FORMAT = DateTimeFormatter.ofPattern("yyyy.MM.dd");
-
     private final PostRepository postRepository;
     private final CategoryRepository categoryRepository;
     private final CommentRepository commentRepository;
     private final PostLikeRepository postLikeRepository;
     private final PostViewRepository postViewRepository;
+    private final PostCreateRequestValidator requestValidator;
+    private final PostResponseMapper responseMapper;
     private final Clock clock;
 
     public PostService(
@@ -40,6 +38,8 @@ public class PostService {
             CommentRepository commentRepository,
             PostLikeRepository postLikeRepository,
             PostViewRepository postViewRepository,
+            PostCreateRequestValidator requestValidator,
+            PostResponseMapper responseMapper,
             Clock clock
     ) {
         this.postRepository = postRepository;
@@ -47,12 +47,14 @@ public class PostService {
         this.commentRepository = commentRepository;
         this.postLikeRepository = postLikeRepository;
         this.postViewRepository = postViewRepository;
+        this.requestValidator = requestValidator;
+        this.responseMapper = responseMapper;
         this.clock = clock;
     }
 
     public List<PostResponse> getPosts() {
         return postRepository.findPostList().stream()
-                .map(this::toSummaryResponse)
+                .map(responseMapper::toSummaryResponse)
                 .toList();
     }
 
@@ -67,7 +69,7 @@ public class PostService {
         post.incrementViewCount();
         postViewRepository.save(new PostView(post, LocalDateTime.now(clock)));
 
-        return toDetailResponse(post);
+        return responseMapper.toDetailResponse(post);
     }
 
     public List<PostSearchResponse> searchPosts(String query) {
@@ -79,7 +81,7 @@ public class PostService {
         return postRepository.findPostList().stream()
                 .filter(post -> matches(post, normalizedQuery))
                 .limit(8)
-                .map(post -> toSearchResponse(post, normalizedQuery))
+                .map(post -> responseMapper.toSearchResponse(post, normalizedQuery))
                 .toList();
     }
 
@@ -99,7 +101,7 @@ public class PostService {
 
     @Transactional
     public PostDetailResponse createPost(PostCreateRequest request) {
-        validateCreateRequest(request);
+        requestValidator.validate(request);
 
         if (postRepository.existsBySlug(request.slug())) {
             throw new ResponseStatusException(CONFLICT, "Post slug already exists: " + request.slug());
@@ -121,51 +123,10 @@ public class PostService {
                 0,
                 request.thumbnailStyle().trim(),
                 request.contentMarkdown().trim(),
-                request.tags().stream()
-                        .map(String::trim)
-                        .filter(tag -> !tag.isBlank())
-                        .limit(10)
-                        .toList()
+                requestValidator.normalizeTags(request.tags())
         );
 
-        return toDetailResponse(postRepository.save(post));
-    }
-
-    private void validateCreateRequest(PostCreateRequest request) {
-        if (request == null) {
-            throw new ResponseStatusException(BAD_REQUEST, "Post request is required");
-        }
-        if (isBlank(request.slug())) {
-            throw new ResponseStatusException(BAD_REQUEST, "Post slug is required");
-        }
-        if (request.categoryId() == null) {
-            throw new ResponseStatusException(BAD_REQUEST, "Category id is required");
-        }
-        if (isBlank(request.title())) {
-            throw new ResponseStatusException(BAD_REQUEST, "Post title is required");
-        }
-        if (isBlank(request.excerpt())) {
-            throw new ResponseStatusException(BAD_REQUEST, "Post excerpt is required");
-        }
-        if (isBlank(request.readTime())) {
-            throw new ResponseStatusException(BAD_REQUEST, "Read time is required");
-        }
-        if (isBlank(request.thumbnailStyle())) {
-            throw new ResponseStatusException(BAD_REQUEST, "Thumbnail style is required");
-        }
-        if (isBlank(request.contentMarkdown())) {
-            throw new ResponseStatusException(BAD_REQUEST, "Content markdown is required");
-        }
-        if (request.tags() == null || request.tags().stream().map(String::trim).filter(tag -> !tag.isBlank()).toList().isEmpty()) {
-            throw new ResponseStatusException(BAD_REQUEST, "At least one tag is required");
-        }
-        if (request.tags().size() > 10) {
-            throw new ResponseStatusException(BAD_REQUEST, "Tags cannot exceed 10 items");
-        }
-    }
-
-    private boolean isBlank(String value) {
-        return value == null || value.isBlank();
+        return responseMapper.toDetailResponse(postRepository.save(post));
     }
 
     private boolean matches(Post post, String normalizedQuery) {
@@ -181,73 +142,4 @@ public class PostService {
         return value == null ? "" : value.toLowerCase(Locale.ROOT).trim();
     }
 
-    private PostResponse toSummaryResponse(Post post) {
-        return new PostResponse(
-                post.getId(),
-                post.getSlug(),
-                post.getCategoryName(),
-                post.getCategorySlug(),
-                post.getTitle(),
-                post.getExcerpt(),
-                post.getPublishedAt().format(DISPLAY_DATE_FORMAT),
-                post.getReadTime(),
-                post.getViewCount(),
-                post.getTags(),
-                post.getThumbnailStyle()
-        );
-    }
-
-    private PostSearchResponse toSearchResponse(Post post, String normalizedQuery) {
-        return new PostSearchResponse(
-                post.getId(),
-                post.getSlug(),
-                post.getCategoryName(),
-                post.getCategorySlug(),
-                post.getTitle(),
-                post.getExcerpt(),
-                post.getPublishedAt().format(DISPLAY_DATE_FORMAT),
-                findMatchedText(post, normalizedQuery)
-        );
-    }
-
-    private String findMatchedText(Post post, String normalizedQuery) {
-        List<String> candidates = List.of(
-                post.getContentMarkdown(),
-                post.getExcerpt(),
-                post.getTitle(),
-                post.getCategoryName(),
-                String.join(", ", post.getTags())
-        );
-
-        return candidates.stream()
-                .filter(value -> normalize(value).contains(normalizedQuery))
-                .findFirst()
-                .map(this::toSnippet)
-                .orElse(post.getExcerpt());
-    }
-
-    private String toSnippet(String value) {
-        String compact = value.replaceAll("\\s+", " ").trim();
-        if (compact.length() <= 140) {
-            return compact;
-        }
-        return compact.substring(0, 140).trim() + "...";
-    }
-
-    private PostDetailResponse toDetailResponse(Post post) {
-        return new PostDetailResponse(
-                post.getId(),
-                post.getSlug(),
-                post.getCategoryName(),
-                post.getCategorySlug(),
-                post.getTitle(),
-                post.getExcerpt(),
-                post.getPublishedAt().format(DISPLAY_DATE_FORMAT),
-                post.getReadTime(),
-                post.getViewCount(),
-                post.getTags(),
-                post.getThumbnailStyle(),
-                post.getContentMarkdown()
-        );
-    }
 }
