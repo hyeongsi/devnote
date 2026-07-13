@@ -102,11 +102,11 @@ SET name = '게시글 관리', path = '/admin/posts', state = '', visible = TRUE
 WHERE id = 5;
 
 UPDATE menus
-SET name = '카테고리 관리', path = '/admin/categories', state = '', visible = TRUE, display_order = 3, area = 'ADMIN', parent_id = 2
+SET name = '카테고리 관리', path = '/admin/categories', state = '', visible = TRUE, display_order = 4, area = 'ADMIN', parent_id = 2
 WHERE id = 6;
 
 UPDATE menus
-SET name = '메뉴 관리', path = '/admin/menus', state = '', visible = TRUE, display_order = 4, area = 'ADMIN', parent_id = 2
+SET name = '메뉴 관리', path = '/admin/menus', state = '', visible = TRUE, display_order = 5, area = 'ADMIN', parent_id = 2
 WHERE id = 7;
 
 INSERT INTO menus (
@@ -120,8 +120,9 @@ INSERT INTO menus (
     parent_id
 )
 VALUES
-    (8, 'AI 자동 포스팅', '/admin/ai-posting', '', TRUE, 5, 'ADMIN', 2),
-    (14, '에러 로그', '/admin/error-logs', '', TRUE, 6, 'ADMIN', 2),
+    (15, '댓글 관리', '/admin/comments', '', TRUE, 3, 'ADMIN', 2),
+    (8, 'AI 자동 포스팅', '/admin/ai-posting', '', TRUE, 6, 'ADMIN', 2),
+    (14, '에러 로그', '/admin/error-logs', '', TRUE, 7, 'ADMIN', 2),
     (9, '홈', '/', '', TRUE, 1, 'HEADER', 3),
     (10, '블로그', '/posts', '', TRUE, 2, 'HEADER', 3),
     (11, '프로젝트', '/projects', '', FALSE, 3, 'HEADER', 3),
@@ -280,11 +281,11 @@ VALUES
     (4, 2, DATEADD('DAY', -5, CURRENT_TIMESTAMP)),
     (5, 3, DATEADD('DAY', -8, CURRENT_TIMESTAMP));
 
-INSERT INTO comments (id, post_id, content, created_at)
+INSERT INTO comments (id, post_id, author_name, content, password_hash, visible, created_at, updated_at)
 VALUES
-    (1, 1, '예외 처리 구조를 이해하는 데 도움이 됐습니다.', DATEADD('DAY', -1, CURRENT_TIMESTAMP)),
-    (2, 2, 'JPA 조회 전략 설명이 유용합니다.', DATEADD('DAY', -4, CURRENT_TIMESTAMP)),
-    (3, 3, 'Docker 개발 환경에 적용해보겠습니다.', DATEADD('DAY', -9, CURRENT_TIMESTAMP));
+    (1, 1, '방문자', '예외 처리 구조를 이해하는 데 도움이 됐습니다.', '$2a$10$Vmm0E8CReUgmfTDSxjbKU.EtLBTQoH0btmAFw02r.rsw00PGHxL7O', true, DATEADD('DAY', -1, CURRENT_TIMESTAMP), DATEADD('DAY', -1, CURRENT_TIMESTAMP)),
+    (2, 2, 'JPA 독자', 'JPA 조회 전략 설명이 유용합니다.', '$2a$10$Vmm0E8CReUgmfTDSxjbKU.EtLBTQoH0btmAFw02r.rsw00PGHxL7O', true, DATEADD('DAY', -4, CURRENT_TIMESTAMP), DATEADD('DAY', -4, CURRENT_TIMESTAMP)),
+    (3, 3, '도커 입문자', 'Docker 개발 환경에 적용해보겠습니다.', '$2a$10$Vmm0E8CReUgmfTDSxjbKU.EtLBTQoH0btmAFw02r.rsw00PGHxL7O', true, DATEADD('DAY', -9, CURRENT_TIMESTAMP), DATEADD('DAY', -9, CURRENT_TIMESTAMP));
 
 INSERT INTO subscribers (id, email, subscribed_at)
 VALUES

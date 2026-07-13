@@ -11,6 +11,7 @@ import { PostDetailPage } from './pages/PostDetailPage';
 import { PostListPage } from './pages/PostListPage';
 import { AdminAiPostingPage } from './pages/admin/AdminAiPostingPage';
 import { AdminCategoriesPage } from './pages/admin/AdminCategoriesPage';
+import { AdminCommentsPage } from './pages/admin/AdminCommentsPage';
 import { AdminDashboardPage } from './pages/admin/AdminDashboardPage';
 import { AdminErrorLogDetailPage } from './pages/admin/AdminErrorLogDetailPage';
 import { AdminErrorLogsPage } from './pages/admin/AdminErrorLogsPage';
@@ -35,6 +36,7 @@ export default function App() {
         <Route element={<AdminShell />}>
           <Route index element={<AdminDashboardPage />} />
           <Route path="posts" element={<AdminPostsPage />} />
+          <Route path="comments" element={<AdminCommentsPage />} />
           <Route path="ai-posting" element={<AdminAiPostingPage />} />
           <Route path="error-logs" element={<AdminErrorLogsPage />} />
           <Route path="error-logs/:id" element={<AdminErrorLogDetailPage />} />

@@ -19,7 +19,7 @@ const fallbackAdminNavItems = [
   { label: '게시글 관리', to: '/admin/posts', icon: FileText, end: false },
   { label: '카테고리 관리', to: '/admin/categories', icon: FolderKanban, end: false },
   { label: '메뉴 관리', to: '/admin/menus', icon: ListTree, end: false },
-  { label: '댓글 관리', to: '/posts/spring-boot', icon: MessageCircle, end: false },
+  { label: '댓글 관리', to: '/admin/comments', icon: MessageCircle, end: false },
   { label: '사용자 관리', to: '/login', icon: UserRound, end: false },
   { label: 'AI 자동 포스팅', to: '/admin/ai-posting', icon: Bot, end: false },
   { label: '에러 로그', to: '/admin/error-logs', icon: TriangleAlert, end: false },
@@ -29,6 +29,7 @@ const fallbackAdminNavItems = [
 const adminIconByPath = [
   { match: '/admin/error-logs', icon: TriangleAlert },
   { match: '/admin/ai-posting', icon: Bot },
+  { match: '/admin/comments', icon: MessageCircle },
   { match: '/admin/posts', icon: FileText },
   { match: '/admin/categories', icon: FolderKanban },
   { match: '/admin/menus', icon: ListTree },
