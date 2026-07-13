@@ -42,10 +42,6 @@ export function AdminErrorLogsPage() {
   const filters = useMemo(() => filtersFromSearchParams(searchParams), [searchParams]);
 
   useEffect(() => {
-    setDraftFilters(filters);
-  }, [filters]);
-
-  useEffect(() => {
     let cancelled = false;
 
     async function loadLogs() {

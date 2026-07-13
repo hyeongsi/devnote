@@ -1,5 +1,6 @@
 import type { ErrorLogDetail, ErrorLogSearchParams, ErrorLogSummary } from '../types';
 import { fetchAdmin } from './adminAuth';
+import { apiRequest } from './http';
 
 const ERROR_LOGS_API_URL = '/api/admin/error-logs';
 
@@ -24,11 +25,8 @@ export async function getErrorLogDetail(id: number): Promise<ErrorLogDetail> {
 }
 
 async function request<T>(url: string): Promise<T> {
-  const response = await fetchAdmin(url);
-
-  if (!response.ok) {
-    throw new Error(`에러 로그를 불러오지 못했습니다. (${response.status})`);
-  }
-
-  return (await response.json()) as T;
+  return apiRequest<T>(url, {
+    request: fetchAdmin,
+    errorMessage: '에러 로그를 불러오지 못했습니다.',
+  });
 }
