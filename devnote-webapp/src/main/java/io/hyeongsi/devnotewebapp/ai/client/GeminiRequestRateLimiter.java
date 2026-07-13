@@ -26,6 +26,10 @@ final class GeminiRequestRateLimiter {
     }
 
     synchronized void acquire() {
+        acquire("UNKNOWN");
+    }
+
+    synchronized void acquire(String stage) {
         Instant now = clock.instant();
         LocalDate requestDate = LocalDate.ofInstant(now, SEOUL);
         if (!requestDate.equals(currentDate)) {
@@ -39,10 +43,23 @@ final class GeminiRequestRateLimiter {
         }
 
         if (dailyRequests >= MAX_REQUESTS_PER_DAY) {
-            throw new IllegalStateException("Gemini daily request limit exceeded: 20/20");
+            throw new IllegalStateException(
+                    "Gemini daily request limit exceeded: stage=" + stage
+                            + ", dailyUsed=" + dailyRequests + "/" + MAX_REQUESTS_PER_DAY
+            );
         }
         if (minuteRequests.size() >= MAX_REQUESTS_PER_MINUTE) {
-            throw new IllegalStateException("Gemini minute request limit exceeded: 5/5");
+            long retryAfterSeconds = Math.max(
+                    1,
+                    Duration.between(now, minuteRequests.getFirst().plus(MINUTE_WINDOW)).toSeconds()
+            );
+            throw new IllegalStateException(
+                    "Gemini minute request limit exceeded: stage=" + stage
+                            + ", minuteUsed=" + minuteRequests.size() + "/" + MAX_REQUESTS_PER_MINUTE
+                            + ", dailyUsed=" + dailyRequests + "/" + MAX_REQUESTS_PER_DAY
+                            + ", nextRequest=" + (dailyRequests + 1)
+                            + ", retryAfterSeconds=" + retryAfterSeconds
+            );
         }
 
         minuteRequests.addLast(now);
