@@ -167,8 +167,12 @@ public class GeminiAiPostClient implements AiPostClient {
 
     @Override
     public AiPostGenerateResponse generate(AiPostGenerationContext context) {
+        if (context.singleRequest()) {
+            return generateSinglePost(context);
+        }
+
         GeminiPostPlan plan = parse(
-                generateJson(buildPlanPrompt(context), planSchema()),
+                generateJson("POST_PLAN", buildPlanPrompt(context), planSchema()),
                 GeminiPostPlan.class,
                 "plan"
         );
@@ -189,7 +193,7 @@ public class GeminiAiPostClient implements AiPostClient {
 
         String content = assemble(plan, sections);
         GeminiPostReview review = parse(
-                generateJson(buildReviewPrompt(plan, sections, content), reviewSchema()),
+                generateJson("POST_REVIEW", buildReviewPrompt(plan, sections, content), reviewSchema()),
                 GeminiPostReview.class,
                 "review"
         );
@@ -198,7 +202,7 @@ public class GeminiAiPostClient implements AiPostClient {
             content = assemble(plan, sections);
             if (secondReviewEnabled) {
                 GeminiPostReview secondReview = parse(
-                        generateJson(buildReviewPrompt(plan, sections, content), reviewSchema()),
+                        generateJson("POST_REVIEW_SECOND", buildReviewPrompt(plan, sections, content), reviewSchema()),
                         GeminiPostReview.class,
                         "review"
                 );
@@ -222,14 +226,28 @@ public class GeminiAiPostClient implements AiPostClient {
         );
     }
 
-    private String generateJson(String prompt, Map<String, Object> schema) {
+    private AiPostGenerateResponse generateSinglePost(AiPostGenerationContext context) {
+        AiPostGenerateResponse response = parse(
+                generateJson("POST_DIRECT", buildDirectPostPrompt(context), postSchema()),
+                AiPostGenerateResponse.class,
+                "post"
+        );
+        if (response == null || response.title() == null || response.title().isBlank()
+                || response.summary() == null || response.summary().isBlank()
+                || response.content() == null || response.content().isBlank()) {
+            throw new IllegalStateException("Gemini returned an incomplete direct post");
+        }
+        return response;
+    }
+
+    private String generateJson(String stage, String prompt, Map<String, Object> schema) {
         GenerateContentConfig config = GenerateContentConfig.builder()
                 .temperature(0.4f)
                 .maxOutputTokens(Math.min(maxOutputTokens, 4_096))
                 .responseMimeType("application/json")
                 .responseJsonSchema(schema)
                 .build();
-        return requireStop(invoke(() -> gateway.generate(prompt, config)));
+        return requireStop(invoke(stage, () -> gateway.generate(prompt, config)));
     }
 
     private GeminiGeneratedUnit generateUnit(
@@ -271,7 +289,7 @@ public class GeminiAiPostClient implements AiPostClient {
                 .responseMimeType("text/plain")
                 .build();
         budget.consume("UNIT_GENERATION", contentKey);
-        GeminiModelResult result = invoke(() -> gateway.generate(
+        GeminiModelResult result = invoke("UNIT_GENERATION:" + contentKey, () -> gateway.generate(
                 buildUnitPrompt(context, plan, section, contentKey, heading, brief), config
         ));
         if ("STOP".equals(result.finishReason())) {
@@ -280,7 +298,7 @@ public class GeminiAiPostClient implements AiPostClient {
         if (!"MAX_TOKENS".equals(result.finishReason())) {
             requireStop(result);
         }
-        GeminiModelResult retryResult = invoke(() -> gateway.generate(
+        GeminiModelResult retryResult = invoke("UNIT_RETRY:" + contentKey, () -> gateway.generate(
                 buildMaxTokensRetryPrompt(context, plan, section, unit, contentKey), config
         ));
         if ("STOP".equals(retryResult.finishReason())) {
@@ -320,7 +338,7 @@ public class GeminiAiPostClient implements AiPostClient {
             String brief
     ) {
         return parse(
-                generateJson(buildSplitPlanPrompt(section, contentKey, heading, brief), splitPlanSchema()),
+                generateJson("UNIT_SPLIT_PLAN:" + contentKey, buildSplitPlanPrompt(section, contentKey, heading, brief), splitPlanSchema()),
                 GeminiUnitSplitPlan.class,
                 "unit split plan"
         );
@@ -428,7 +446,7 @@ public class GeminiAiPostClient implements AiPostClient {
                 .maxOutputTokens(maxOutputTokens)
                 .responseMimeType("text/plain")
                 .build();
-        GeminiModelResult result = invoke(() -> gateway.generate(
+        GeminiModelResult result = invoke("REPAIR:" + leaf.contentKey(), () -> gateway.generate(
                 buildRepairPrompt(context, plan, section, leaf, issues),
                 config
         ));
@@ -454,14 +472,23 @@ public class GeminiAiPostClient implements AiPostClient {
         );
     }
 
-    private GeminiModelResult invoke(Supplier<GeminiModelResult> request) {
+    private GeminiModelResult invoke(String stage, Supplier<GeminiModelResult> request) {
         Duration[] delays = {Duration.ofSeconds(5), Duration.ofSeconds(15)};
         for (int attempt = 0; ; attempt++) {
             try {
-                requestRateLimiter.acquire();
+                requestRateLimiter.acquire(stage);
                 return request.get();
             } catch (ApiException exception) {
                 if (exception.code() != 429 || attempt >= delays.length) {
+                    if (exception.code() == 429) {
+                        throw new IllegalStateException(
+                                "Gemini API rate limit exceeded after retries: stage=" + stage
+                                        + ", attempts=" + (attempt + 1)
+                                        + ", status=429"
+                                        + ", message=\"" + exception.getMessage() + "\"",
+                                exception
+                        );
+                    }
                     throw exception;
                 }
                 sleeper.accept(delays[attempt]);
@@ -657,6 +684,36 @@ public class GeminiAiPostClient implements AiPostClient {
                 , context.lengthHint()
                 , context.categorySlug()
                 , context.recentTitles().isEmpty() ? "none" : String.join(" | ", context.recentTitles())
+        );
+    }
+
+    String buildDirectPostPrompt(AiPostGenerationContext context) {
+        return """
+                POST_DIRECT
+                Write one complete Korean developer blog post in a single response.
+                Return JSON only. Keep the scope compact and practical so the whole post fits in one request.
+                The content field must be Korean Markdown.
+                Use 2-3 short sections at most.
+                Keep examples minimal and only include code when it is essential.
+                Avoid filler, repeated explanations, broad tangents, and unfinished code blocks.
+
+                Topic: %s
+                Direction: %s
+                Include keywords: %s
+                Exclude keywords: %s
+                Reader level: %s
+                Desired length: %s
+                Default category slug: %s
+                Recent titles on similar topics: %s
+                """.formatted(
+                context.topic(),
+                context.direction(),
+                String.join(", ", context.keywords()),
+                String.join(", ", context.excludedKeywords()),
+                context.level(),
+                context.lengthHint(),
+                context.categorySlug(),
+                context.recentTitles().isEmpty() ? "none" : String.join(" | ", context.recentTitles())
         );
     }
 
@@ -859,6 +916,31 @@ public class GeminiAiPostClient implements AiPostClient {
                 "required", List.of(
                         "title", "summary", "tags", "readTime", "recommendedTopics",
                         "recommendedCategorySlug", "thumbnailStyle", "sections"
+                )
+        );
+    }
+
+    private Map<String, Object> postSchema() {
+        Map<String, Object> string = Map.of("type", "string");
+        Map<String, Object> stringArray = Map.of("type", "array", "items", string);
+        return Map.of(
+                "type", "object",
+                "properties", Map.of(
+                        "title", string,
+                        "summary", string,
+                        "content", string,
+                        "tags", stringArray,
+                        "readTime", string,
+                        "recommendedTopics", stringArray,
+                        "recommendedCategorySlug", string,
+                        "thumbnailStyle", Map.of(
+                                "type", "string",
+                                "enum", List.of("ai", "laptop", "docker", "code", "chart", "security", "data", "monitor")
+                        )
+                ),
+                "required", List.of(
+                        "title", "summary", "content", "tags", "readTime",
+                        "recommendedTopics", "recommendedCategorySlug", "thumbnailStyle"
                 )
         );
     }
