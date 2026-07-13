@@ -2,6 +2,7 @@ import { ArrowLeft, Check, Clock3, Copy, Loader2, ServerCrash } from 'lucide-rea
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import { Link, useLocation, useParams } from 'react-router-dom';
 import { getErrorLogDetail } from '../../api/errorLogs';
+import { useFeedback } from '../../features/feedback/FeedbackContext';
 import type { ErrorLogDetail } from '../../types';
 
 export function AdminErrorLogDetailPage() {
@@ -179,17 +180,29 @@ function DetailRow({ label, value }: { label: string; value: string }) {
   );
 }
 
+type CopyStatus = 'idle' | 'copied' | 'failed';
+
 function LogCodeBlock({ code }: { code: string }) {
-  const [copied, setCopied] = useState(false);
+  const { showMessage } = useFeedback();
+  const [copyStatus, setCopyStatus] = useState<CopyStatus>('idle');
 
   async function handleCopy() {
-    try {
-      await navigator.clipboard.writeText(code);
-      setCopied(true);
-      window.setTimeout(() => setCopied(false), 1600);
-    } catch {
-      setCopied(false);
-    }
+    const copied = await copyText(code);
+    setCopyStatus(copied ? 'copied' : 'failed');
+    showMessage(
+      copied
+        ? {
+            title: '에러 로그 복사 완료',
+            description: '실제 에러 로그가 클립보드에 복사되었습니다.',
+            tone: 'success',
+          }
+        : {
+            title: '에러 로그 복사 실패',
+            description: '브라우저에서 클립보드 복사를 허용하지 않았습니다.',
+            tone: 'error',
+          },
+    );
+    window.setTimeout(() => setCopyStatus('idle'), 1600);
   }
 
   return (
@@ -212,14 +225,48 @@ function LogCodeBlock({ code }: { code: string }) {
           className="grid h-8 w-8 place-items-center rounded-md text-slate-400 transition hover:bg-white/10 hover:text-white"
           onClick={() => void handleCopy()}
         >
-          {copied ? <Check className="h-4 w-4 text-emerald-400" /> : <Copy className="h-4 w-4" />}
+          {copyStatus === 'copied' ? (
+            <Check className="h-4 w-4 text-emerald-400" />
+          ) : (
+            <Copy className={copyStatus === 'failed' ? 'h-4 w-4 text-red-400' : 'h-4 w-4'} />
+          )}
         </button>
       </div>
+      <span className="sr-only" aria-live="polite">
+        {copyStatus === 'copied' ? '복사됨' : copyStatus === 'failed' ? '복사 실패' : '복사'}
+      </span>
       <pre className="max-h-[720px] overflow-auto p-4 font-mono text-xs leading-6 text-gray-100">
         {code}
       </pre>
     </div>
   );
+}
+
+async function copyText(text: string) {
+  if (navigator.clipboard?.writeText) {
+    try {
+      await navigator.clipboard.writeText(text);
+      return true;
+    } catch {
+      // Fall back for browsers or deployment contexts that block Clipboard API.
+    }
+  }
+
+  const textarea = document.createElement('textarea');
+  textarea.value = text;
+  textarea.setAttribute('readonly', '');
+  textarea.style.position = 'fixed';
+  textarea.style.top = '-9999px';
+  textarea.style.left = '-9999px';
+  document.body.appendChild(textarea);
+  textarea.select();
+  textarea.setSelectionRange(0, textarea.value.length);
+
+  try {
+    return document.execCommand('copy');
+  } finally {
+    document.body.removeChild(textarea);
+  }
 }
 
 function formatDateTime(value: string) {
