@@ -22,6 +22,7 @@ import { TagList } from '../components/ui/TagList';
 import { getPostPath } from '../data/siteData';
 import { useFeedback } from '../features/feedback/FeedbackContext';
 import { PostMarkdownRenderer } from '../features/post/PostMarkdownRenderer';
+import { PostComments } from '../features/post/PostComments';
 import { extractMarkdownHeadings } from '../features/post/postMarkdown';
 import type { AuthUser, BlogPost, BlogPostDetail } from '../types';
 import { formatViewCount } from '../utils/postMetadata';
@@ -383,14 +384,21 @@ export function PostDetailPage() {
             <Heart className="h-4 w-4" />
             좋아요 128
           </Button>
-          <Button variant="outline" className="gap-2">
+          <a
+            href="#post-comments"
+            className="inline-flex items-center justify-center gap-2 rounded-[10px] border border-line bg-white px-5 py-3 text-sm font-bold text-gray-900 transition hover:-translate-y-0.5"
+          >
             <MessageSquareShare className="h-4 w-4" />
-            댓글 16
-          </Button>
+            댓글
+          </a>
           <Button variant="outline" className="gap-2">
             <Eye className="h-4 w-4" />
             공유하기
           </Button>
+        </div>
+
+        <div id="post-comments">
+          <PostComments categorySlug={post.categorySlug} postSlug={post.slug} />
         </div>
       </article>
 

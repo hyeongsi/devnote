@@ -33,6 +33,7 @@ public class SecurityConfig {
                         "/api/posts/**",
                         "/api/ai/posts/**",
                         "/api/admin/ai-posting/**",
+                        "/api/admin/comments/**",
                         "/api/categories/admin/**",
                         "/api/menus/admin/**",
                         "/api/auth/login",
