@@ -29,49 +29,73 @@ public class CategoryService {
 
     @Transactional
     public void saveAdminCategories(List<AdminCategorySaveRequest> requests) {
-      List<Category> existingCategories = categoryRepository.findAll();
-      Map<Long, Category> existingCategoryMap = new HashMap<>();
+        List<Category> existingCategories = categoryRepository.findAll();
+        Map<Long, Category> categoriesById = mapById(existingCategories);
+        Set<Long> retainedIds = new HashSet<>();
 
-      for (Category category : existingCategories) {
-          existingCategoryMap.put(category.getId(), category);
-      }
+        for (AdminCategorySaveRequest request : requests) {
+            applyAdminSaveRequest(request, categoriesById, retainedIds);
+        }
 
-      Set<Long> retainedIds = new HashSet<>();
+        deleteRemovedCategories(existingCategories, retainedIds);
+    }
 
-      for (AdminCategorySaveRequest request : requests) {
-          if (request.id() == null) {
-              categoryRepository.save(new Category(
-                      request.slug(),
-                      request.name(),
-                      request.description(),
-                      request.visible(),
-                      request.displayOrder()
-              ));
-              continue;
-          }
+    private Map<Long, Category> mapById(List<Category> categories) {
+        Map<Long, Category> categoriesById = new HashMap<>();
 
-          Category category = existingCategoryMap.get(request.id());
+        for (Category category : categories) {
+            categoriesById.put(category.getId(), category);
+        }
 
-          if (category == null) {
-              continue;
-          }
+        return categoriesById;
+    }
 
-          category.updateAdminDetails(
-                  request.slug(),
-                  request.name(),
-                  request.description(),
-                  request.visible(),
-                  request.displayOrder()
-          );
-          retainedIds.add(category.getId());
-      }
+    private void applyAdminSaveRequest(
+            AdminCategorySaveRequest request,
+            Map<Long, Category> categoriesById,
+            Set<Long> retainedIds
+    ) {
+        if (request.id() == null) {
+            createCategory(request);
+            return;
+        }
 
-      List<Category> categoriesToDelete = existingCategories.stream()
-              .filter(category -> !retainedIds.contains(category.getId()))
-              .toList();
+        Category category = categoriesById.get(request.id());
+        if (category == null) {
+            return;
+        }
 
-      if (!categoriesToDelete.isEmpty()) {
-          categoryRepository.deleteAll(categoriesToDelete);
-      }
+        updateCategory(category, request);
+        retainedIds.add(category.getId());
+    }
+
+    private void createCategory(AdminCategorySaveRequest request) {
+        categoryRepository.save(new Category(
+                request.slug(),
+                request.name(),
+                request.description(),
+                request.visible(),
+                request.displayOrder()
+        ));
+    }
+
+    private void updateCategory(Category category, AdminCategorySaveRequest request) {
+        category.updateAdminDetails(
+                request.slug(),
+                request.name(),
+                request.description(),
+                request.visible(),
+                request.displayOrder()
+        );
+    }
+
+    private void deleteRemovedCategories(List<Category> existingCategories, Set<Long> retainedIds) {
+        List<Category> categoriesToDelete = existingCategories.stream()
+                .filter(category -> !retainedIds.contains(category.getId()))
+                .toList();
+
+        if (!categoriesToDelete.isEmpty()) {
+            categoryRepository.deleteAll(categoriesToDelete);
+        }
     }
 }

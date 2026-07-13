@@ -36,13 +36,12 @@ class PostServiceTest {
         CommentRepository commentRepository = mock(CommentRepository.class);
         PostLikeRepository postLikeRepository = mock(PostLikeRepository.class);
         PostViewRepository postViewRepository = mock(PostViewRepository.class);
-        PostService postService = new PostService(
+        PostService postService = newPostService(
                 postRepository,
                 categoryRepository,
                 commentRepository,
                 postLikeRepository,
-                postViewRepository,
-                CLOCK
+                postViewRepository
         );
         Category spring = new Category("spring-boot", "Spring Boot", "Spring Boot posts", true, 1);
         Category infra = new Category("infra", "Infra", "Infra posts", true, 2);
@@ -100,13 +99,12 @@ class PostServiceTest {
         CommentRepository commentRepository = mock(CommentRepository.class);
         PostLikeRepository postLikeRepository = mock(PostLikeRepository.class);
         PostViewRepository postViewRepository = mock(PostViewRepository.class);
-        PostService postService = new PostService(
+        PostService postService = newPostService(
                 postRepository,
                 categoryRepository,
                 commentRepository,
                 postLikeRepository,
-                postViewRepository,
-                CLOCK
+                postViewRepository
         );
         Post post = mock(Post.class);
 
@@ -128,13 +126,12 @@ class PostServiceTest {
         CommentRepository commentRepository = mock(CommentRepository.class);
         PostLikeRepository postLikeRepository = mock(PostLikeRepository.class);
         PostViewRepository postViewRepository = mock(PostViewRepository.class);
-        PostService postService = new PostService(
+        PostService postService = newPostService(
                 postRepository,
                 categoryRepository,
                 commentRepository,
                 postLikeRepository,
-                postViewRepository,
-                CLOCK
+                postViewRepository
         );
 
         when(postRepository.findPostDetail("spring-boot", "missing"))
@@ -152,13 +149,12 @@ class PostServiceTest {
         CommentRepository commentRepository = mock(CommentRepository.class);
         PostLikeRepository postLikeRepository = mock(PostLikeRepository.class);
         PostViewRepository postViewRepository = mock(PostViewRepository.class);
-        PostService postService = new PostService(
+        PostService postService = newPostService(
                 postRepository,
                 categoryRepository,
                 commentRepository,
                 postLikeRepository,
-                postViewRepository,
-                CLOCK
+                postViewRepository
         );
         Category category = new Category("spring-boot", "Spring Boot", "Spring Boot posts", true, 1);
         PostCreateRequest request = new PostCreateRequest(
@@ -192,13 +188,12 @@ class PostServiceTest {
         CommentRepository commentRepository = mock(CommentRepository.class);
         PostLikeRepository postLikeRepository = mock(PostLikeRepository.class);
         PostViewRepository postViewRepository = mock(PostViewRepository.class);
-        PostService postService = new PostService(
+        PostService postService = newPostService(
                 postRepository,
                 categoryRepository,
                 commentRepository,
                 postLikeRepository,
-                postViewRepository,
-                CLOCK
+                postViewRepository
         );
         Post post = mock(Post.class);
 
@@ -221,5 +216,24 @@ class PostServiceTest {
         verify(post).incrementViewCount();
         verify(postViewRepository).save(any(PostView.class));
         assertThat(response.viewCount()).isEqualTo(11);
+    }
+
+    private PostService newPostService(
+            PostRepository postRepository,
+            CategoryRepository categoryRepository,
+            CommentRepository commentRepository,
+            PostLikeRepository postLikeRepository,
+            PostViewRepository postViewRepository
+    ) {
+        return new PostService(
+                postRepository,
+                categoryRepository,
+                commentRepository,
+                postLikeRepository,
+                postViewRepository,
+                new PostCreateRequestValidator(),
+                new PostResponseMapper(),
+                CLOCK
+        );
     }
 }

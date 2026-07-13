@@ -102,48 +102,10 @@ public class AiAutoPostingService {
                 topic.getName()
         );
         try {
-            List<String> recentTitles = runRepository.findRecentGeneratedTitles(
-                    topic,
-                    AiPostRunStatus.SUCCEEDED,
-                    2
-            );
-            AiPostGenerateResponse generated = aiPostClient.generate(new AiPostGenerationContext(
-                    topic.getName(),
-                    "실무 학습형 글",
-                    List.of(),
-                    List.of(),
-                    "초급도 이해할 수 있게",
-                    "간결하게",
-                    topic.getCategory().getSlug(),
-                    recentTitles
-            ));
+            AiPostGenerateResponse generated = aiPostClient.generate(createGenerationContext(topic));
             validate(generated);
-            String slug = uniqueSlug(generated.title(), topic.getName(), LocalDate.now(clock.withZone(zone)));
-            PostDetailResponse post = postService.createPost(new PostCreateRequest(
-                    slug,
-                    topic.getCategory().getId(),
-                    generated.title(),
-                    generated.summary(),
-                    generated.readTime(),
-                    generated.thumbnailStyle(),
-                    generated.content(),
-                    generated.tags()
-            ));
-            LocalDateTime completedAt = now(zone);
-            run.succeed(post.id(), generated.title(), completedAt);
-            topic.markSucceeded(completedAt);
-            topicRepository.save(topic);
-            AiPostRun saved = runRepository.save(run);
-            log.info(
-                    "ai-autopost run succeeded runType={} runId={} topicId={} postId={} title=\"{}\" durationMs={}",
-                    runType,
-                    saved.getId(),
-                    topic.getId(),
-                    post.id(),
-                    generated.title(),
-                    elapsedMillis(startedAt)
-            );
-            return saved;
+            PostDetailResponse post = postService.createPost(createPostRequest(topic, generated, zone));
+            return markSucceeded(runType, startedAt, run, topic, generated, post, zone);
         } catch (RuntimeException exception) {
             long durationMs = elapsedMillis(startedAt);
             run.fail(safeMessage(exception), now(zone));
@@ -160,6 +122,68 @@ public class AiAutoPostingService {
             );
             return saved;
         }
+    }
+
+    private AiPostGenerationContext createGenerationContext(AiPostTopic topic) {
+        List<String> recentTitles = runRepository.findRecentGeneratedTitles(
+                topic,
+                AiPostRunStatus.SUCCEEDED,
+                2
+        );
+        return new AiPostGenerationContext(
+                topic.getName(),
+                "실무 학습형 글",
+                List.of(),
+                List.of(),
+                "초급도 이해할 수 있게",
+                "간결하게",
+                topic.getCategory().getSlug(),
+                recentTitles
+        );
+    }
+
+    private PostCreateRequest createPostRequest(
+            AiPostTopic topic,
+            AiPostGenerateResponse generated,
+            ZoneId zone
+    ) {
+        String slug = uniqueSlug(generated.title(), topic.getName(), LocalDate.now(clock.withZone(zone)));
+        return new PostCreateRequest(
+                slug,
+                topic.getCategory().getId(),
+                generated.title(),
+                generated.summary(),
+                generated.readTime(),
+                generated.thumbnailStyle(),
+                generated.content(),
+                generated.tags()
+        );
+    }
+
+    private AiPostRun markSucceeded(
+            String runType,
+            long startedAt,
+            AiPostRun run,
+            AiPostTopic topic,
+            AiPostGenerateResponse generated,
+            PostDetailResponse post,
+            ZoneId zone
+    ) {
+        LocalDateTime completedAt = now(zone);
+        run.succeed(post.id(), generated.title(), completedAt);
+        topic.markSucceeded(completedAt);
+        topicRepository.save(topic);
+        AiPostRun saved = runRepository.save(run);
+        log.info(
+                "ai-autopost run succeeded runType={} runId={} topicId={} postId={} title=\"{}\" durationMs={}",
+                runType,
+                saved.getId(),
+                topic.getId(),
+                post.id(),
+                generated.title(),
+                elapsedMillis(startedAt)
+        );
+        return saved;
     }
 
     private LocalDateTime now(ZoneId zone) {
