@@ -209,18 +209,10 @@ function LogCodeBlock({ code }: { code: string }) {
           type="button"
           title="로그 복사"
           aria-label="로그 복사"
-<<<<<<< HEAD
-          className="inline-flex h-8 items-center gap-1.5 rounded-md px-2.5 text-xs font-bold text-slate-300 transition hover:bg-white/10 hover:text-white"
-          onClick={() => void handleCopy()}
-        >
-          {copied ? <Check className="h-4 w-4 text-emerald-400" /> : <Copy className="h-4 w-4" />}
-          <span>{copied ? '복사됨' : '복사'}</span>
-=======
           className="grid h-8 w-8 place-items-center rounded-md text-slate-400 transition hover:bg-white/10 hover:text-white"
           onClick={() => void handleCopy()}
         >
           {copied ? <Check className="h-4 w-4 text-emerald-400" /> : <Copy className="h-4 w-4" />}
->>>>>>> origin/main
         </button>
       </div>
       <pre className="max-h-[720px] overflow-auto p-4 font-mono text-xs leading-6 text-gray-100">
