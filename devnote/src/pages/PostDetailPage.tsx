@@ -12,7 +12,7 @@ import {
   ServerCog,
   Trash2,
 } from 'lucide-react';
-import { useEffect, useMemo, useState, type ReactNode } from 'react';
+import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { getCurrentUser } from '../api/auth';
 import { deletePost, getPost, getPosts } from '../api/posts';
@@ -72,8 +72,10 @@ export function PostDetailPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [isDeleting, setIsDeleting] = useState(false);
   const [isNotFound, setIsNotFound] = useState(false);
+  const [isCommentPanelOpen, setIsCommentPanelOpen] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [activeHeadingId, setActiveHeadingId] = useState('');
+  const commentPanelRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     if (!categorySlug || !postSlug) {
@@ -136,6 +138,10 @@ export function PostDetailPage() {
     return () => {
       isMounted = false;
     };
+  }, [categorySlug, postSlug]);
+
+  useEffect(() => {
+    setIsCommentPanelOpen(false);
   }, [categorySlug, postSlug]);
 
   useEffect(() => {
@@ -256,6 +262,17 @@ export function PostDetailPage() {
     } finally {
       setIsDeleting(false);
     }
+  }
+
+  function handleOpenComments() {
+    setIsCommentPanelOpen(true);
+
+    window.requestAnimationFrame(() => {
+      commentPanelRef.current?.scrollIntoView({
+        behavior: 'smooth',
+        block: 'start',
+      });
+    });
   }
 
   if (isLoading) {
@@ -384,21 +401,26 @@ export function PostDetailPage() {
             <Heart className="h-4 w-4" />
             좋아요 128
           </Button>
-          <a
-            href="#post-comments"
+          <button
+            type="button"
             className="inline-flex items-center justify-center gap-2 rounded-[10px] border border-line bg-white px-5 py-3 text-sm font-bold text-gray-900 transition hover:-translate-y-0.5"
+            aria-expanded={isCommentPanelOpen}
+            aria-controls="post-comments"
+            onClick={handleOpenComments}
           >
             <MessageSquareShare className="h-4 w-4" />
-            댓글
-          </a>
+            {isCommentPanelOpen ? '댓글 보기 중' : '댓글'}
+          </button>
           <Button variant="outline" className="gap-2">
             <Eye className="h-4 w-4" />
             공유하기
           </Button>
         </div>
 
-        <div id="post-comments">
-          <PostComments categorySlug={post.categorySlug} postSlug={post.slug} />
+        <div id="post-comments" ref={commentPanelRef} className="scroll-mt-24">
+          {isCommentPanelOpen ? (
+            <PostComments categorySlug={post.categorySlug} postSlug={post.slug} />
+          ) : null}
         </div>
       </article>
 
