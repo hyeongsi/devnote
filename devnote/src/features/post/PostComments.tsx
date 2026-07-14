@@ -14,6 +14,8 @@ import type { PostComment } from '../../types';
 interface PostCommentsProps {
   categorySlug: string;
   postSlug: string;
+  canManageComments?: boolean;
+  onCommentCountChange?: (commentCount: number) => void;
 }
 
 const initialForm = {
@@ -32,7 +34,12 @@ function formatCommentDate(value: string) {
   }).format(new Date(value));
 }
 
-export function PostComments({ categorySlug, postSlug }: PostCommentsProps) {
+export function PostComments({
+  categorySlug,
+  postSlug,
+  canManageComments = false,
+  onCommentCountChange,
+}: PostCommentsProps) {
   const { showMessage } = useFeedback();
   const [comments, setComments] = useState<PostComment[]>([]);
   const [form, setForm] = useState(initialForm);
@@ -75,6 +82,10 @@ export function PostComments({ categorySlug, postSlug }: PostCommentsProps) {
       cancelled = true;
     };
   }, [categorySlug, postSlug]);
+
+  useEffect(() => {
+    onCommentCountChange?.(comments.length);
+  }, [comments.length, onCommentCountChange]);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -137,7 +148,7 @@ export function PostComments({ categorySlug, postSlug }: PostCommentsProps) {
   }
 
   return (
-    <section className="mt-12 border-t border-line pt-10" aria-labelledby="post-comments-title">
+    <section className="mt-6 border-t border-line pt-8" aria-labelledby="post-comments-title">
       <div className="flex items-center justify-between gap-4">
         <div>
           <h2 id="post-comments-title" className="text-2xl font-black text-gray-950">
@@ -211,30 +222,34 @@ export function PostComments({ categorySlug, postSlug }: PostCommentsProps) {
                   <p className="font-bold text-gray-950">{comment.authorName}</p>
                   <p className="mt-1 text-xs text-muted">{formatCommentDate(comment.createdAt)}</p>
                 </div>
-                <div className="flex items-center gap-2">
-                  <Input
-                    type="password"
-                    value={deletePasswords[comment.id] ?? ''}
-                    placeholder="비밀번호"
-                    className="h-10 w-32 px-3 py-2"
-                    onChange={(event) =>
-                      setDeletePasswords((currentPasswords) => ({
-                        ...currentPasswords,
-                        [comment.id]: event.target.value,
-                      }))
-                    }
-                  />
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    disabled={deletingId === comment.id}
-                    onClick={() => void handleDelete(comment.id)}
-                  >
-                    <Trash2 className="mr-1 h-4 w-4" />
-                    삭제
-                  </Button>
-                </div>
+                {canManageComments ? (
+                  <div className="flex items-center gap-2">
+                    <Input
+                      type="password"
+                      value={deletePasswords[comment.id] ?? ''}
+                      placeholder="비밀번호"
+                      className="h-10 w-32 px-3 py-2"
+                      onChange={(event) =>
+                        setDeletePasswords((currentPasswords) => ({
+                          ...currentPasswords,
+                          [comment.id]: event.target.value,
+                        }))
+                      }
+                    />
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      aria-label="댓글 삭제"
+                      title="댓글 삭제"
+                      className="h-10 w-10 shrink-0 p-0 text-red-600 hover:border-red-200 hover:bg-red-50"
+                      disabled={deletingId === comment.id}
+                      onClick={() => void handleDelete(comment.id)}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
+                ) : null}
               </div>
               <p className="mt-4 whitespace-pre-wrap text-sm leading-7 text-gray-700">
                 {comment.content}

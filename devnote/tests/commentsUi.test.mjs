@@ -14,10 +14,15 @@ const commentsSource = await readFile(
 
 assert.match(appSource, /path="comments" element={<AdminCommentsPage \/>}/);
 assert.match(sidebarSource, /댓글 관리', to: '\/admin\/comments'/);
-assert.match(detailSource, /isCommentPanelOpen/);
-assert.match(detailSource, /handleOpenComments/);
-assert.match(detailSource, /aria-controls="post-comments"/);
-assert.match(detailSource, /<PostComments categorySlug={post\.categorySlug} postSlug={post\.slug} \/>/);
+assert.match(detailSource, /aria-expanded={isCommentPanelOpen}/);
+assert.match(detailSource, /onClick={handleToggleComments}/);
+assert.match(detailSource, /<span>{commentCount}<\/span>/);
+assert.match(detailSource, /id="post-comments"/);
+assert.match(detailSource, /hidden={!isCommentPanelOpen}/);
+assert.match(detailSource, /canManageComments={isAdmin}/);
+assert.match(detailSource, /onCommentCountChange={setCommentCount}/);
 assert.match(commentsSource, /createPostComment/);
 assert.match(commentsSource, /deletePostComment/);
+assert.match(commentsSource, /onCommentCountChange\?\.\(comments\.length\)/);
+assert.match(commentsSource, /canManageComments \? \(/);
 assert.match(commentsSource, /삭제용 비밀번호/);

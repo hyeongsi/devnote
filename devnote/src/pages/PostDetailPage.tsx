@@ -16,6 +16,7 @@ import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { getCurrentUser } from '../api/auth';
 import { deletePost, getPost, getPosts } from '../api/posts';
+import { isAdminUser } from '../components/auth/adminAccess';
 import { Button } from '../components/ui/Button';
 import { Card } from '../components/ui/Card';
 import { TagList } from '../components/ui/TagList';
@@ -71,11 +72,12 @@ export function PostDetailPage() {
   const [currentUser, setCurrentUser] = useState<AuthUser | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isDeleting, setIsDeleting] = useState(false);
-  const [isNotFound, setIsNotFound] = useState(false);
   const [isCommentPanelOpen, setIsCommentPanelOpen] = useState(false);
+  const [commentCount, setCommentCount] = useState(0);
+  const [isNotFound, setIsNotFound] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [activeHeadingId, setActiveHeadingId] = useState('');
-  const commentPanelRef = useRef<HTMLDivElement | null>(null);
+  const commentsSectionRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     if (!categorySlug || !postSlug) {
@@ -142,6 +144,7 @@ export function PostDetailPage() {
 
   useEffect(() => {
     setIsCommentPanelOpen(false);
+    setCommentCount(0);
   }, [categorySlug, postSlug]);
 
   useEffect(() => {
@@ -218,7 +221,8 @@ export function PostDetailPage() {
     };
   }, [headings]);
 
-  const canDeletePost = currentUser?.role === 'ROLE_ADMIN';
+  const isAdmin = isAdminUser(currentUser);
+  const canDeletePost = isAdmin;
 
   async function handleDeletePost() {
     if (!post || isDeleting) {
@@ -264,14 +268,17 @@ export function PostDetailPage() {
     }
   }
 
-  function handleOpenComments() {
-    setIsCommentPanelOpen(true);
+  function handleToggleComments() {
+    setIsCommentPanelOpen((currentValue) => {
+      const nextValue = !currentValue;
 
-    window.requestAnimationFrame(() => {
-      commentPanelRef.current?.scrollIntoView({
-        behavior: 'smooth',
-        block: 'start',
-      });
+      if (nextValue) {
+        window.setTimeout(() => {
+          commentsSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }, 0);
+      }
+
+      return nextValue;
     });
   }
 
@@ -401,26 +408,36 @@ export function PostDetailPage() {
             <Heart className="h-4 w-4" />
             좋아요 128
           </Button>
-          <button
+          <Button
             type="button"
-            className="inline-flex items-center justify-center gap-2 rounded-[10px] border border-line bg-white px-5 py-3 text-sm font-bold text-gray-900 transition hover:-translate-y-0.5"
+            variant="outline"
+            className="gap-2"
             aria-expanded={isCommentPanelOpen}
             aria-controls="post-comments"
-            onClick={handleOpenComments}
+            onClick={handleToggleComments}
           >
             <MessageSquareShare className="h-4 w-4" />
-            {isCommentPanelOpen ? '댓글 보기 중' : '댓글'}
-          </button>
+            댓글
+            <span>{commentCount}</span>
+          </Button>
           <Button variant="outline" className="gap-2">
             <Eye className="h-4 w-4" />
             공유하기
           </Button>
         </div>
 
-        <div id="post-comments" ref={commentPanelRef} className="scroll-mt-24">
-          {isCommentPanelOpen ? (
-            <PostComments categorySlug={post.categorySlug} postSlug={post.slug} />
-          ) : null}
+        <div
+          ref={commentsSectionRef}
+          id="post-comments"
+          className="scroll-mt-24"
+          hidden={!isCommentPanelOpen}
+        >
+          <PostComments
+            categorySlug={post.categorySlug}
+            postSlug={post.slug}
+            canManageComments={isAdmin}
+            onCommentCountChange={setCommentCount}
+          />
         </div>
       </article>
 
