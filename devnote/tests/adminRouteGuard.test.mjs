@@ -19,3 +19,7 @@ assert.match(appSource, /<Route path="categories" element={<AdminCategoriesPage 
 
 assert.match(requireAdminSource, /buildLoginRedirectPath\(location\.pathname, location\.search, location\.hash\)/);
 assert.match(requireAdminSource, /window\.addEventListener\(AUTH_REQUIRED_EVENT, handleAuthRequired\)/);
+assert.match(requireAdminSource, /useNavigate\(\)/);
+assert.match(requireAdminSource, /useFeedback\(\)/);
+assert.match(requireAdminSource, /navigate\('\/', \{ replace: true \}\)/);
+assert.match(requireAdminSource, /관리자 인증 확인 실패/);

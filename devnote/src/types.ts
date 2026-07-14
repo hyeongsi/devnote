@@ -189,6 +189,56 @@ export interface PostCreateRequest {
   tags: string[];
 }
 
+export interface PostComment {
+  id: number;
+  authorName: string;
+  content: string;
+  createdAt: string;
+}
+
+export interface CommentCreateRequest {
+  authorName: string;
+  password: string;
+  content: string;
+}
+
+export interface CommentDeleteRequest {
+  password: string;
+}
+
+export interface AdminComment extends PostComment {
+  postId: number;
+  postTitle: string;
+  categorySlug: string;
+  postSlug: string;
+  visible: boolean;
+}
+
+export interface PostComment {
+  id: number;
+  authorName: string;
+  content: string;
+  createdAt: string;
+}
+
+export interface CommentCreateRequest {
+  authorName: string;
+  password: string;
+  content: string;
+}
+
+export interface CommentDeleteRequest {
+  password: string;
+}
+
+export interface AdminComment extends PostComment {
+  postId: number;
+  postTitle: string;
+  categorySlug: string;
+  postSlug: string;
+  visible: boolean;
+}
+
 export interface RankedPost {
   rank: number;
   title: string;

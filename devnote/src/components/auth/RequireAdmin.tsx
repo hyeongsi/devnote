@@ -1,12 +1,19 @@
 import { useEffect, useState } from 'react';
-import { Navigate, Outlet, useLocation } from 'react-router-dom';
+import { Navigate, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { getCurrentUser } from '../../api/auth';
 import { AUTH_REQUIRED_EVENT, buildLoginRedirectPath } from '../../api/adminAuth';
+import { useFeedback } from '../../features/feedback/FeedbackContext';
 import type { AuthUser } from '../../types';
 import { isAdminUser } from './adminAccess';
 
+const ADMIN_AUTH_CHECK_ERROR_TITLE = '관리자 인증 확인 실패';
+const ADMIN_AUTH_CHECK_ERROR_FALLBACK_MESSAGE =
+  '관리자 인증 상태를 확인하지 못했습니다. 첫 화면으로 이동합니다.';
+
 export function RequireAdmin() {
   const location = useLocation();
+  const navigate = useNavigate();
+  const { showMessage } = useFeedback();
   const [status, setStatus] = useState<'loading' | 'authorized' | 'unauthorized'>('loading');
   const [user, setUser] = useState<AuthUser | null>(null);
 
@@ -29,11 +36,20 @@ export function RequireAdmin() {
 
         setUser(null);
         setStatus('unauthorized');
-      } catch {
-        if (!cancelled) {
-          setUser(null);
-          setStatus('unauthorized');
+      } catch (error) {
+        if (cancelled) {
+          return;
         }
+
+        setUser(null);
+        showMessage({
+          title: ADMIN_AUTH_CHECK_ERROR_TITLE,
+          description:
+            error instanceof Error ? error.message : ADMIN_AUTH_CHECK_ERROR_FALLBACK_MESSAGE,
+          tone: 'error',
+          durationMs: 5000,
+        });
+        navigate('/', { replace: true });
       }
     }
 
@@ -49,7 +65,7 @@ export function RequireAdmin() {
       cancelled = true;
       window.removeEventListener(AUTH_REQUIRED_EVENT, handleAuthRequired);
     };
-  }, []);
+  }, [navigate, showMessage]);
 
   if (status === 'loading') {
     return (

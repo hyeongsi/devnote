@@ -33,6 +33,7 @@ public class SecurityConfig {
                         "/api/posts/**",
                         "/api/ai/posts/**",
                         "/api/admin/ai-posting/**",
+                        "/api/admin/comments/**",
                         "/api/categories/admin/**",
                         "/api/menus/admin/**",
                         "/api/auth/login",
@@ -44,6 +45,7 @@ public class SecurityConfig {
                         .requestMatchers("/api/admin/**").hasRole("ADMIN")
                         .requestMatchers("/api/ai/posts/**").hasRole("ADMIN")
                         .requestMatchers(POST, "/api/posts").hasRole("ADMIN")
+                        .requestMatchers(DELETE, "/api/posts/*/*/comments/*").permitAll()
                         .requestMatchers(DELETE, "/api/posts/**").hasRole("ADMIN")
                         .requestMatchers("/api/posts/**").permitAll()
                         .requestMatchers("/api/menus/admin/**").hasRole("ADMIN")

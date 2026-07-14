@@ -22,10 +22,13 @@ class GeminiRequestRateLimiterTest {
             assertThatCode(limiter::acquire).doesNotThrowAnyException();
         }
 
-        assertThatThrownBy(limiter::acquire)
+        assertThatThrownBy(() -> limiter.acquire("POST_REVIEW"))
                 .isInstanceOf(IllegalStateException.class)
                 .hasMessageContaining("minute")
-                .hasMessageContaining("5/5");
+                .hasMessageContaining("stage=POST_REVIEW")
+                .hasMessageContaining("minuteUsed=5/5")
+                .hasMessageContaining("dailyUsed=5/20")
+                .hasMessageContaining("retryAfterSeconds=");
     }
 
     @Test

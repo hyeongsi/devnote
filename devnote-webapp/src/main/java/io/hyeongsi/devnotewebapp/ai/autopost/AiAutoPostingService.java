@@ -138,7 +138,8 @@ public class AiAutoPostingService {
                 "초급도 이해할 수 있게",
                 "간결하게",
                 topic.getCategory().getSlug(),
-                recentTitles
+                recentTitles,
+                true
         );
     }
 

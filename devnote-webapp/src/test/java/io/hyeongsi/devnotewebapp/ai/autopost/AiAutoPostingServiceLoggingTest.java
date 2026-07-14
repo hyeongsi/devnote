@@ -77,6 +77,7 @@ class AiAutoPostingServiceLoggingTest {
 
         assertThat(capturedContext.get()).isNotNull();
         assertThat(capturedContext.get().lengthHint()).isEqualTo("간결하게");
+        assertThat(capturedContext.get().singleRequest()).isTrue();
         verify(runRepository).findRecentGeneratedTitles(topic, AiPostRunStatus.SUCCEEDED, 2);
     }
 

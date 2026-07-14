@@ -1,5 +1,7 @@
 package io.hyeongsi.devnotewebapp.config;
 
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -16,6 +18,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 class AdminMutationSecurityTest {
+
+    private final ObjectMapper objectMapper = new ObjectMapper();
 
     @LocalServerPort
     private int port;
@@ -53,6 +57,47 @@ class AdminMutationSecurityTest {
     }
 
     @Test
+    void anonymousVisitorCanDeleteOwnCommentWithPassword() throws Exception {
+        String slug = "comment-delete-security-" + System.nanoTime();
+        HttpResponse<String> postResponse = sendJson("POST", "/api/posts", """
+                {
+                  "slug":"%s",
+                  "categoryId":1,
+                  "title":"Comment delete security test",
+                  "excerpt":"Visitor comment delete request",
+                  "readTime":"1 min",
+                  "thumbnailStyle":"code",
+                  "contentMarkdown":"Test body",
+                  "tags":["test"]
+                }
+                """.formatted(slug));
+        assertThat(postResponse.statusCode()).isEqualTo(201);
+
+        HttpClient anonymousClient = HttpClient.newHttpClient();
+        HttpResponse<String> createResponse = sendJson(
+                anonymousClient,
+                "POST",
+                "/api/posts/spring-boot/" + slug + "/comments",
+                """
+                {"authorName":"visitor","password":"1234","content":"delete me"}
+                """
+        );
+        assertThat(createResponse.statusCode()).isEqualTo(201);
+
+        JsonNode comment = objectMapper.readTree(createResponse.body());
+        HttpResponse<String> deleteResponse = sendJson(
+                anonymousClient,
+                "DELETE",
+                "/api/posts/spring-boot/" + slug + "/comments/" + comment.get("id").asLong(),
+                """
+                {"password":"1234"}
+                """
+        );
+
+        assertThat(deleteResponse.statusCode()).isEqualTo(204);
+    }
+
+    @Test
     void authenticatedAdminCanSaveCategories() throws Exception {
         String categories = get("/api/categories/admin").body();
 
@@ -76,6 +121,10 @@ class AdminMutationSecurityTest {
     }
 
     private HttpResponse<String> sendJson(String method, String path, String body) throws Exception {
+        return sendJson(client, method, path, body);
+    }
+
+    private HttpResponse<String> sendJson(HttpClient client, String method, String path, String body) throws Exception {
         HttpRequest request = HttpRequest.newBuilder(uri(path))
                 .header("Content-Type", "application/json")
                 .method(method, HttpRequest.BodyPublishers.ofString(body))

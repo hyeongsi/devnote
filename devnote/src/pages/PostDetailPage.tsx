@@ -12,16 +12,18 @@ import {
   ServerCog,
   Trash2,
 } from 'lucide-react';
-import { useEffect, useMemo, useState, type ReactNode } from 'react';
+import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { getCurrentUser } from '../api/auth';
 import { deletePost, getPost, getPosts } from '../api/posts';
+import { isAdminUser } from '../components/auth/adminAccess';
 import { Button } from '../components/ui/Button';
 import { Card } from '../components/ui/Card';
 import { TagList } from '../components/ui/TagList';
 import { getPostPath } from '../data/siteData';
 import { useFeedback } from '../features/feedback/FeedbackContext';
 import { PostMarkdownRenderer } from '../features/post/PostMarkdownRenderer';
+import { PostComments } from '../features/post/PostComments';
 import { extractMarkdownHeadings } from '../features/post/postMarkdown';
 import type { AuthUser, BlogPost, BlogPostDetail } from '../types';
 import { formatViewCount } from '../utils/postMetadata';
@@ -70,9 +72,12 @@ export function PostDetailPage() {
   const [currentUser, setCurrentUser] = useState<AuthUser | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [isCommentPanelOpen, setIsCommentPanelOpen] = useState(false);
+  const [commentCount, setCommentCount] = useState(0);
   const [isNotFound, setIsNotFound] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [activeHeadingId, setActiveHeadingId] = useState('');
+  const commentsSectionRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     if (!categorySlug || !postSlug) {
@@ -135,6 +140,11 @@ export function PostDetailPage() {
     return () => {
       isMounted = false;
     };
+  }, [categorySlug, postSlug]);
+
+  useEffect(() => {
+    setIsCommentPanelOpen(false);
+    setCommentCount(0);
   }, [categorySlug, postSlug]);
 
   useEffect(() => {
@@ -211,7 +221,8 @@ export function PostDetailPage() {
     };
   }, [headings]);
 
-  const canDeletePost = currentUser?.role === 'ROLE_ADMIN';
+  const isAdmin = isAdminUser(currentUser);
+  const canDeletePost = isAdmin;
 
   async function handleDeletePost() {
     if (!post || isDeleting) {
@@ -255,6 +266,20 @@ export function PostDetailPage() {
     } finally {
       setIsDeleting(false);
     }
+  }
+
+  function handleToggleComments() {
+    setIsCommentPanelOpen((currentValue) => {
+      const nextValue = !currentValue;
+
+      if (nextValue) {
+        window.setTimeout(() => {
+          commentsSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }, 0);
+      }
+
+      return nextValue;
+    });
   }
 
   if (isLoading) {
@@ -383,14 +408,36 @@ export function PostDetailPage() {
             <Heart className="h-4 w-4" />
             좋아요 128
           </Button>
-          <Button variant="outline" className="gap-2">
+          <Button
+            type="button"
+            variant="outline"
+            className="gap-2"
+            aria-expanded={isCommentPanelOpen}
+            aria-controls="post-comments"
+            onClick={handleToggleComments}
+          >
             <MessageSquareShare className="h-4 w-4" />
-            댓글 16
+            댓글
+            <span>{commentCount}</span>
           </Button>
           <Button variant="outline" className="gap-2">
             <Eye className="h-4 w-4" />
             공유하기
           </Button>
+        </div>
+
+        <div
+          ref={commentsSectionRef}
+          id="post-comments"
+          className="scroll-mt-24"
+          hidden={!isCommentPanelOpen}
+        >
+          <PostComments
+            categorySlug={post.categorySlug}
+            postSlug={post.slug}
+            canManageComments={isAdmin}
+            onCommentCountChange={setCommentCount}
+          />
         </div>
       </article>
 

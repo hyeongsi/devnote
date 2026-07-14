@@ -22,6 +22,18 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 class GeminiAiPostClientTest {
 
     @Test
+    void generatesDirectPostWithOneGeminiRequestWhenSingleRequestIsEnabled() {
+        FakeGateway gateway = new FakeGateway(result(directPostJson(), "STOP"));
+
+        AiPostGenerateResponse response = client(gateway).generate(singleRequestContext());
+
+        assertThat(response.title()).isEqualTo("Spring Boot operations");
+        assertThat(response.content()).contains("## Checklist");
+        assertThat(gateway.prompts).hasSize(1);
+        assertThat(gateway.prompts.getFirst()).startsWith("POST_DIRECT");
+    }
+
+    @Test
     void generatesChildUnitsInPlanOrderAndAssemblesTheirHeadings() {
         FakeGateway gateway = new FakeGateway(
                 result(planWithTwoUnitsJson(), "STOP"),
@@ -427,6 +439,35 @@ class GeminiAiPostClientTest {
                 "spring-boot",
                 List.of()
         );
+    }
+
+    private AiPostGenerationContext singleRequestContext() {
+        return new AiPostGenerationContext(
+                "Spring Boot operations",
+                "scheduled auto posting",
+                List.of(),
+                List.of(),
+                "beginner",
+                "concise",
+                "spring-boot",
+                List.of("Previous Spring post"),
+                true
+        );
+    }
+
+    private String directPostJson() {
+        return """
+                {
+                  "title": "Spring Boot operations",
+                  "summary": "A compact checklist for Spring Boot operations.",
+                  "content": "## Checklist\\n\\nKeep configuration small and observable.",
+                  "tags": ["Spring Boot"],
+                  "readTime": "3 min",
+                  "recommendedTopics": ["Actuator"],
+                  "recommendedCategorySlug": "spring-boot",
+                  "thumbnailStyle": "code"
+                }
+                """;
     }
 
     private String planJson() {
