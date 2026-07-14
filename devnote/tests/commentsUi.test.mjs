@@ -14,6 +14,9 @@ const commentsSource = await readFile(
 
 assert.match(appSource, /path="comments" element={<AdminCommentsPage \/>}/);
 assert.match(sidebarSource, /댓글 관리', to: '\/admin\/comments'/);
+assert.match(detailSource, /isCommentPanelOpen/);
+assert.match(detailSource, /handleOpenComments/);
+assert.match(detailSource, /aria-controls="post-comments"/);
 assert.match(detailSource, /<PostComments categorySlug={post\.categorySlug} postSlug={post\.slug} \/>/);
 assert.match(commentsSource, /createPostComment/);
 assert.match(commentsSource, /deletePostComment/);
