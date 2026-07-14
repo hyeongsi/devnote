@@ -1,33 +1,8 @@
 import assert from 'node:assert/strict';
-import { readFile, writeFile, mkdir } from 'node:fs/promises';
-import { tmpdir } from 'node:os';
-import { join } from 'node:path';
 import { pathToFileURL } from 'node:url';
-import ts from 'typescript';
+import { transpileApiModule } from './transpileApiModule.mjs';
 
-const sourcePath = new URL('../src/api/posts.ts', import.meta.url);
-const source = await readFile(sourcePath, 'utf8');
-const adminAuthSource = await readFile(new URL('../src/api/adminAuth.ts', import.meta.url), 'utf8');
-const transpiled = ts.transpileModule(source, {
-  compilerOptions: {
-    module: ts.ModuleKind.ES2022,
-    target: ts.ScriptTarget.ES2022,
-    verbatimModuleSyntax: true,
-  },
-});
-const adminAuthTranspiled = ts.transpileModule(adminAuthSource, {
-  compilerOptions: {
-    module: ts.ModuleKind.ES2022,
-    target: ts.ScriptTarget.ES2022,
-    verbatimModuleSyntax: true,
-  },
-});
-
-const outputDir = join(tmpdir(), 'devnote-post-tests');
-const outputPath = join(outputDir, `posts-${Date.now()}.mjs`);
-await mkdir(outputDir, { recursive: true });
-await writeFile(join(outputDir, 'adminAuth'), adminAuthTranspiled.outputText, 'utf8');
-await writeFile(outputPath, transpiled.outputText, 'utf8');
+const outputPath = await transpileApiModule(new URL('../src/api/posts.ts', import.meta.url), 'posts');
 
 const postResponse = {
   id: 10,
@@ -51,7 +26,7 @@ globalThis.fetch = async (url, options) => {
   const isSearch = String(url).includes('/search?query=');
   return {
     ok: true,
-    status: options?.method === 'POST' ? 201 : 204,
+    status: options?.method === 'POST' || isSearch ? 200 : 204,
     json: async () => (isSearch ? [postResponse] : postResponse),
   };
 };
@@ -81,11 +56,8 @@ assert.deepEqual(calls, [
   {
     url: '/api/posts',
     options: {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
       credentials: 'include',
+      method: 'POST',
       body: JSON.stringify({
         slug: 'spring-security-practical-guide',
         categoryId: 1,
@@ -96,13 +68,16 @@ assert.deepEqual(calls, [
         contentMarkdown: '## Spring Security\n\nSecuring requests.',
         tags: ['Spring Security', 'Auth'],
       }),
+      headers: {
+        'Content-Type': 'application/json',
+      },
     },
   },
   {
     url: '/api/posts/spring-boot/delete-me',
     options: {
-      method: 'DELETE',
       credentials: 'include',
+      method: 'DELETE',
     },
   },
   {

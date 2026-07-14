@@ -25,7 +25,7 @@ export async function fetchAdmin(input: RequestInfo | URL, init?: RequestInit) {
     }
 
     notifyAuthRequired();
-    throw new Error(AUTH_REQUIRED_ERROR);
+    throw new Error(AUTH_REQUIRED_ERROR, { cause: error });
   }
 }
 

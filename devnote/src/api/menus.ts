@@ -1,5 +1,6 @@
 import type { AdminMenuApiResponse, AdminMenuRow } from '../types';
 import { fetchAdmin } from './adminAuth';
+import { apiRequest } from './http';
 import {
   mapMenuResponseToAdminRow,
   mapMenusToAdminNavItems,
@@ -11,53 +12,38 @@ const MENUS_API_URL = '/api/menus';
 export const MENUS_CHANGED_EVENT = 'devnote:menus-changed';
 
 export async function getPublicMenus() {
-  const response = await fetch(MENUS_API_URL);
-
-  if (!response.ok) {
-    throw new Error(`메뉴 목록을 불러오지 못했습니다. (${response.status})`);
-  }
-
-  const menus = (await response.json()) as AdminMenuApiResponse[];
+  const menus = await apiRequest<AdminMenuApiResponse[]>(MENUS_API_URL, {
+    errorMessage: '메뉴 목록을 불러오지 못했습니다.',
+  });
 
   return mapMenusToPublicNavItems(menus.map(mapMenuResponseToAdminRow));
 }
 
 export async function getAdminMenus(): Promise<AdminMenuRow[]> {
-  const response = await fetchAdmin(`${MENUS_API_URL}/admin`);
-
-  if (!response.ok) {
-    throw new Error(`메뉴 목록을 불러오지 못했습니다. (${response.status})`);
-  }
-
-  const menus = (await response.json()) as AdminMenuApiResponse[];
+  const menus = await apiRequest<AdminMenuApiResponse[]>(`${MENUS_API_URL}/admin`, {
+    request: fetchAdmin,
+    errorMessage: '메뉴 목록을 불러오지 못했습니다.',
+  });
 
   return menus.map(mapMenuResponseToAdminRow);
 }
 
 export async function getAdminSidebarMenus() {
-  const response = await fetchAdmin(`${MENUS_API_URL}/admin/sidebar`);
-
-  if (!response.ok) {
-    throw new Error(`운영자 메뉴 목록을 불러오지 못했습니다. (${response.status})`);
-  }
-
-  const menus = (await response.json()) as AdminMenuApiResponse[];
+  const menus = await apiRequest<AdminMenuApiResponse[]>(`${MENUS_API_URL}/admin/sidebar`, {
+    request: fetchAdmin,
+    errorMessage: '운영자 메뉴 목록을 불러오지 못했습니다.',
+  });
 
   return mapMenusToAdminNavItems(menus.map(mapMenuResponseToAdminRow));
 }
 
 export async function saveAdminMenus(items: AdminMenuRow[]): Promise<void> {
-  const response = await fetchAdmin(`${MENUS_API_URL}/admin`, {
+  await apiRequest<void, ReturnType<typeof mapMenusToSavePayload>>(`${MENUS_API_URL}/admin`, {
     method: 'PUT',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify(mapMenusToSavePayload(items)),
+    request: fetchAdmin,
+    body: mapMenusToSavePayload(items),
+    errorMessage: '메뉴 변경 사항을 저장하지 못했습니다.',
   });
-
-  if (!response.ok) {
-    throw new Error(`메뉴 변경 사항을 저장하지 못했습니다. (${response.status})`);
-  }
 
   notifyMenusChanged();
 }

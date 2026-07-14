@@ -7,6 +7,7 @@ import type { ErrorLogDetail } from '../../types';
 export function AdminErrorLogDetailPage() {
   const { id } = useParams();
   const location = useLocation();
+  const missingId = !id;
   const [detail, setDetail] = useState<ErrorLogDetail | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -21,8 +22,6 @@ export function AdminErrorLogDetailPage() {
 
   useEffect(() => {
     if (!id) {
-      setError('에러 로그 ID가 없습니다.');
-      setIsLoading(false);
       return;
     }
 
@@ -84,7 +83,11 @@ export function AdminErrorLogDetailPage() {
         </div>
       </section>
 
-      {isLoading ? (
+      {missingId ? (
+        <p className="rounded-lg border border-red-200 bg-red-50 px-6 py-12 text-center text-sm font-semibold text-red-600">
+          에러 로그 ID가 없습니다.
+        </p>
+      ) : isLoading ? (
         <div className="rounded-lg border border-line bg-white px-6 py-14 text-center text-sm font-semibold text-muted">
           <Loader2 className="mx-auto mb-3 h-5 w-5 animate-spin" />
           에러 로그 상세를 불러오는 중입니다.
@@ -209,10 +212,11 @@ function LogCodeBlock({ code }: { code: string }) {
           type="button"
           title="로그 복사"
           aria-label="로그 복사"
-          className="grid h-8 w-8 place-items-center rounded-md text-slate-400 transition hover:bg-white/10 hover:text-white"
+          className="inline-flex h-8 items-center gap-1.5 rounded-md px-2.5 text-xs font-bold text-slate-300 transition hover:bg-white/10 hover:text-white"
           onClick={() => void handleCopy()}
         >
           {copied ? <Check className="h-4 w-4 text-emerald-400" /> : <Copy className="h-4 w-4" />}
+          <span>{copied ? '복사됨' : '복사'}</span>
         </button>
       </div>
       <pre className="max-h-[720px] overflow-auto p-4 font-mono text-xs leading-6 text-gray-100">

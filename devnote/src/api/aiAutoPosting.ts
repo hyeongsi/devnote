@@ -8,24 +8,22 @@ import type {
   PostCreateRequest,
 } from '../types';
 import { fetchAdmin } from './adminAuth';
+import { apiRequest } from './http';
 
 const AI_AUTO_POSTING_API_URL = '/api/admin/ai-posting';
 
-async function request<T>(path: string, init?: RequestInit): Promise<T> {
-  const response = await fetchAdmin(`${AI_AUTO_POSTING_API_URL}${path}`, {
-    ...init,
-    headers: {
-      'Content-Type': 'application/json',
-      ...init?.headers,
-    },
+function request<TResponse, TBody = unknown>(
+  path: string,
+  options: Omit<
+    Parameters<typeof apiRequest<TResponse, TBody>>[1],
+    'request' | 'withCredentials' | 'errorMessage'
+  > = {},
+) {
+  return apiRequest<TResponse, TBody>(`${AI_AUTO_POSTING_API_URL}${path}`, {
+    ...options,
+    request: fetchAdmin,
+    errorMessage: 'AI 자동 포스팅 요청에 실패했습니다.',
   });
-  if (!response.ok) {
-    throw new Error(`AI 자동 포스팅 요청에 실패했습니다. (${response.status})`);
-  }
-  if (response.status === 204 || response.headers.get('content-length') === '0') {
-    return undefined as T;
-  }
-  return (await response.json()) as T;
 }
 
 export function getAiPostingStatus() {
@@ -45,9 +43,9 @@ export function getAiPostingDraft(id: number) {
 }
 
 export function publishAiPostingDraft(id: number, post: PostCreateRequest) {
-  return request<BlogPostDetailApiResponse>(`/drafts/${id}/publish`, {
+  return request<BlogPostDetailApiResponse, { post: PostCreateRequest }>(`/drafts/${id}/publish`, {
     method: 'POST',
-    body: JSON.stringify({ post }),
+    body: { post },
   });
 }
 
@@ -56,16 +54,16 @@ export function createAiPostingTopic(requestBody: {
   categoryId: number;
   enabled: boolean;
 }) {
-  return request<AiPostingTopic>('/topics', {
+  return request<AiPostingTopic, typeof requestBody>('/topics', {
     method: 'POST',
-    body: JSON.stringify(requestBody),
+    body: requestBody,
   });
 }
 
 export function updateAiPostingTopic(topic: AiPostingTopic) {
-  return request<AiPostingTopic>(`/topics/${topic.id}`, {
+  return request<AiPostingTopic, AiPostingTopic>(`/topics/${topic.id}`, {
     method: 'PUT',
-    body: JSON.stringify(topic),
+    body: topic,
   });
 }
 
